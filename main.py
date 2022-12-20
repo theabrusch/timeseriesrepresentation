@@ -14,7 +14,8 @@ def main(args):
     val = torch.load(args.data_path + 'val.pt')
     test = torch.load(args.data_path + 'test.pt')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    
+    print('Loading data')
     TFC_dset = TFC_Dataset(train['samples'], train['labels'])
     train_loader = DataLoader(TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=True)
 
@@ -22,7 +23,8 @@ def main(args):
     test_dset = TensorDataset(test['samples'], test['labels'])
     val_loader = DataLoader(val_dset, batch_size = args.batch_size)
     test_loader = DataLoader(test_dset, batch_size = args.batch_size)
-
+    
+    print('Initializing model')
     model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
                         num_classes = TFC_dset.num_classes, classify = args.train_classifier)
     model.to(device)
@@ -31,6 +33,7 @@ def main(args):
 
     loss_fn = ContrastiveLoss(tau = 0.2, batchsize = args.batch_size, device = device)
 
+    print('Training model')
     model, losses = TFC_trainer(model = model, 
                                 train_loader = train_loader, 
                                 optimizer = optimizer, 
