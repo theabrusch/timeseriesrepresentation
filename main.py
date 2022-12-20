@@ -13,6 +13,7 @@ def main(args):
     train = torch.load(args.data_path + 'train.pt')
     val = torch.load(args.data_path + 'val.pt')
     test = torch.load(args.data_path + 'test.pt')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     TFC_dset = TFC_Dataset(train['samples'], train['labels'])
     train_loader = DataLoader(TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=True)
@@ -24,10 +25,10 @@ def main(args):
 
     model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
                         num_classes = TFC_dset.num_classes, classify = args.train_classifier)
+    model.to(device)
 
     optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     loss_fn = ContrastiveLoss(tau = 0.2, batchsize = args.batch_size, device = device)
 
     model, losses = TFC_trainer(model = model, 
