@@ -21,7 +21,7 @@ def main(args):
 
     val_dset = TFC_Dataset(val['samples'], val['labels'])
     test_dset = TensorDataset(test['samples'], test['labels'])
-    val_loader = DataLoader(val_dset, batch_size = args.batch_size)
+    val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
     test_loader = DataLoader(test_dset, batch_size = args.batch_size)
     
     print('Initializing model')
