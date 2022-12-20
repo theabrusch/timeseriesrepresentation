@@ -82,7 +82,7 @@ class TFC_encoder(nn.Module):
             out = self.classifier(torch.cat([z_t, z_f], dim = -1))
             return h_t, z_t, h_f, z_f, out
 
-        return h_t, z_t, h_f, z_f, None
+        return h_t, z_t, h_f, z_f
 
 
 
