@@ -16,4 +16,4 @@
 
 module load python3/3.9.11
 
-python3 main.py --data_path /work3/theb/timeseries/ECG/ --epochs 10
+python3 main.py --data_path /work3/theb/timeseries/ECG/ --epochs 2
