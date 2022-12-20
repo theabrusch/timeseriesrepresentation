@@ -21,7 +21,7 @@ def TFC_trainer(model, train_loader, optimizer, loss_fn, epochs, val_loader, dev
         val_epoch_time, val_epoch_freq, val_epoch_time_freq, val_epoch_class, val_epoch_loss = [0, 0, 0, 0, 0]
         model.train()
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(train_loader):
-            x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.float().to(device)
+            x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
 
             h_t, z_t, h_f, z_f, out = model(x_t, x_f)
             h_t_aug, z_t_aug, h_f_aug, z_f_aug, _ = model(x_t_aug, x_f_aug)

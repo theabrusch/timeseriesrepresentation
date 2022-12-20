@@ -6,7 +6,7 @@ class TFC_Dataset(Dataset):
     def __init__(self, X, Y):
         super().__init__()
         self.X_t = X
-        self.Y = Y.unsqueeze(1)
+        self.Y = Y
         self.channels = X.shape[1]
         self.time_length = X.shape[2]
         self.num_classes = len(torch.unique(Y))
