@@ -1,5 +1,6 @@
 #!/bin/sh
 #BSUB -q gpuv100
+#BSUB -gpu "num=1"
 #BSUB -J train_selfsupervised
 ### number of core
 #BSUB -n 1 
