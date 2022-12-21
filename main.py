@@ -1,11 +1,13 @@
 import torch
 import argparse
 from torch.utils.data import DataLoader, TensorDataset
-from utils.trainer import TFC_trainer
+from utils.trainer import TFC_trainer, evaluate_latent_space
 from utils.models import TFC_encoder, ContrastiveLoss
 from utils.dataset import TFC_Dataset
 from torch.optim import Adam
+from utils.plot_functions import plot_contrastive_losses
 import pickle
+import datetime
 
 
 def main(args):
@@ -43,21 +45,29 @@ def main(args):
                                 device = device, 
                                 train_classifier = args.train_classifier)
     
-    with open('outputs.pickle', 'wb') as file:
+    plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}.png'.format(args.train_classifier))
+    plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}.png'.format(args.train_classifier))
+
+    outputs = evaluate_latent_space(model=model, data_loader=val_loader, device = device)
+
+    with open('outputs/losses_train_classifier_{}.pickle'.format(args.train_classifier), 'wb') as file:
         pickle.dump(losses, file)
+    
+    with open('outputs/latents_train_classifier_{}.pickle'.format(args.train_classifier), 'wb') as file:
+        pickle.dump(outputs, file)
 
     return None
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path', type = str, default = '/work3/theb/timeseries/ECG/')
+    parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
     parser.add_argument('--batch_size', type = int, default = 64)
     parser.add_argument('--train_classifier', type = bool, default = True)
     parser.add_argument('--learning_rate', type = float, default = 3e-4)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
 
-    parser.add_argument('--epochs', type = int, default = 100)
+    parser.add_argument('--epochs', type = int, default = 0)
     args = parser.parse_args()
     main(args)
 

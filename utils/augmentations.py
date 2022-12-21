@@ -5,7 +5,7 @@ def remove_frequency(x_f, frac = 0.1):
     remove_freqs = torch.rand_like(x_f) > frac
     return x_f*remove_freqs
 
-def remove_frequency_abs_budget(x_f, E = 5):
+def remove_frequency_abs_budget(x_f, E = 20):
     remove_freqs = torch.rand(x_f.shape).argsort(2)[:,:,:E]
     return x_f.scatter(-1, remove_freqs, 0)
 
@@ -18,7 +18,7 @@ def add_frequency(x_f, alpha = 0.5, frac = 0.1):
 
     return x_f*~final_mask + new_freqs
 
-def add_frequency_abs_budget(x_f, alpha = 0.5, E = 5):
+def add_frequency_abs_budget(x_f, alpha = 0.5, E = 20):
     
     for i, sample in enumerate(x_f):
         for j, row in enumerate(sample):
@@ -56,7 +56,7 @@ def jitter(x, sigma = 0.01):
     return x + np.random.normal(0, sigma, size = x.shape)
 
 def scaling(x, sigma = 1.1):
-    factor = np.random.normal(2, sigma, size = [x.shape[0], x.shape[1], 1])
+    factor = np.random.normal(2, sigma, size = [x.shape[0], 1, 1])
     return x * factor
 
 def permutation(x, max_seg = 8):

@@ -93,19 +93,20 @@ class ContrastiveLoss(nn.Module):
         self.batchsize = batchsize
         self.device = device
         self.cosine_similarity = nn.CosineSimilarity(dim = -1)
+        self.criterion = nn.CrossEntropyLoss(reduction = 'sum')
 
         # compute negative mask
-        upper = np.eye(2*batchsize, k = batchsize)
-        lower = np.eye(2*batchsize, k = -batchsize)
+        upper = np.eye(2*batchsize, 2*batchsize, k = batchsize)
+        lower = np.eye(2*batchsize, 2*batchsize, k = -batchsize)
         diag = np.eye(2*batchsize)
 
         self.negative_mask = torch.from_numpy(1-(upper+lower+diag)).bool().to(device)
 
     def forward(self, z_orig, z_augment):
-        collect_z = torch.cat([z_orig, z_augment], axis = 0)
+        collect_z = torch.cat([z_augment, z_orig], dim = 0)
         # calculate cosine similarity between all augmented and
         # non-augmented latent representations
-        similarities = self.cosine_similarity(collect_z.unsqueeze(0), collect_z.unsqueeze(1))
+        similarities = self.cosine_similarity(collect_z.unsqueeze(1), collect_z.unsqueeze(0))
 
         # get the positive samples (upper and lower diagonal)
         upper_pos = torch.diag(similarities, self.batchsize)
@@ -117,7 +118,8 @@ class ContrastiveLoss(nn.Module):
         negative = similarities[self.negative_mask].view(2*self.batchsize, -1)
 
         # concatenate the logits
-        logits = torch.cat((positive, negative), dim = 1)/self.tau
+        logits = torch.cat((positive, negative), dim = 1)
+        logits /= self.tau
         
         # calculate loss using cross entropy by setting the "labels" to zero:
         # we have the positive samples on the 0th index in the logits and all 
@@ -125,8 +127,8 @@ class ContrastiveLoss(nn.Module):
         # to be large and all other to be smal
         labels = torch.zeros(2*self.batchsize).to(self.device).long()
          
-        loss = torch.nn.functional.cross_entropy(logits, labels)
-        return loss / 2*self.batchsize
+        loss = self.criterion(logits, labels)
+        return loss / (2*self.batchsize)
         
 
 class TimeFrequencyLoss(nn.Module):

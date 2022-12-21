@@ -1,4 +1,6 @@
 import torch
+import pandas as pd
+import numpy as np
 
 def TFC_trainer(model, train_loader, optimizer, loss_fn, epochs, val_loader, device, train_classifier, delta_ = 1, lambda_ = 0.5):
     time_loss_total = []
@@ -87,16 +89,16 @@ def TFC_trainer(model, train_loader, optimizer, loss_fn, epochs, val_loader, dev
             val_epoch_loss += loss.detach().cpu()/len(x_t)
         
         print('\nValidation losses')
-        print('Time consistency loss:', epoch_time)
-        print('Frequency consistency loss:', epoch_freq)
-        print('Time-freq consistency loss:', epoch_time_freq)
-        print('Total loss:', epoch_loss)
-        print('Classification loss:', epoch_class)
-        val_time_loss_total.append(epoch_time)
-        val_freq_loss_total.append(epoch_freq)
-        val_time_freq_loss_total.append(epoch_time_freq)
-        val_loss_total.append(epoch_loss)
-        val_class_loss_total.append(epoch_class)
+        print('Time consistency loss:', val_epoch_time)
+        print('Frequency consistency loss:', val_epoch_freq)
+        print('Time-freq consistency loss:', val_epoch_time_freq)
+        print('Total loss:', val_epoch_loss)
+        print('Classification loss:', val_epoch_class)
+        val_time_loss_total.append(val_epoch_time)
+        val_freq_loss_total.append(val_epoch_freq)
+        val_time_freq_loss_total.append(val_epoch_time_freq)
+        val_loss_total.append(val_epoch_loss)
+        val_class_loss_total.append(val_epoch_class)
 
 
 
@@ -116,3 +118,43 @@ def TFC_trainer(model, train_loader, optimizer, loss_fn, epochs, val_loader, dev
         }
     return model, losses
 
+
+
+def evaluate_latent_space(model, data_loader, device):
+    model.eval()
+    for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(data_loader):
+        x_t, x_f, x_t_aug, x_f_aug = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device)
+        normal_outputs = model(x_t, x_f)
+        augmented_outputs = model(x_t_aug, x_f_aug)
+
+        normal_outputs = [out.detach().cpu().numpy() for out in normal_outputs]
+        augmented_outputs = [out.detach().cpu().numpy() for out in augmented_outputs[:-1]]
+
+        h_latent_space = np.concatenate((normal_outputs[0][np.newaxis,:, :], normal_outputs[2][np.newaxis, :, :], augmented_outputs[0][np.newaxis, :, :], augmented_outputs[2][np.newaxis, :, :]), axis = 0)
+        z_latent_space = np.concatenate((normal_outputs[1][np.newaxis, :, :], normal_outputs[3][np.newaxis, :, :], augmented_outputs[1][np.newaxis, :, :], augmented_outputs[3][np.newaxis, :, :]), axis = 0)
+
+        if i == 0:
+            collect_h_latent_space = h_latent_space
+            collect_z_latent_space = z_latent_space
+            collect_y_out = normal_outputs[-1]
+            collect_y = y 
+        else:
+            collect_h_latent_space = np.concatenate((collect_h_latent_space, h_latent_space), axis = 1)
+            collect_z_latent_space = np.concatenate((collect_z_latent_space, z_latent_space), axis = 1)
+            collect_y_out = np.concatenate((collect_y_out, normal_outputs[-1]), axis = 0)
+            collect_y = np.concatenate((collect_y, y), axis = 0)
+    
+    columns_h = ['h_t', 'h_f', 'h_t_aug', 'h_f_aug'] 
+    columns_z = ['z_t', 'z_f', 'z_t_aug', 'z_f_aug'] 
+    outputs = dict()
+
+    for latent in [zip(columns_h, collect_h_latent_space), zip(columns_z, collect_z_latent_space)]:
+        for i, (name, var) in enumerate(latent):
+            outputs[name] = var
+    outputs['y'] = collect_y
+    outputs['y_pred'] = collect_y_out
+
+    return outputs
+
+
+    
