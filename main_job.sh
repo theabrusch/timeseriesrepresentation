@@ -10,11 +10,11 @@
 #BSUB -R "rusage[mem=200GB]"
 ### Number of hours needed
 #BSUB -N 
-#BSUB -W 24:00
+#BSUB -W 01:00
 ### added outputs and errors to files
 #BSUB -o logs/Output_selfsuper_%J.out
 #BSUB -e logs/Error_selfsuper%J.err
 
 module load python3/3.9.11
 
-python3 main.py --data_path /work3/theb/timeseries/ECG/ --epochs 2
+python3 main.py --data_path /work3/theb/timeseries/ECG/ --epochs 50
