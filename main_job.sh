@@ -17,4 +17,4 @@
 
 module load python3/3.9.11
 
-python3 main.py --data_path /work3/theb/timeseries/ECG/ --epochs 50 --train_classifier False
+python3 main.py --data_path /work3/theb/timeseries/ECG/ --epochs 50 --train_classifier False --train_TFC True --learning_rate 3e-4
