@@ -66,6 +66,12 @@ def main(args):
                                          epochs=args.epochs,
                                          val_loader=val_loader,
                                          device= device)
+                                         
+        outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
+        
+        with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
+            pickle.dump(outputs, file)
+
 
     plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
     plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
@@ -93,12 +99,7 @@ def main(args):
                                  device = device)
         with open('outputs/results_train_{}_test{}.pickle'.format(args.data_path.split('/')[-2], args.finetune_path.split('/')[-2]), 'wb') as file:
             pickle.dump(results, file)
-    else:
-        outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
-        
-        with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
-            pickle.dump(outputs, file)
-
+    
     return None
 
 
