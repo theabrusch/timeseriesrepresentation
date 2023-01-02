@@ -1,7 +1,7 @@
 import torch
 import argparse
 from torch.utils.data import DataLoader, TensorDataset
-from utils.trainer import TFC_trainer, evaluate_latent_space
+from utils.trainer import TFC_trainer, train_classifier, evaluate_latent_space
 from utils.models import TFC_encoder, ContrastiveLoss
 from utils.dataset import TFC_Dataset
 from torch.optim import Adam
@@ -36,24 +36,32 @@ def main(args):
     loss_fn = ContrastiveLoss(tau = 0.2, batchsize = args.batch_size, device = device)
 
     print('Training model')
-    model, losses = TFC_trainer(model = model, 
-                                train_loader = train_loader, 
-                                optimizer = optimizer, 
-                                loss_fn = loss_fn, 
-                                epochs = args.epochs, 
-                                val_loader = val_loader, 
-                                device = device, 
-                                train_classifier = args.train_classifier)
-    
-    plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}.png'.format(args.train_classifier))
-    plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}.png'.format(args.train_classifier))
+    if args.train_TFC:
+        model, losses = TFC_trainer(model = model, 
+                                    train_loader = train_loader, 
+                                    optimizer = optimizer, 
+                                    loss_fn = loss_fn, 
+                                    epochs = args.epochs, 
+                                    val_loader = val_loader, 
+                                    device = device, 
+                                    train_classifier = args.train_classifier)
+    else:
+        args.train_classifier = True
+        model, losses = train_classifier(model=model,
+                                         train_loader=train_loader,
+                                         optimizer=optimizer,
+                                         epochs=args.epochs,
+                                         val_loader=val_loader,
+                                         device= device)
 
-    outputs = evaluate_latent_space(model  =model, data_loader = val_loader, device = device, classifier = args.train_classifier)
+    plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
+    plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
+    outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
 
-    with open('outputs/losses_train_classifier_{}.pickle'.format(args.train_classifier), 'wb') as file:
+    with open('outputs/losses_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
         pickle.dump(losses, file)
     
-    with open('outputs/latents_train_classifier_{}.pickle'.format(args.train_classifier), 'wb') as file:
+    with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
         pickle.dump(outputs, file)
 
     return None
@@ -63,6 +71,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
     parser.add_argument('--batch_size', type = int, default = 64)
+    parser.add_argument('--train_TFC', type = eval, default = True)
     parser.add_argument('--train_classifier', type = eval, default = True)
     parser.add_argument('--learning_rate', type = float, default = 3e-4)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)

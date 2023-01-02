@@ -17,11 +17,8 @@ def TFC_trainer(model,
 
     Args:
         model (torch.Module): The model to train
-
         train_loader (torch.utils.data.DataLoader): Dataloader containing the train data on which to train the model
-
         optimizer (torch.optim.Optimizer): Optimizer with which to optimize the model. 
-
         loss_fn (torch.Module): Function implementing the contrastive loss function to use for 
                                 optimizing the self-supervised part of the model.
         epochs (int): Number of epochs to train the model for. 
@@ -33,10 +30,9 @@ def TFC_trainer(model,
         eta_ (float, optional): Parameter weighing the contrastive loss vs the classifier. Defaults to 0.5.
 
     Returns:
-        _type_: _description_
-    """    '''
-    
-    '''
+    torch.Module: Final model after training
+    dict: Dictionary containing all of the losses
+    """    
     time_loss_total = []
     freq_loss_total = []
     time_freq_loss_total = []
@@ -107,8 +103,12 @@ def TFC_trainer(model,
         model.eval()
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(val_loader):
             x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
-            h_t, z_t, h_f, z_f, out = model(x_t, x_f)
-            h_t_aug, z_t_aug, h_f_aug, z_f_aug, _ = model(x_t_aug, x_f_aug)
+            if train_classifier:
+                h_t, z_t, h_f, z_f, out = model(x_t, x_f)
+                h_t_aug, z_t_aug, h_f_aug, z_f_aug, _ = model(x_t_aug, x_f_aug)
+            else:
+                h_t, z_t, h_f, z_f = model(x_t, x_f)
+                h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
             time_loss = loss_fn(h_t, h_t_aug)
             freq_loss = loss_fn(h_f, h_f_aug)
 
@@ -156,6 +156,84 @@ def TFC_trainer(model,
             'freq_loss': val_freq_loss_total,
             'time_freq_loss': val_time_freq_loss_total,
             'class_loss': val_class_loss_total,
+            'loss': val_loss_total}
+        }
+    return model, losses
+
+def train_classifier(model, 
+                    train_loader, 
+                    optimizer, 
+                    epochs, 
+                    val_loader, 
+                    device):
+    """Function for training only the classifier part of the TFC model. 
+
+    Args:
+        model (_type_): _description_
+        train_loader (_type_): _description_
+        optimizer (_type_): _description_
+        epochs (_type_): _description_
+        val_loader (_type_): _description_
+        device (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """    
+    
+    
+    loss_total = []
+    val_loss_total = []
+
+    class_loss_fn = torch.nn.CrossEntropyLoss()
+
+    for epoch in range(epochs):
+        print('\n', epoch + 1 , 'of', epochs)
+        epoch_loss = 0
+        val_epoch_loss = 0
+        val_epoch_acc = 0 
+        model.train()
+        for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(train_loader):
+            optimizer.zero_grad()
+            x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
+
+            _, _, _, _, out = model(x_t, x_f)
+
+            class_loss = class_loss_fn(out, y)
+                
+            epoch_loss += class_loss.detach().cpu()/len(x_t)
+
+            class_loss.backward()
+            optimizer.step()
+        
+        print('\nTraining losses:')
+        print('Total loss:', epoch_loss)
+
+        loss_total.append(epoch_loss)
+
+        # evaluate on validation set
+        model.eval()
+        for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(val_loader):
+            x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
+            _, _, _, _, out = model(x_t, x_f)
+
+            class_loss = class_loss_fn(out, y)
+            acc = (out.detach().cpu() == y.detach().cpu()).mean()
+            loss += class_loss
+            val_epoch_loss += class_loss.detach().cpu()
+            val_epoch_acc += acc/len(x_t)
+        
+        print('\nValidation losses')
+        print('Accuarcy:', val_epoch_acc)
+        print('Total loss:', val_epoch_loss)
+    
+        val_loss_total.append(val_epoch_loss)
+
+
+
+    losses = {
+        'train': {
+            'loss': loss_total},
+        'val': {
             'loss': val_loss_total}
         }
     return model, losses
