@@ -109,6 +109,7 @@ def TFC_trainer(model,
             else:
                 h_t, z_t, h_f, z_f = model(x_t, x_f)
                 h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
+
             time_loss = loss_fn(h_t, h_t_aug)
             freq_loss = loss_fn(h_f, h_f_aug)
 
@@ -120,7 +121,8 @@ def TFC_trainer(model,
 
             if train_classifier:
                 class_loss = class_loss_fn(out, y)
-                acc = (out.detach().cpu() == y.detach().cpu()).mean()
+                y_pred = torch.argmax(out, axis = 1)
+                acc = torch.mean((y_pred.detach().cpu() == y.detach().cpu()).int())
                 loss += class_loss
                 val_epoch_class += class_loss.detach().cpu()
                 val_epoch_acc += acc
@@ -217,8 +219,8 @@ def train_classifier(model,
             _, _, _, _, out = model(x_t, x_f)
 
             class_loss = class_loss_fn(out, y)
-            acc = (out.detach().cpu() == y.detach().cpu()).mean()
-            loss += class_loss
+            y_pred = torch.argmax(out, axis = 1)
+            acc = (y_pred.detach().cpu() == y.detach().cpu()).mean()
             val_epoch_loss += class_loss.detach().cpu()
             val_epoch_acc += acc/len(x_t)
         
