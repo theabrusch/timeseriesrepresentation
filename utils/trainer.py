@@ -1,7 +1,7 @@
 import torch
 import pandas as pd
 import numpy as np
-from sklearn.metrics import accuracy_score, f1_score, balanced_accuracy_score
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_auc_score, average_precision_score
 
 def TFC_trainer(model, 
                 train_loader, 
@@ -92,13 +92,14 @@ def TFC_trainer(model,
         print('Frequency consistency loss:', epoch_freq/(i+1))
         print('Time-freq consistency loss:', epoch_time_freq/(i+1))
         print('Total loss:', epoch_loss/(i+1))
-        print('Classification loss:', epoch_class/(i+1))
             
         time_loss_total.append(epoch_time/(i+1))
         freq_loss_total.append(epoch_freq/(i+1))
         time_freq_loss_total.append(epoch_time_freq/(i+1))
         loss_total.append(epoch_loss/(i+1))
-        class_loss_total.append(epoch_class/(i+1))
+        if train_classifier:
+            class_loss_total.append(epoch_class/(i+1))
+            print('Classification loss:', epoch_class/(i+1))
 
         # evaluate on validation set
         model.eval()
@@ -152,13 +153,13 @@ def TFC_trainer(model,
             'time_loss': time_loss_total,
             'freq_loss': freq_loss_total,
             'time_freq_loss': time_freq_loss_total,
-            'class_loss': class_loss_total,
+            #'class_loss': class_loss_total,
             'loss': loss_total},
         'val': {
             'time_loss': val_time_loss_total,
             'freq_loss': val_freq_loss_total,
             'time_freq_loss': val_time_freq_loss_total,
-            'class_loss': val_class_loss_total,
+            #'class_loss': val_class_loss_total,
             'loss': val_loss_total}
         }
     return model, losses
@@ -260,6 +261,93 @@ def train_classifier(model,
             'loss': val_loss_total}
         }
     return model, losses
+
+def finetune_model(model, 
+                  classifier, 
+                  data_loader, 
+                  loss_fn, 
+                  optimizer, 
+                  class_optimizer, 
+                  epochs, 
+                  device, 
+                  lambda_ = 0.2):
+
+    model.train()
+    classifier.train()
+    class_loss_fn = torch.nn.CrossEntropyLoss()
+
+    for epoch in range(epochs):
+        epoch_loss = 0
+        epoch_class_loss = 0
+        for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(data_loader):
+            optimizer.zero_grad()
+            class_optimizer.zero_grad()
+            x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
+            h_t, z_t, h_f, z_f = model(x_t, x_f)
+            h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
+
+            time_loss = loss_fn(h_t, h_t_aug)
+            freq_loss = loss_fn(h_f, h_f_aug)
+
+            time_freq_pos = loss_fn(z_t, z_f)
+            time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
+            loss_TFC = (time_freq_pos - time_freq_neg[0] + 1) + (time_freq_pos - time_freq_neg[1] + 1) + (time_freq_pos - time_freq_neg[2] + 1)
+
+            y_out = classifier(torch.cat[z_t, z_f], dim = -1)
+            class_loss = class_loss_fn(y_out, y)
+            loss = class_loss + lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
+            loss.backward()
+            optimizer.step()
+            class_optimizer.step()
+            epoch_loss += loss
+            epoch_class_loss += class_loss
+        
+        print('Epoch loss:', epoch_loss/(i+1))
+        print('Class. loss:', epoch_class_loss/(i+1))
+    
+    return model
+
+    
+def evaluate_model(model,
+                   classifier,
+                   test_loader,
+                   device):
+    
+    model.eval()
+    classifier.eval()
+    for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(test_loader):
+        x_t, x_f = x_t.float().to(device), x_f.float().to(device), y.long()
+        h_t, z_t, h_f, z_f = model(x_t, x_f)
+        y_out = classifier(torch.cat[z_t, z_f], dim = -1)
+
+        if i == 0:
+            y_pred = torch.argmax(y_out, dim = -1).detach().cpu()
+            y_true = y
+        else:
+            y_pred = torch.cat([y_pred, torch.argmax(y_out, dim = -1).detach().cpu()], dim = 0)
+            y_true = torch.cat([y_true, y], dim = 0)
+    
+    acc = accuracy_score(y_true, y_pred)
+    prec, rec, f, _ = precision_recall_fscore_support(y_true, y_pred)
+    auroc = roc_auc_score(y_true, y_pred)
+    auprc = average_precision_score(y_true, y_pred)
+
+    results = {
+        'Accuracy': acc,
+        'Precision': prec,
+        'Recall': rec,
+        'F1 score': f, 
+        'AUROC': auroc, 
+        'AUPRC': auprc
+    }
+
+    for res in results.keys():
+        print(res, ':', results[res])
+    
+    return results
+
+
+
 
 
 
