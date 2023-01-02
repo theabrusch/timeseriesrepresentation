@@ -220,7 +220,7 @@ def train_classifier(model,
 
             class_loss = class_loss_fn(out, y)
             y_pred = torch.argmax(out, axis = 1)
-            acc = (y_pred.detach().cpu() == y.detach().cpu()).mean()
+            acc = (y_pred.detach().cpu() == y.detach().cpu()).float().mean()
             val_epoch_loss += class_loss.detach().cpu()
             val_epoch_acc += acc/len(x_t)
         
