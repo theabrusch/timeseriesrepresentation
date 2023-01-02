@@ -1,1 +1,1 @@
-rsync -Pav -a ~/Documents/PhD/code/self-supervision/datasets/ECG --rsh=ssh theb@transfer.gbar.dtu.dk:/work3/theb/timeseries/
+rsync -Pav -a ~/Documents/PhD/code/timeseriesrepresentation/datasets/EMG --rsh=ssh theb@transfer.gbar.dtu.dk:/work3/theb/timeseries/
