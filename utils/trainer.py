@@ -123,18 +123,25 @@ def TFC_trainer(model,
 
             if train_classifier:
                 class_loss = class_loss_fn(out, y)
-                y_pred = torch.argmax(out, axis = 1)
-                acc = accuracy_score( y.detach().cpu(), y_pred.detach().cpu())
+
+                if i == 0:
+                    y_pred = torch.argmax(out.detach().cpu(), dim = 1)
+                    y_true = y.detach().cpu()
+                else:
+                    y_pred = torch.cat((y_pred, torch.argmax(out.detach().cpu(), dim = 1)), dim = 0)
+                    y_true = torch.cat((y_true, y.detach().cpu()), dim = 0)
+
                 loss += class_loss
                 val_epoch_class += class_loss.detach().cpu()
-                val_epoch_acc += acc
+
             val_epoch_time += time_loss.detach().cpu()
             val_epoch_freq += freq_loss.detach().cpu()
             val_epoch_time_freq += loss_TFC.detach().cpu()
             val_epoch_loss += loss.detach().cpu()
         
+        acc = accuracy_score(y_true, y_pred)
         print('\nValidation losses')
-        print('Accuracy:', val_epoch_acc)
+        print('Accuracy:', acc)
         print('Time consistency loss:', val_epoch_time/(i+1))
         print('Frequency consistency loss:', val_epoch_freq/(i+1))
         print('Time-freq consistency loss:', val_epoch_time_freq/(i+1))
@@ -153,15 +160,17 @@ def TFC_trainer(model,
             'time_loss': time_loss_total,
             'freq_loss': freq_loss_total,
             'time_freq_loss': time_freq_loss_total,
-            #'class_loss': class_loss_total,
             'loss': loss_total},
         'val': {
             'time_loss': val_time_loss_total,
             'freq_loss': val_freq_loss_total,
             'time_freq_loss': val_time_freq_loss_total,
-            #'class_loss': val_class_loss_total,
             'loss': val_loss_total}
         }
+    if train_classifier:
+        losses['train']['class_loss'] = class_loss_total
+        losses['val']['class_loss'] = val_class_loss_total
+
     return model, losses
 
 def train_classifier(model, 
