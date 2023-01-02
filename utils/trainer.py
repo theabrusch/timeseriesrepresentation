@@ -233,7 +233,7 @@ def train_classifier(model,
             x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long()
             _, _, _, _, out = model(x_t, x_f)
 
-            class_loss = class_loss_fn(out, y)
+            class_loss = class_loss_fn(out.detach().cpu(), y)
 
             if i == 0:
                 y_pred = torch.argmax(out.detach().cpu(), dim = 1)
