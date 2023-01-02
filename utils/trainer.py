@@ -77,28 +77,28 @@ def TFC_trainer(model,
                 class_loss = class_loss_fn(out, y)
                 loss *= (1-eta_)
                 loss += eta_*class_loss
-                epoch_class += class_loss.detach().cpu()/len(x_t)
+                epoch_class += class_loss.detach().cpu()
 
-            epoch_time += time_loss.detach().cpu()/len(x_t)
-            epoch_freq += freq_loss.detach().cpu()/len(x_t)
-            epoch_time_freq += loss_TFC.detach().cpu()/len(x_t)
-            epoch_loss += loss.detach().cpu()/len(x_t)
+            epoch_time += time_loss.detach().cpu()
+            epoch_freq += freq_loss.detach().cpu()
+            epoch_time_freq += loss_TFC.detach().cpu()
+            epoch_loss += loss.detach().cpu()
 
             loss.backward()
             optimizer.step()
         
         print('\nTraining losses:')
-        print('Time consistency loss:', epoch_time)
-        print('Frequency consistency loss:', epoch_freq)
-        print('Time-freq consistency loss:', epoch_time_freq)
-        print('Total loss:', epoch_loss)
-        print('Classification loss:', epoch_class)
+        print('Time consistency loss:', epoch_time/(i+1))
+        print('Frequency consistency loss:', epoch_freq/(i+1))
+        print('Time-freq consistency loss:', epoch_time_freq/(i+1))
+        print('Total loss:', epoch_loss/(i+1))
+        print('Classification loss:', epoch_class/(i+1))
             
-        time_loss_total.append(epoch_time)
-        freq_loss_total.append(epoch_freq)
-        time_freq_loss_total.append(epoch_time_freq)
-        loss_total.append(epoch_loss)
-        class_loss_total.append(epoch_class)
+        time_loss_total.append(epoch_time/(i+1))
+        freq_loss_total.append(epoch_freq/(i+1))
+        time_freq_loss_total.append(epoch_time_freq/(i+1))
+        loss_total.append(epoch_loss/(i+1))
+        class_loss_total.append(epoch_class/(i+1))
 
         # evaluate on validation set
         model.eval()
@@ -127,23 +127,23 @@ def TFC_trainer(model,
                 loss += class_loss
                 val_epoch_class += class_loss.detach().cpu()
                 val_epoch_acc += acc
-            val_epoch_time += time_loss.detach().cpu()/len(x_t)
-            val_epoch_freq += freq_loss.detach().cpu()/len(x_t)
-            val_epoch_time_freq += loss_TFC.detach().cpu()/len(x_t)
-            val_epoch_loss += loss.detach().cpu()/len(x_t)
+            val_epoch_time += time_loss.detach().cpu()
+            val_epoch_freq += freq_loss.detach().cpu()
+            val_epoch_time_freq += loss_TFC.detach().cpu()
+            val_epoch_loss += loss.detach().cpu()
         
         print('\nValidation losses')
-        print('Accuarcy:', val_epoch_acc)
-        print('Time consistency loss:', val_epoch_time)
-        print('Frequency consistency loss:', val_epoch_freq)
-        print('Time-freq consistency loss:', val_epoch_time_freq)
-        print('Total loss:', val_epoch_loss)
-        print('Classification loss:', val_epoch_class)
-        val_time_loss_total.append(val_epoch_time)
-        val_freq_loss_total.append(val_epoch_freq)
-        val_time_freq_loss_total.append(val_epoch_time_freq)
-        val_loss_total.append(val_epoch_loss)
-        val_class_loss_total.append(val_epoch_class)
+        print('Accuracy:', val_epoch_acc)
+        print('Time consistency loss:', val_epoch_time/(i+1))
+        print('Frequency consistency loss:', val_epoch_freq/(i+1))
+        print('Time-freq consistency loss:', val_epoch_time_freq/(i+1))
+        print('Total loss:', val_epoch_loss/(i+1))
+        print('Classification loss:', val_epoch_class/(i+1))
+        val_time_loss_total.append(val_epoch_time/(i+1))
+        val_freq_loss_total.append(val_epoch_freq/(i+1))
+        val_time_freq_loss_total.append(val_epoch_time_freq/(i+1))
+        val_loss_total.append(val_epoch_loss/(i+1))
+        val_class_loss_total.append(val_epoch_class/(i+1))
 
 
 
@@ -195,6 +195,8 @@ def train_classifier(model,
         epoch_acc = 0 
         val_epoch_loss = 0
         val_epoch_acc = 0 
+        y_pred = []
+        y_true = []
         model.train()
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(train_loader):
             optimizer.zero_grad()
@@ -204,37 +206,50 @@ def train_classifier(model,
 
             class_loss = class_loss_fn(out, y)
                 
-            epoch_loss += class_loss.detach().cpu()/len(x_t)
+            epoch_loss += class_loss.detach().cpu()
 
-            y_pred = torch.argmax(out.detach().cpu(), dim = 1)
-            epoch_acc += accuracy_score(y.detach().cpu(), y_pred)/len(x_t)
+            if i == 0:
+                y_pred = torch.argmax(out.detach().cpu(), dim = 1)
+                y_true = y.detach().cpu()
+            else:
+                y_pred = torch.cat((y_pred, torch.argmax(out.detach().cpu(), dim = 1)), dim = 0)
+                y_true = torch.cat((y_true, y.detach().cpu()), dim = 0)
 
             class_loss.backward()
             optimizer.step()
         
+        epoch_acc += accuracy_score(y_true, y_pred)
         print('\nTraining losses:')
         print('Accuracy', epoch_acc)
-        print('Total loss:', epoch_loss)
+        print('Total loss:', epoch_loss/(i+1))
 
-        loss_total.append(epoch_loss)
+        loss_total.append(epoch_loss/(i+1))
 
         # evaluate on validation set
         model.eval()
+        y_pred = []
+        y_true = []
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(val_loader):
             x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long()
             _, _, _, _, out = model(x_t, x_f)
 
             class_loss = class_loss_fn(out, y)
-            y_pred = torch.argmax(out.detach().cpu(), axis = 1)
-            acc = accuracy_score(y, y_pred)
-            val_epoch_loss += class_loss.detach().cpu()/len(x_t)
-            val_epoch_acc += acc/len(x_t)
+
+            if i == 0:
+                y_pred = torch.argmax(out.detach().cpu(), dim = 1)
+                y_true = y.detach().cpu()
+            else:
+                y_pred = torch.cat((y_pred, torch.argmax(out.detach().cpu(), dim = 1)), dim = 0)
+                y_true = torch.cat((y_true, y.detach().cpu()), dim = 0)
+            val_epoch_loss += class_loss.detach().cpu()
+        
+        val_epoch_acc += accuracy_score(y_true, y_pred)
         
         print('\nValidation losses')
         print('Accuracy:', val_epoch_acc)
-        print('Total loss:', val_epoch_loss)
+        print('Total loss:', val_epoch_loss/(i+1))
     
-        val_loss_total.append(val_epoch_loss)
+        val_loss_total.append(val_epoch_loss/(i+1))
 
 
 
