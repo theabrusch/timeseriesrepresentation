@@ -1,6 +1,7 @@
 import torch
 import pandas as pd
 import numpy as np
+from sklearn.metrics import accuracy_score, f1_score, balanced_accuracy_score
 
 def TFC_trainer(model, 
                 train_loader, 
@@ -122,7 +123,7 @@ def TFC_trainer(model,
             if train_classifier:
                 class_loss = class_loss_fn(out, y)
                 y_pred = torch.argmax(out, axis = 1)
-                acc = torch.mean((y_pred.detach().cpu() == y.detach().cpu()).float())
+                acc = accuracy_score( y.detach().cpu(), y_pred.detach().cpu())
                 loss += class_loss
                 val_epoch_class += class_loss.detach().cpu()
                 val_epoch_acc += acc
@@ -191,6 +192,7 @@ def train_classifier(model,
     for epoch in range(epochs):
         print('\n', epoch + 1 , 'of', epochs)
         epoch_loss = 0
+        epoch_acc = 0 
         val_epoch_loss = 0
         val_epoch_acc = 0 
         model.train()
@@ -204,10 +206,14 @@ def train_classifier(model,
                 
             epoch_loss += class_loss.detach().cpu()/len(x_t)
 
+            y_pred = torch.argmax(out.detach().cpu(), dim = 1)
+            epoch_acc += accuracy_score(y.detach().cpu(), y_pred)/len(x_t)
+
             class_loss.backward()
             optimizer.step()
         
         print('\nTraining losses:')
+        print('Accuracy', epoch_acc)
         print('Total loss:', epoch_loss)
 
         loss_total.append(epoch_loss)
@@ -215,12 +221,12 @@ def train_classifier(model,
         # evaluate on validation set
         model.eval()
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(val_loader):
-            x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
+            x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long()
             _, _, _, _, out = model(x_t, x_f)
 
             class_loss = class_loss_fn(out, y)
-            y_pred = torch.argmax(out, axis = 1)
-            acc = (y_pred.detach().cpu() == y.detach().cpu()).float().mean()
+            y_pred = torch.argmax(out.detach().cpu(), axis = 1)
+            acc = accuracy_score(y, y_pred)
             val_epoch_loss += class_loss.detach().cpu()/len(x_t)
             val_epoch_acc += acc/len(x_t)
         
