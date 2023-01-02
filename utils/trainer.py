@@ -122,7 +122,7 @@ def TFC_trainer(model,
             if train_classifier:
                 class_loss = class_loss_fn(out, y)
                 y_pred = torch.argmax(out, axis = 1)
-                acc = torch.mean((y_pred.detach().cpu() == y.detach().cpu()).int())
+                acc = torch.mean((y_pred.detach().cpu() == y.detach().cpu()).float())
                 loss += class_loss
                 val_epoch_class += class_loss.detach().cpu()
                 val_epoch_acc += acc
@@ -225,7 +225,7 @@ def train_classifier(model,
             val_epoch_acc += acc/len(x_t)
         
         print('\nValidation losses')
-        print('Accuarcy:', val_epoch_acc)
+        print('Accuracy:', val_epoch_acc)
         print('Total loss:', val_epoch_loss)
     
         val_loss_total.append(val_epoch_loss)
