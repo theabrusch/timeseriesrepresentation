@@ -70,7 +70,6 @@ class TFC_encoder(nn.Module):
                 nn.BatchNorm1d(64),
                 nn.ReLU(),
                 nn.Linear(in_features=64, out_features=num_classes),
-                nn.Softmax(dim = -1)
             )
 
     def forward(self, x_t, x_f):
