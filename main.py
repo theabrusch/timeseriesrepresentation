@@ -48,7 +48,7 @@ def main(args):
     plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}.png'.format(args.train_classifier))
     plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}.png'.format(args.train_classifier))
 
-    outputs = evaluate_latent_space(model=model, data_loader=val_loader, device = device)
+    outputs = evaluate_latent_space(model  =model, data_loader = val_loader, device = device, classifier = args.train_classifier)
 
     with open('outputs/losses_train_classifier_{}.pickle'.format(args.train_classifier), 'wb') as file:
         pickle.dump(losses, file)

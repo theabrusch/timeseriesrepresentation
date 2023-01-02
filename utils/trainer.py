@@ -2,7 +2,41 @@ import torch
 import pandas as pd
 import numpy as np
 
-def TFC_trainer(model, train_loader, optimizer, loss_fn, epochs, val_loader, device, train_classifier, delta_ = 1, lambda_ = 0.5):
+def TFC_trainer(model, 
+                train_loader, 
+                optimizer, 
+                loss_fn, 
+                epochs, 
+                val_loader, 
+                device, 
+                train_classifier, 
+                delta_ = 1, 
+                lambda_ = 0.5, 
+                eta_ = 0.5):
+    """Function for training the time frequency contrastive model for time series. 
+
+    Args:
+        model (torch.Module): The model to train
+
+        train_loader (torch.utils.data.DataLoader): Dataloader containing the train data on which to train the model
+
+        optimizer (torch.optim.Optimizer): Optimizer with which to optimize the model. 
+
+        loss_fn (torch.Module): Function implementing the contrastive loss function to use for 
+                                optimizing the self-supervised part of the model.
+        epochs (int): Number of epochs to train the model for. 
+        val_loader (torch.utils.data.DataLoader): Dataloader containing the validation data on which to validate the model
+        device (torch.device): CPU or GPU depending on availability
+        train_classifier (bool): Whether to train the classifier along with the contrastive loss. 
+        delta_ (int, optional): Parameter to add in the time frequency consistency loss. Defaults to 1.
+        lambda_ (float, optional): Parameter weighing the time and frequency loss vs the time-frequency consistency loss. Defaults to 0.5.
+        eta_ (float, optional): Parameter weighing the contrastive loss vs the classifier. Defaults to 0.5.
+
+    Returns:
+        _type_: _description_
+    """    '''
+    
+    '''
     time_loss_total = []
     freq_loss_total = []
     time_freq_loss_total = []
@@ -20,27 +54,32 @@ def TFC_trainer(model, train_loader, optimizer, loss_fn, epochs, val_loader, dev
     for epoch in range(epochs):
         print('\n', epoch + 1 , 'of', epochs)
         epoch_time, epoch_freq, epoch_time_freq, epoch_class, epoch_loss = [0, 0, 0, 0, 0]
-        val_epoch_time, val_epoch_freq, val_epoch_time_freq, val_epoch_class, val_epoch_loss = [0, 0, 0, 0, 0]
+        val_epoch_time, val_epoch_freq, val_epoch_time_freq, val_epoch_class, val_epoch_loss, val_epoch_acc = [0, 0, 0, 0, 0, 0]
         model.train()
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(train_loader):
             optimizer.zero_grad()
             x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
 
-            h_t, z_t, h_f, z_f, out = model(x_t, x_f)
-            h_t_aug, z_t_aug, h_f_aug, z_f_aug, _ = model(x_t_aug, x_f_aug)
+            if train_classifier:
+                h_t, z_t, h_f, z_f, out = model(x_t, x_f)
+                h_t_aug, z_t_aug, h_f_aug, z_f_aug, _ = model(x_t_aug, x_f_aug)
+            else:
+                h_t, z_t, h_f, z_f = model(x_t, x_f)
+                h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
 
             time_loss = loss_fn(h_t, h_t_aug)
             freq_loss = loss_fn(h_f, h_f_aug)
 
             time_freq_pos = loss_fn(z_t, z_f)
             time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
-            loss_TFC = 3*time_freq_pos - time_freq_neg[0] - time_freq_neg[1] - time_freq_neg[2] + 3*delta_
+            loss_TFC = (time_freq_pos - time_freq_neg[0] + delta_) + (time_freq_pos - time_freq_neg[1] + delta_) + (time_freq_pos - time_freq_neg[2] + delta_)
 
             loss = lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
 
             if train_classifier:
                 class_loss = class_loss_fn(out, y)
-                loss += class_loss
+                loss *= (1-eta_)
+                loss += eta_*class_loss
                 epoch_class += class_loss.detach().cpu()/len(x_t)
 
             epoch_time += time_loss.detach().cpu()/len(x_t)
@@ -81,14 +120,17 @@ def TFC_trainer(model, train_loader, optimizer, loss_fn, epochs, val_loader, dev
 
             if train_classifier:
                 class_loss = class_loss_fn(out, y)
+                acc = (out.detach().cpu() == y.detach().cpu()).mean()
                 loss += class_loss
                 val_epoch_class += class_loss.detach().cpu()
+                val_epoch_acc += acc
             val_epoch_time += time_loss.detach().cpu()/len(x_t)
             val_epoch_freq += freq_loss.detach().cpu()/len(x_t)
             val_epoch_time_freq += loss_TFC.detach().cpu()/len(x_t)
             val_epoch_loss += loss.detach().cpu()/len(x_t)
         
         print('\nValidation losses')
+        print('Accuarcy:', val_epoch_acc)
         print('Time consistency loss:', val_epoch_time)
         print('Frequency consistency loss:', val_epoch_freq)
         print('Time-freq consistency loss:', val_epoch_time_freq)
@@ -120,7 +162,7 @@ def TFC_trainer(model, train_loader, optimizer, loss_fn, epochs, val_loader, dev
 
 
 
-def evaluate_latent_space(model, data_loader, device):
+def evaluate_latent_space(model, data_loader, device, classifier):
     model.eval()
     for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(data_loader):
         x_t, x_f, x_t_aug, x_f_aug = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device)
@@ -136,13 +178,15 @@ def evaluate_latent_space(model, data_loader, device):
         if i == 0:
             collect_h_latent_space = h_latent_space
             collect_z_latent_space = z_latent_space
-            collect_y_out = normal_outputs[-1]
-            collect_y = y 
+            if classifier:
+                collect_y_out = normal_outputs[-1]
+                collect_y = y 
         else:
             collect_h_latent_space = np.concatenate((collect_h_latent_space, h_latent_space), axis = 1)
             collect_z_latent_space = np.concatenate((collect_z_latent_space, z_latent_space), axis = 1)
-            collect_y_out = np.concatenate((collect_y_out, normal_outputs[-1]), axis = 0)
-            collect_y = np.concatenate((collect_y, y), axis = 0)
+            if classifier:
+                collect_y_out = np.concatenate((collect_y_out, normal_outputs[-1]), axis = 0)
+                collect_y = np.concatenate((collect_y, y), axis = 0)
     
     columns_h = ['h_t', 'h_f', 'h_t_aug', 'h_f_aug'] 
     columns_z = ['z_t', 'z_f', 'z_t_aug', 'z_f_aug'] 
