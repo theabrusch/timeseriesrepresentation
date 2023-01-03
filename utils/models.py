@@ -49,7 +49,7 @@ class TFC_encoder(nn.Module):
             nn.Flatten()
             )
 
-        out_shape = conv1D_out_shape(input_size, [8,2,8,2,8,2], [1,2,1,2,1,2], [4,1,4,1,4,1])
+        out_shape = conv1D_out_shape(input_size, [8,2,8,2,8,2], [8,2,1,2,1,2], [4,1,4,1,4,1])
 
         self.TimeCrossSpace = nn.Sequential(
             nn.Linear(in_features=out_shape*128, out_features=256),

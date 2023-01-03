@@ -63,12 +63,11 @@ def permutation(x, max_seg = 8):
     seg = np.random.randint(1, max_seg, size = x.shape[0])
 
     for i, signal in enumerate(x):
-        sig_points = np.random.choice(np.arange(signal.shape[-1]), size = seg[i], replace = False)
-        sig_points = [0, *np.sort(sig_points), signal.shape[-1]-1]
-        #sig_points = [point for i, point in enumerate(sig_points[:-1]) if sig_points[i+1]-point > min_length][1:]
-        sig_split = np.split(signal.squeeze().numpy(), sig_points, axis = 0)
-        new_sig = np.concatenate(np.random.permutation(sig_split), axis = 0)
-        x[i,0,:] = torch.Tensor(new_sig)
+        sig_points = np.sort(np.random.choice(np.arange(signal.shape[-1]), size = seg[i], replace = False))
+        for j, chan in enumerate(signal.clone()):
+            sig_split = np.split(chan.numpy(), sig_points, axis = -1)
+            new_sig = np.concatenate(np.random.permutation(sig_split), axis = -1)
+            x[i,j,:] = torch.Tensor(new_sig)
 
     return x
 
