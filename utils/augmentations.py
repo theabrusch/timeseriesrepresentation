@@ -5,7 +5,7 @@ def remove_frequency(x_f, frac = 0.1):
     remove_freqs = torch.rand_like(x_f) > frac
     return x_f*remove_freqs
 
-def remove_frequency_abs_budget(x_f, E = 20):
+def remove_frequency_abs_budget(x_f, E = 1):
     remove_freqs = torch.rand(x_f.shape).argsort(2)[:,:,:E]
     return x_f.scatter(-1, remove_freqs, 0)
 
@@ -18,7 +18,7 @@ def add_frequency(x_f, alpha = 0.5, frac = 0.1):
 
     return x_f*~final_mask + new_freqs
 
-def add_frequency_abs_budget(x_f, alpha = 0.5, E = 20):
+def add_frequency_abs_budget(x_f, alpha = 0.5, E = 1):
     
     for i, sample in enumerate(x_f):
         for j, row in enumerate(sample):
@@ -52,7 +52,7 @@ def frequency_augmentation(freq_cont, keep_all = True, return_ifft = True, abs_b
 
 # Temporal augmentations
 
-def jitter(x, sigma = 0.01):
+def jitter(x, sigma = 0.8):
     return x + np.random.normal(0, sigma, size = x.shape)
 
 def scaling(x, sigma = 1.1):
