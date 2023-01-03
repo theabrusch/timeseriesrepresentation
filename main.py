@@ -24,20 +24,7 @@ def main(args):
     val_dset = TFC_Dataset(val['samples'], val['labels'])
     test_dset = TensorDataset(test['samples'], test['labels'])
     val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
-    test_loader = DataLoader(test_dset, batch_size = args.batch_size)
-
-    if args.finetune:
-        ft_train = torch.load(args.finetune_path + 'train.pt')
-        ft_val = torch.load(args.finetune_path + 'val.pt')
-        ft_test = torch.load(args.finetune_path + 'test.pt')
-        ft_TFC_dset = TFC_Dataset(ft_train['samples'], ft_train['labels'])
-        ft_train_loader = DataLoader(ft_TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=False)
-        ft_val_dset = TFC_Dataset(ft_val['samples'], ft_val['labels'])
-        ft_test_dset = TensorDataset(ft_test['samples'], ft_test['labels'])
-        ft_val_loader = DataLoader(ft_val_dset, batch_size = args.batch_size, drop_last=False)
-        ft_test_loader = DataLoader(ft_test_dset, batch_size = args.batch_size)
-
-        Classifier = ClassifierModule(ft_TFC_dset.num_classes)
+    test_loader = DataLoader(test_dset, batch_size = args.batch_size)        
     
     print('Initializing model')
     model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
@@ -67,6 +54,12 @@ def main(args):
                                          val_loader=val_loader,
                                          device= device)
 
+        outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
+        
+        with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
+            pickle.dump(outputs, file)
+
+
     plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
     plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
     
@@ -74,6 +67,15 @@ def main(args):
             pickle.dump(losses, file)
 
     if args.finetune:
+        ft_train = torch.load(args.finetune_path + 'train.pt')
+        ft_test = torch.load(args.finetune_path + 'test.pt')
+        ft_TFC_dset = TFC_Dataset(ft_train['samples'], ft_train['labels'])
+        ft_train_loader = DataLoader(ft_TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=False)
+        ft_test_dset = TensorDataset(ft_test['samples'], ft_test['labels'])
+        ft_test_loader = DataLoader(ft_test_dset, batch_size = args.batch_size)
+
+        Classifier = ClassifierModule(ft_TFC_dset.num_classes)
+
         Classifier.to(device)
         optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
         class_optimizer = Adam(Classifier.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
@@ -93,12 +95,7 @@ def main(args):
                                  device = device)
         with open('outputs/results_train_{}_test{}.pickle'.format(args.data_path.split('/')[-2], args.finetune_path.split('/')[-2]), 'wb') as file:
             pickle.dump(results, file)
-    else:
-        outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
-        
-        with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
-            pickle.dump(outputs, file)
-
+    
     return None
 
 

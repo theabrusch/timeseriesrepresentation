@@ -123,16 +123,16 @@ def TFC_trainer(model,
 
             if train_classifier:
                 class_loss = class_loss_fn(out, y)
-
-                if i == 0:
-                    y_pred = torch.argmax(out.detach().cpu(), dim = 1)
-                    y_true = y.detach().cpu()
-                else:
-                    y_pred = torch.cat((y_pred, torch.argmax(out.detach().cpu(), dim = 1)), dim = 0)
-                    y_true = torch.cat((y_true, y.detach().cpu()), dim = 0)
-
                 loss += class_loss
                 val_epoch_class += class_loss.detach().cpu()
+
+            if i == 0:
+                y_pred = torch.argmax(out.detach().cpu(), dim = 1)
+                y_true = y.detach().cpu()
+            else:
+                y_pred = torch.cat((y_pred, torch.argmax(out.detach().cpu(), dim = 1)), dim = 0)
+                y_true = torch.cat((y_true, y.detach().cpu()), dim = 0)
+                
 
             val_epoch_time += time_loss.detach().cpu()
             val_epoch_freq += freq_loss.detach().cpu()
@@ -146,12 +146,14 @@ def TFC_trainer(model,
         print('Frequency consistency loss:', val_epoch_freq/(i+1))
         print('Time-freq consistency loss:', val_epoch_time_freq/(i+1))
         print('Total loss:', val_epoch_loss/(i+1))
-        print('Classification loss:', val_epoch_class/(i+1))
+        
         val_time_loss_total.append(val_epoch_time/(i+1))
         val_freq_loss_total.append(val_epoch_freq/(i+1))
         val_time_freq_loss_total.append(val_epoch_time_freq/(i+1))
         val_loss_total.append(val_epoch_loss/(i+1))
-        val_class_loss_total.append(val_epoch_class/(i+1))
+        if train_classifier:
+            val_class_loss_total.append(val_epoch_class/(i+1))
+            print('Classification loss:', val_epoch_class/(i+1))
 
 
 
