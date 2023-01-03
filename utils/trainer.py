@@ -304,7 +304,7 @@ def finetune_model(model,
             time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
             loss_TFC = (time_freq_pos - time_freq_neg[0] + 1) + (time_freq_pos - time_freq_neg[1] + 1) + (time_freq_pos - time_freq_neg[2] + 1)
 
-            y_out = classifier(torch.cat[z_t, z_f], dim = -1)
+            y_out = classifier(torch.cat([z_t, z_f], dim = -1))
             class_loss = class_loss_fn(y_out, y)
             loss = class_loss + lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
             loss.backward()
