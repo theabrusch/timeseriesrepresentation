@@ -128,7 +128,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_classifier', type = eval, default = False)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 0)
+    parser.add_argument('--epochs', type = int, default = 1)
 
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')

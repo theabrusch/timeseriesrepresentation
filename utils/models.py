@@ -43,7 +43,7 @@ class TFC_encoder(nn.Module):
             )
         
         self.FrequencyEncoder = nn.Sequential(
-            conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 1, dropout = 0.35),
+            conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 8, dropout = 0.35),
             conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.35),
             conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.35),
             nn.Flatten()
