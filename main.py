@@ -18,13 +18,16 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     print('Loading data')
+    time = datetime.datetime.now()
     TFC_dset = TFC_Dataset(train['samples'], train['labels'])
     train_loader = DataLoader(TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=True)
 
     val_dset = TFC_Dataset(val['samples'], val['labels'])
     test_dset = TensorDataset(test['samples'], test['labels'])
     val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
-    test_loader = DataLoader(test_dset, batch_size = args.batch_size)        
+    test_loader = DataLoader(test_dset, batch_size = args.batch_size)
+    time2 = datetime.datetime.now()     
+    print('Loading the data took', time2-time, 's.')
     
     print('Initializing model')
     model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
@@ -37,6 +40,7 @@ def main(args):
 
     print('Training model')
     if args.train_TFC:
+        time = datetime.datetime.now()
         model, losses = TFC_trainer(model = model, 
                                     train_loader = train_loader, 
                                     optimizer = optimizer, 
@@ -45,16 +49,24 @@ def main(args):
                                     val_loader = val_loader, 
                                     device = device, 
                                     train_classifier = args.train_classifier)
+        time2 = datetime.datetime.now()    
+        print('Pre-training for',args.epochs,'epochs took', time2-time, 's.')
     else:
         args.train_classifier = True
+        time = datetime.datetime.now()
         model, losses = train_classifier(model=model,
                                          train_loader=train_loader,
                                          optimizer=optimizer,
                                          epochs=args.epochs,
                                          val_loader=val_loader,
                                          device= device)
-
+        time2 = datetime.datetime.now()   
+        print('Pre-training for',args.epochs,'epochs took', time2-time, 's.')
+        time = time2
         outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
+
+        time2 = datetime.datetime.now()   
+        print('Evaluating the latent space took', time2-time, 's.')
         
         with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
             pickle.dump(outputs, file)
@@ -67,6 +79,7 @@ def main(args):
             pickle.dump(losses, file)
 
     if args.finetune:
+        time = datetime.datetime.now()   
         ft_train = torch.load(args.finetune_path + 'train.pt')
         ft_test = torch.load(args.finetune_path + 'test.pt')
         ft_TFC_dset = TFC_Dataset(ft_train['samples'], ft_train['labels'])
@@ -74,12 +87,16 @@ def main(args):
         ft_test_dset = TensorDataset(ft_test['samples'], ft_test['labels'])
         ft_test_loader = DataLoader(ft_test_dset, batch_size = args.batch_size)
 
+        time2 = datetime.datetime.now()     
+        print('Loading the finetuning data took', time2-time, 's.')
+
         Classifier = ClassifierModule(ft_TFC_dset.num_classes)
 
         Classifier.to(device)
         optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
         class_optimizer = Adam(Classifier.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
+        time = datetime.datetime.now()  
         model = finetune_model(model = model, 
                                 classifier = Classifier, 
                                 data_loader = ft_train_loader, 
@@ -88,11 +105,15 @@ def main(args):
                                 class_optimizer = class_optimizer, 
                                 epochs = args.finetune_epochs, 
                                 device = device)
-        
+        time2 = datetime.datetime.now()     
+        print('Finetuning the model for', args.finetune_epochs,'epochs took', time2-time, 's.')
+        time = time2
         results = evaluate_model(model = model,
                                  classifier = Classifier, 
                                  test_loader = ft_test_loader,
                                  device = device)
+        time2 = datetime.datetime.now()     
+        print('Evaluating the finetuned model took', time2-time, 's.')
         with open('outputs/results_train_{}_test{}.pickle'.format(args.data_path.split('/')[-2], args.finetune_path.split('/')[-2]), 'wb') as file:
             pickle.dump(results, file)
     
