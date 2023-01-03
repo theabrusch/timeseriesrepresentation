@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
-    parser.add_argument('--finetune_epochs', type = int, default = 40)
+    parser.add_argument('--finetune_epochs', type = int, default = 0)
     args = parser.parse_args()
     main(args)
 

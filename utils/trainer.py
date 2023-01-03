@@ -327,9 +327,9 @@ def evaluate_model(model,
     model.eval()
     classifier.eval()
     for i, (x_t, x_f, y) in enumerate(test_loader):
-        x_t, x_f = x_t.float().to(device), x_f.float().to(device), y.long()
-        h_t, z_t, h_f, z_f = model(x_t, x_f)
-        y_out = classifier(torch.cat[z_t, z_f], dim = -1)
+        x_t, x_f, y = x_t.float().to(device), x_f.float().to(device), y.long()
+        _, z_t, _, z_f = model(x_t, x_f)
+        y_out = classifier(torch.cat([z_t, z_f], dim = -1))
 
         if i == 0:
             y_pred = torch.argmax(y_out, dim = -1).detach().cpu()
@@ -340,16 +340,16 @@ def evaluate_model(model,
     
     acc = accuracy_score(y_true, y_pred)
     prec, rec, f, _ = precision_recall_fscore_support(y_true, y_pred)
-    auroc = roc_auc_score(y_true, y_pred)
-    auprc = average_precision_score(y_true, y_pred)
+    #auroc = roc_auc_score(y_true, y_pred)
+    #auprc = average_precision_score(y_true, y_pred)
 
     results = {
         'Accuracy': acc,
         'Precision': prec,
         'Recall': rec,
-        'F1 score': f, 
-        'AUROC': auroc, 
-        'AUPRC': auprc
+        'F1 score': f
+        #'AUROC': auroc, 
+        #'AUPRC': auprc
     }
 
     for res in results.keys():
