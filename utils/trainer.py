@@ -126,12 +126,12 @@ def TFC_trainer(model,
                 loss += class_loss
                 val_epoch_class += class_loss.detach().cpu()
 
-            if i == 0:
-                y_pred = torch.argmax(out.detach().cpu(), dim = 1)
-                y_true = y.detach().cpu()
-            else:
-                y_pred = torch.cat((y_pred, torch.argmax(out.detach().cpu(), dim = 1)), dim = 0)
-                y_true = torch.cat((y_true, y.detach().cpu()), dim = 0)
+                if i == 0:
+                    y_pred = torch.argmax(out.detach().cpu(), dim = 1)
+                    y_true = y.detach().cpu()
+                else:
+                    y_pred = torch.cat((y_pred, torch.argmax(out.detach().cpu(), dim = 1)), dim = 0)
+                    y_true = torch.cat((y_true, y.detach().cpu()), dim = 0)
                 
 
             val_epoch_time += time_loss.detach().cpu()
@@ -139,9 +139,7 @@ def TFC_trainer(model,
             val_epoch_time_freq += loss_TFC.detach().cpu()
             val_epoch_loss += loss.detach().cpu()
         
-        acc = accuracy_score(y_true, y_pred)
         print('\nValidation losses')
-        print('Accuracy:', acc)
         print('Time consistency loss:', val_epoch_time/(i+1))
         print('Frequency consistency loss:', val_epoch_freq/(i+1))
         print('Time-freq consistency loss:', val_epoch_time_freq/(i+1))
@@ -153,6 +151,8 @@ def TFC_trainer(model,
         val_loss_total.append(val_epoch_loss/(i+1))
         if train_classifier:
             val_class_loss_total.append(val_epoch_class/(i+1))
+            acc = accuracy_score(y_true, y_pred)
+            print('Accuracy:', acc)
             print('Classification loss:', val_epoch_class/(i+1))
 
 
