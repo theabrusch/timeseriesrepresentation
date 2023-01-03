@@ -326,7 +326,7 @@ def evaluate_model(model,
     
     model.eval()
     classifier.eval()
-    for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(test_loader):
+    for i, (x_t, x_f, y) in enumerate(test_loader):
         x_t, x_f = x_t.float().to(device), x_f.float().to(device), y.long()
         h_t, z_t, h_f, z_f = model(x_t, x_f)
         y_out = classifier(torch.cat[z_t, z_f], dim = -1)
