@@ -23,7 +23,7 @@ def main(args):
     train_loader = DataLoader(TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=True)
 
     val_dset = TFC_Dataset(val['samples'], val['labels'])
-    test_dset = TensorDataset(test['samples'], test['labels'])
+    test_dset = TFC_Dataset(test['samples'], test['labels'], test_mode = True)
     val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
     test_loader = DataLoader(test_dset, batch_size = args.batch_size)
     time2 = datetime.datetime.now()     
