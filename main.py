@@ -84,7 +84,7 @@ def main(args):
         ft_test = torch.load(args.finetune_path + 'test.pt')
         ft_TFC_dset = TFC_Dataset(ft_train['samples'], ft_train['labels'])
         ft_train_loader = DataLoader(ft_TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=False)
-        ft_test_dset = TensorDataset(ft_test['samples'], ft_test['labels'])
+        ft_test_dset = TFC_Dataset(ft_test['samples'], ft_test['labels'], test_mode = True)
         ft_test_loader = DataLoader(ft_test_dset, batch_size = args.batch_size)
 
         time2 = datetime.datetime.now()     
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_classifier', type = eval, default = False)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 1)
+    parser.add_argument('--epochs', type = int, default = 0)
 
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
