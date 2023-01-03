@@ -1,7 +1,7 @@
 #!/bin/sh
 #BSUB -q gpuv100
 #BSUB -gpu "num=1"
-#BSUB -J train_selfsupervised_no_classifier
+#BSUB -J train_selfsupervised_
 ### number of core
 #BSUB -n 1 
 ### specify that all cores should be on the same host
@@ -12,13 +12,9 @@
 #BSUB -N 
 #BSUB -W 02:00
 ### added outputs and errors to files
-#BSUB -o logs/Output_selfsuper_no_class_%J.out
-#BSUB -e logs/Error_selfsuper_no_class_%J.err
+#BSUB -o logs/Output_selfsuper_finetuning_%J.out
+#BSUB -e logs/Error_selfsuper_finetuning_%J.err
 
 module load python3/3.9.11
 
-<<<<<<< HEAD
-python3 main.py --data_path /work3/theb/timeseries/ECG/ --epochs 50 --train_classifier False --train_TFC True --learning_rate 3e-4
-=======
-python3 main.py --data_path /work3/theb/timeseries/ECG/ --epochs 50 --train_classifier False --finetune_path /work3/theb/timeseries/EMG/ 
->>>>>>> 3635c277a677d53eb0224b8eee8bcfdbc638ac1a
+python3 main.py --data_path /work3/theb/timeseries/ECG/ --epochs 10 --train_classifier False --finetune_path /work3/theb/timeseries/EMG/ --finetune_epochs 10 --finetune True --batch_size 64
