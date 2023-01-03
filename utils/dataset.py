@@ -21,7 +21,7 @@ class TFC_Dataset(Dataset):
         freq_aug = torch.randint(high = 2, size = [1])
         time_aug = torch.randint(high = 3, size = [1])
         if not self.test_mode:
-            return self.X_t[idx], self.X_f[idx], self.X_t_aug[idx][time_aug].squeeze(1), self.X_f_aug[idx][freq_aug].squeeze(1), self.Y[idx]
+            return self.X_t[idx], self.X_f[idx], self.X_t_aug[idx][time_aug].squeeze(0), self.X_f_aug[idx][freq_aug].squeeze(0), self.Y[idx]
         else:
             return self.X_t[idx], self.X_f[idx], self.Y[idx]
     
