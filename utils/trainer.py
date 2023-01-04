@@ -404,15 +404,16 @@ def evaluate_latent_space(model, data_loader, device, classifier):
         if i == 0:
             collect_h_latent_space = h_latent_space
             collect_z_latent_space = z_latent_space
+            collect_y = y 
             if classifier:
                 collect_y_out = normal_outputs[-1]
-                collect_y = y 
+                
         else:
             collect_h_latent_space = np.concatenate((collect_h_latent_space, h_latent_space), axis = 1)
             collect_z_latent_space = np.concatenate((collect_z_latent_space, z_latent_space), axis = 1)
+            collect_y = np.concatenate((collect_y, y), axis = 0)
             if classifier:
                 collect_y_out = np.concatenate((collect_y_out, normal_outputs[-1]), axis = 0)
-                collect_y = np.concatenate((collect_y, y), axis = 0)
     
     columns_h = ['h_t', 'h_f', 'h_t_aug', 'h_f_aug'] 
     columns_z = ['z_t', 'z_f', 'z_t_aug', 'z_f_aug'] 
@@ -422,7 +423,9 @@ def evaluate_latent_space(model, data_loader, device, classifier):
         for i, (name, var) in enumerate(latent):
             outputs[name] = var
     outputs['y'] = collect_y
-    outputs['y_pred'] = collect_y_out
+    
+    if classifier:
+        outputs['y_pred'] = collect_y_out
 
     return outputs
 
