@@ -59,17 +59,26 @@ def scaling(x, sigma = 1.1):
     factor = np.random.normal(2, sigma, size = [x.shape[0], 1, 1])
     return x * factor
 
-def permutation(x, max_seg = 8):
-    seg = np.random.randint(1, max_seg, size = x.shape[0])
 
-    for i, signal in enumerate(x):
-        sig_points = np.sort(np.random.choice(np.arange(signal.shape[-1]), size = seg[i], replace = False))
-        for j, chan in enumerate(signal.clone()):
-            sig_split = np.split(chan.numpy(), sig_points, axis = -1)
-            new_sig = np.concatenate(np.random.permutation(sig_split), axis = -1)
-            x[i,j,:] = torch.Tensor(new_sig)
+def permutation(x, max_segments = 8, seg_mode="random"):
+    orig_steps = np.arange(x.shape[2])
 
-    return x
+    num_segs = np.random.randint(1, max_segments, size=(x.shape[0]))
+
+    ret = np.zeros_like(x)
+    for i, pat in enumerate(x):
+        if num_segs[i] > 1:
+            if seg_mode == "random":
+                split_points = np.random.choice(x.shape[2] - 2, num_segs[i] - 1, replace=False)
+                split_points.sort()
+                splits = np.split(orig_steps, split_points)
+            else:
+                splits = np.array_split(orig_steps, num_segs[i])
+            warp = np.concatenate(np.random.permutation(splits)).ravel()
+            ret[i] = pat[0,warp]
+        else:
+            ret[i] = pat
+    return torch.from_numpy(ret)
 
 def time_augmentation(x, keep_all = True, return_fft = True):
     x_jitter = jitter(x.clone())

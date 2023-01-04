@@ -287,9 +287,19 @@ def finetune_model(model,
     classifier.train()
     class_loss_fn = torch.nn.CrossEntropyLoss()
 
+    collect_class_loss = torch.zeros(epochs)
+    collect_loss = torch.zeros(epochs)
+    collect_time_loss = torch.zeros(epochs)
+    collect_freq_loss = torch.zeros(epochs)
+    collect_time_freq_loss = torch.zeros(epochs)
+
     for epoch in range(epochs):
         epoch_loss = 0
         epoch_class_loss = 0
+        epoch_time_loss = 0
+        epoch_freq_loss = 0
+        epoch_time_freq_loss = 0
+
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(data_loader):
             optimizer.zero_grad()
             class_optimizer.zero_grad()
@@ -310,13 +320,29 @@ def finetune_model(model,
             loss.backward()
             optimizer.step()
             class_optimizer.step()
-            epoch_loss += loss
-            epoch_class_loss += class_loss
+            epoch_loss += loss.detach().cpu()
+            epoch_class_loss += class_loss.detach().cpu()
+            epoch_time_loss += time_loss.detach().cpu()
+            epoch_freq_loss += freq_loss.detach().cpu()
+            epoch_time_freq_loss += loss_TFC.detach().cpu()
         
+        collect_class_loss[epoch] = epoch_class_loss / (i+1)
+        collect_loss[epoch] = epoch_loss / (i+1)
+        collect_time_loss[epoch] = epoch_time_loss / (i+1)
+        collect_freq_loss[epoch] = epoch_freq_loss / (i+1)
+        collect_time_freq_loss[epoch] = epoch_time_freq_loss / (i+1)
+
         print('Epoch loss:', epoch_loss/(i+1))
         print('Class. loss:', epoch_class_loss/(i+1))
     
-    return model
+    losses = {
+        'Loss': collect_loss,
+        'Class loss': collect_class_loss,
+        'Time loss': collect_time_loss,
+        'Freq loss': collect_freq_loss,
+        'Time freq loss': collect_time_freq_loss
+    }
+    return model, losses
 
     
 def evaluate_model(model,

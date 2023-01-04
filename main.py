@@ -19,10 +19,10 @@ def main(args):
     
     print('Loading data')
     time = datetime.datetime.now()
-    TFC_dset = TFC_Dataset(train['samples'], train['labels'])
+    TFC_dset = TFC_Dataset(train['samples'], train['labels'], abs_budget=args.abs_budget)
     train_loader = DataLoader(TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=True)
 
-    val_dset = TFC_Dataset(val['samples'], val['labels'])
+    val_dset = TFC_Dataset(val['samples'], val['labels'], abs_budget=args.abs_budget)
     test_dset = TFC_Dataset(test['samples'], test['labels'], test_mode = True)
     val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
     test_loader = DataLoader(test_dset, batch_size = args.batch_size)
@@ -71,6 +71,10 @@ def main(args):
         with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
             pickle.dump(outputs, file)
 
+    if args.save_model:
+        model.eval()
+        path = 'outputs/pretrained_model_classifier_{}_TFC_{}.pt'
+        torch.save(model.state_dict(), path)
 
     plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
     plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
@@ -97,14 +101,14 @@ def main(args):
         class_optimizer = Adam(Classifier.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
         time = datetime.datetime.now()  
-        model = finetune_model(model = model, 
-                                classifier = Classifier, 
-                                data_loader = ft_train_loader, 
-                                loss_fn = loss_fn, 
-                                optimizer = optimizer, 
-                                class_optimizer = class_optimizer, 
-                                epochs = args.finetune_epochs, 
-                                device = device)
+        model, losses = finetune_model(model = model, 
+                                        classifier = Classifier, 
+                                        data_loader = ft_train_loader, 
+                                        loss_fn = loss_fn, 
+                                        optimizer = optimizer, 
+                                        class_optimizer = class_optimizer, 
+                                        epochs = args.finetune_epochs, 
+                                        device = device)
         time2 = datetime.datetime.now()     
         print('Finetuning the model for', args.finetune_epochs,'epochs took', time2-time, 's.')
         time = time2
@@ -113,7 +117,9 @@ def main(args):
                                  test_loader = ft_test_loader,
                                  device = device)
         time2 = datetime.datetime.now()     
+        plot_contrastive_losses(losses, 'outputs/test_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
         print('Evaluating the finetuned model took', time2-time, 's.')
+
         with open('outputs/results_train_{}_test{}.pickle'.format(args.data_path.split('/')[-2], args.finetune_path.split('/')[-2]), 'wb') as file:
             pickle.dump(results, file)
     
@@ -123,11 +129,13 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
+    parser.add_argument('--absolute_budget', type = eval, default = False)
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--train_TFC', type = eval, default = True)
     parser.add_argument('--train_classifier', type = eval, default = False)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
+    parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--epochs', type = int, default = 1)
 
     parser.add_argument('--finetune', type = eval, default = True)

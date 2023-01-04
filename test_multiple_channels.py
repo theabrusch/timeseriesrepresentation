@@ -3,8 +3,11 @@ from utils.dataset import TFC_Dataset
 import numpy as np
 import torch
 
-x = torch.randn(size = (100, 6, 1500))
-y = torch.randn(size = (100, 1))
+data_path = 'datasets/HAR/'
+data = torch.load(data_path + 'train.pt')
+x = data['samples']
+y = data['labels']
+
 x_aug = time_augmentation(x, keep_all = False, return_fft=False)
 x_f = torch.fft.fft(x, dim = -1)
 x_f_aug = frequency_augmentation(x_f, keep_all=False, return_ifft=False)

@@ -1,9 +1,5 @@
-wget -O EMG.zip https://figshare.com/ndownloader/articles/19930250/versions/1
+wget -O Epilepsy.zip https://figshare.com/ndownloader/articles/19930199/versions/1
 
-tar -xf EMG.zip -C datasets/EMG/
+unzip  Epilepsy.zip -d datasets/Epilepsy/
 
-rm EMG.zip
-
-
-
-
+rm Epilepsy.zip
