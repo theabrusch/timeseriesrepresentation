@@ -3,7 +3,7 @@ from utils.dataset import TFC_Dataset
 import numpy as np
 import torch
 
-data_path = 'datasets/HAR/'
+data_path = 'datasets/Epilepsy/'
 data = torch.load(data_path + 'train.pt')
 x = data['samples']
 y = data['labels']

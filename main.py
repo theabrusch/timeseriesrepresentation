@@ -129,18 +129,18 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
-    parser.add_argument('--absolute_budget', type = eval, default = False)
+    parser.add_argument('--abs_budget', type = eval, default = False)
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--train_TFC', type = eval, default = True)
     parser.add_argument('--train_classifier', type = eval, default = False)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
     parser.add_argument('--save_model', type = eval, default = True)
-    parser.add_argument('--epochs', type = int, default = 1)
+    parser.add_argument('--epochs', type = int, default = 0)
 
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
-    parser.add_argument('--finetune_epochs', type = int, default = 0)
+    parser.add_argument('--finetune_epochs', type = int, default = 1)
     args = parser.parse_args()
     main(args)
 

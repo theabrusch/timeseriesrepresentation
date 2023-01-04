@@ -39,7 +39,11 @@ collected_data = {
     }
 }
 
-with open('datasets/Bonn/data.pkl', 'wb') as file:
+with open('datasets/Bonn/data.pickle', 'wb') as file:
     pickle.dump(collected_data, file)
 
 train = train_data[train_test == 1,:]
+
+
+with open('datasets/Bonn/data.pkl', 'rb') as file:
+    data = pickle.load(file)
