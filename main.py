@@ -63,7 +63,12 @@ def main(args):
         time2 = datetime.datetime.now()   
         print('Pre-training for',args.epochs,'epochs took', time2-time, 's.')
         time = time2
-        
+
+    if args.save_model:
+        model.eval()
+        path = 'outputs/pretrained_model_classifier_{}_TFC_{}.pt'
+        torch.save(model.state_dict(), path)
+    
     outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
 
     time2 = datetime.datetime.now()   
@@ -71,11 +76,6 @@ def main(args):
     
     with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
         pickle.dump(outputs, file)
-
-    if args.save_model:
-        model.eval()
-        path = 'outputs/pretrained_model_classifier_{}_TFC_{}.pt'
-        torch.save(model.state_dict(), path)
 
     plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
     plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
