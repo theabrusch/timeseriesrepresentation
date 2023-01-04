@@ -396,7 +396,7 @@ def evaluate_latent_space(model, data_loader, device, classifier):
         augmented_outputs = model(x_t_aug, x_f_aug)
 
         normal_outputs = [out.detach().cpu().numpy() for out in normal_outputs]
-        augmented_outputs = [out.detach().cpu().numpy() for out in augmented_outputs[:-1]]
+        augmented_outputs = [out.detach().cpu().numpy() for out in augmented_outputs]
 
         h_latent_space = np.concatenate((normal_outputs[0][np.newaxis,:, :], normal_outputs[2][np.newaxis, :, :], augmented_outputs[0][np.newaxis, :, :], augmented_outputs[2][np.newaxis, :, :]), axis = 0)
         z_latent_space = np.concatenate((normal_outputs[1][np.newaxis, :, :], normal_outputs[3][np.newaxis, :, :], augmented_outputs[1][np.newaxis, :, :], augmented_outputs[3][np.newaxis, :, :]), axis = 0)
