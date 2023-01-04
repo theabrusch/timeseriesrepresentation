@@ -63,13 +63,14 @@ def main(args):
         time2 = datetime.datetime.now()   
         print('Pre-training for',args.epochs,'epochs took', time2-time, 's.')
         time = time2
-        outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
-
-        time2 = datetime.datetime.now()   
-        print('Evaluating the latent space took', time2-time, 's.')
         
-        with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
-            pickle.dump(outputs, file)
+    outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
+
+    time2 = datetime.datetime.now()   
+    print('Evaluating the latent space took', time2-time, 's.')
+    
+    with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
+        pickle.dump(outputs, file)
 
     if args.save_model:
         model.eval()
