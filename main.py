@@ -11,16 +11,16 @@ import datetime
 
 
 def main(args):
+    train = torch.load(args.data_path + 'train.pt')
+    TFC_dset = TFC_Dataset(train['samples'], train['labels'], abs_budget=args.abs_budget)
 
     if args.pretrain:
-        train = torch.load(args.data_path + 'train.pt')
         val = torch.load(args.data_path + 'val.pt')
         test = torch.load(args.data_path + 'test.pt')
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         print('Loading data')
         time = datetime.datetime.now()
-        TFC_dset = TFC_Dataset(train['samples'], train['labels'], abs_budget=args.abs_budget)
         train_loader = DataLoader(TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=True)
 
         val_dset = TFC_Dataset(val['samples'], val['labels'], abs_budget=args.abs_budget)
