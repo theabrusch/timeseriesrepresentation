@@ -281,6 +281,7 @@ def finetune_model(model,
                   class_optimizer, 
                   epochs, 
                   device, 
+                  delta = 0.5, 
                   lambda_ = 0.2):
 
     model.train()
@@ -316,7 +317,7 @@ def finetune_model(model,
 
             y_out = classifier(torch.cat([z_t, z_f], dim = -1))
             class_loss = class_loss_fn(y_out, y)
-            loss = class_loss + lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
+            loss = delta*class_loss + (1-delta_)*(lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC)
             loss.backward()
             optimizer.step()
             class_optimizer.step()

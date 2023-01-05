@@ -88,6 +88,7 @@ def main(args):
             pretrained_path = args.pretrained_model_path
         else:
             pretrained_path = 'outputs/pretrained_model_classifier_{}_TFC_{}_stride_{}.pt'.format(args.train_classifier, args.train_TFC, args.stride)
+
         model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
                             num_classes = TFC_dset.num_classes, stride = args.stride, classify = args.train_classifier)
         model.load_state_dict(pretrained_path)
@@ -118,7 +119,8 @@ def main(args):
                                         optimizer = optimizer, 
                                         class_optimizer = class_optimizer, 
                                         epochs = args.finetune_epochs, 
-                                        device = device)
+                                        device = device,
+                                        delta = args.delta)
         time2 = datetime.datetime.now()     
         print('Finetuning the model for', args.finetune_epochs,'epochs took', time2-time, 's.')
         time = time2
@@ -153,6 +155,7 @@ if __name__ == '__main__':
     parser.add_argument('--abs_budget', type = eval, default = False)
     parser.add_argument('--stride', type = int, default = 8)
     # optimizer arguments
+    parser.add_argument('--delta', type = float, default = 0.5)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
     parser.add_argument('--epochs', type = int, default = 0)
