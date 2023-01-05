@@ -91,7 +91,7 @@ def main(args):
 
         model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
                             num_classes = TFC_dset.num_classes, stride = args.stride, classify = args.train_classifier)
-        model.load_state_dict(pretrained_path)
+        model.load_state_dict(torch.load(pretrained_path))
 
     if args.finetune:
         time = datetime.datetime.now()   
