@@ -13,11 +13,11 @@ import datetime
 def main(args):
     train = torch.load(args.data_path + 'train.pt')
     TFC_dset = TFC_Dataset(train['samples'], train['labels'], abs_budget=args.abs_budget)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if args.pretrain:
         val = torch.load(args.data_path + 'val.pt')
         test = torch.load(args.data_path + 'test.pt')
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         print('Loading data')
         time = datetime.datetime.now()
@@ -92,6 +92,7 @@ def main(args):
         model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
                             num_classes = TFC_dset.num_classes, stride = args.stride, classify = args.train_classifier)
         model.load_state_dict(torch.load(pretrained_path))
+        model.to(device=device)
 
     if args.finetune:
         time = datetime.datetime.now()   
