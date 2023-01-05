@@ -12,76 +12,85 @@ import datetime
 
 def main(args):
 
-    train = torch.load(args.data_path + 'train.pt')
-    val = torch.load(args.data_path + 'val.pt')
-    test = torch.load(args.data_path + 'test.pt')
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    print('Loading data')
-    time = datetime.datetime.now()
-    TFC_dset = TFC_Dataset(train['samples'], train['labels'], abs_budget=args.abs_budget)
-    train_loader = DataLoader(TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=True)
-
-    val_dset = TFC_Dataset(val['samples'], val['labels'], abs_budget=args.abs_budget)
-    test_dset = TFC_Dataset(test['samples'], test['labels'], test_mode = True)
-    val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
-    test_loader = DataLoader(test_dset, batch_size = args.batch_size)
-    time2 = datetime.datetime.now()     
-    print('Loading the data took', time2-time, 's.')
-    
-    print('Initializing model')
-    model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
-                        num_classes = TFC_dset.num_classes, classify = args.train_classifier)
-    model.to(device)
-
-    optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
-
-    loss_fn = ContrastiveLoss(tau = 0.2, device = device)
-
-    print('Training model')
-    if args.train_TFC:
+    if args.pretrain:
+        train = torch.load(args.data_path + 'train.pt')
+        val = torch.load(args.data_path + 'val.pt')
+        test = torch.load(args.data_path + 'test.pt')
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        print('Loading data')
         time = datetime.datetime.now()
-        model, losses = TFC_trainer(model = model, 
-                                    train_loader = train_loader, 
-                                    optimizer = optimizer, 
-                                    loss_fn = loss_fn, 
-                                    epochs = args.epochs, 
-                                    val_loader = val_loader, 
-                                    device = device, 
-                                    train_classifier = args.train_classifier)
-        time2 = datetime.datetime.now()    
-        print('Pre-training for',args.epochs,'epochs took', time2-time, 's.')
-    else:
-        args.train_classifier = True
-        time = datetime.datetime.now()
-        model, losses = train_classifier(model=model,
-                                         train_loader=train_loader,
-                                         optimizer=optimizer,
-                                         epochs=args.epochs,
-                                         val_loader=val_loader,
-                                         device= device)
+        TFC_dset = TFC_Dataset(train['samples'], train['labels'], abs_budget=args.abs_budget)
+        train_loader = DataLoader(TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=True)
+
+        val_dset = TFC_Dataset(val['samples'], val['labels'], abs_budget=args.abs_budget)
+        test_dset = TFC_Dataset(test['samples'], test['labels'], test_mode = True)
+        val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
+        test_loader = DataLoader(test_dset, batch_size = args.batch_size)
+        time2 = datetime.datetime.now()     
+        print('Loading the data took', time2-time, 's.')
+        
+        print('Initializing model')
+        model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
+                            num_classes = TFC_dset.num_classes, stride = args.stride, classify = args.train_classifier)
+        model.to(device)
+
+        optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
+
+        loss_fn = ContrastiveLoss(tau = 0.2, device = device)
+
+        print('Training model')
+        if args.train_TFC:
+            time = datetime.datetime.now()
+            model, losses = TFC_trainer(model = model, 
+                                        train_loader = train_loader, 
+                                        optimizer = optimizer, 
+                                        loss_fn = loss_fn, 
+                                        epochs = args.epochs, 
+                                        val_loader = val_loader, 
+                                        device = device, 
+                                        train_classifier = args.train_classifier)
+            time2 = datetime.datetime.now()    
+            print('Pre-training for',args.epochs,'epochs took', time2-time, 's.')
+        else:
+            args.train_classifier = True
+            time = datetime.datetime.now()
+            model, losses = train_classifier(model=model,
+                                            train_loader=train_loader,
+                                            optimizer=optimizer,
+                                            epochs=args.epochs,
+                                            val_loader=val_loader,
+                                            device= device)
+            time2 = datetime.datetime.now()   
+            print('Pre-training for',args.epochs,'epochs took', time2-time, 's.')
+            time = time2
+
+        if args.save_model:
+            model.eval()
+            path = 'outputs/pretrained_model_classifier_{}_TFC_{}_stride_{}.pt'.format(args.train_classifier, args.train_TFC, args.stride)
+            torch.save(model.state_dict(), path)
+        
+        outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
+
         time2 = datetime.datetime.now()   
-        print('Pre-training for',args.epochs,'epochs took', time2-time, 's.')
-        time = time2
+        print('Evaluating the latent space took', time2-time, 's.')
+        
+        with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
+            pickle.dump(outputs, file)
 
-    if args.save_model:
-        model.eval()
-        path = 'outputs/pretrained_model_classifier_{}_TFC_{}.pt'
-        torch.save(model.state_dict(), path)
-    
-    outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
-
-    time2 = datetime.datetime.now()   
-    print('Evaluating the latent space took', time2-time, 's.')
-    
-    with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
-        pickle.dump(outputs, file)
-
-    plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
-    plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
-    
-    with open('outputs/losses_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
-            pickle.dump(losses, file)
+        plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
+        plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
+        
+        with open('outputs/losses_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
+                pickle.dump(losses, file)
+    else:
+        if args.pretrained_model_path is not None:
+            pretrained_path = args.pretrained_model_path
+        else:
+            pretrained_path = 'outputs/pretrained_model_classifier_{}_TFC_{}_stride_{}.pt'.format(args.train_classifier, args.train_TFC, args.stride)
+        model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
+                            num_classes = TFC_dset.num_classes, stride = args.stride, classify = args.train_classifier)
+        model.load_state_dict(pretrained_path)
 
     if args.finetune:
         time = datetime.datetime.now()   
@@ -129,18 +138,24 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
-    parser.add_argument('--abs_budget', type = eval, default = False)
-    parser.add_argument('--batch_size', type = int, default = 128)
+    # training arguments
     parser.add_argument('--train_TFC', type = eval, default = True)
     parser.add_argument('--train_classifier', type = eval, default = False)
+    parser.add_argument('--save_model', type = eval, default = True)
+    parser.add_argument('--finetune', type = eval, default = True)
+    parser.add_argument('--pretrain', type = eval, default = True)
+    parser.add_argument('--pretrained_model_path', type = str, default = None)
+    # data arguments
+    parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
+    parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
+    parser.add_argument('--batch_size', type = int, default = 128)
+    # augmentation arguments
+    parser.add_argument('--abs_budget', type = eval, default = False)
+    parser.add_argument('--stride', type = int, default = 8)
+    # optimizer arguments
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--epochs', type = int, default = 0)
-
-    parser.add_argument('--finetune', type = eval, default = True)
-    parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
     parser.add_argument('--finetune_epochs', type = int, default = 1)
     args = parser.parse_args()
     main(args)

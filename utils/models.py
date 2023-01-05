@@ -31,25 +31,25 @@ class PrintShape(nn.Module):
         return x
 
 class TFC_encoder(nn.Module):
-    def __init__(self, in_channels, input_size, num_classes = None, classify = True):
+    def __init__(self, in_channels, input_size, stride = 1, num_classes = None, classify = True):
         super().__init__()
         self.classify = classify
 
         self.TimeEncoder = nn.Sequential(
-            conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 8, dropout = 0.35),
-            conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.35),
-            conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.35),
+            conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = 0.35),
+            conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.),
+            conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.),
             nn.Flatten()
             )
         
         self.FrequencyEncoder = nn.Sequential(
-            conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 8, dropout = 0.35),
-            conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.35),
-            conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.35),
+            conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = 0.35),
+            conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.),
+            conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.),
             nn.Flatten()
             )
 
-        out_shape = conv1D_out_shape(input_size, [8,2,8,2,8,2], [8,2,1,2,1,2], [4,1,4,1,4,1])
+        out_shape = conv1D_out_shape(input_size, [8,2,8,2,8,2], [stride,2,1,2,1,2], [4,1,4,1,4,1])
 
         self.TimeCrossSpace = nn.Sequential(
             nn.Linear(in_features=out_shape*128, out_features=256),
