@@ -93,6 +93,8 @@ def main(args):
                             num_classes = TFC_dset.num_classes, stride = args.stride, classify = args.train_classifier)
         model.load_state_dict(torch.load(pretrained_path))
         model.to(device=device)
+        loss_fn = ContrastiveLoss(tau = 0.2, device = device)
+
 
     if args.finetune:
         time = datetime.datetime.now()   
