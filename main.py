@@ -2,7 +2,7 @@ import torch
 import argparse
 from torch.utils.data import DataLoader, TensorDataset
 from utils.trainer import TFC_trainer, train_classifier, evaluate_latent_space, finetune_model, evaluate_model
-from utils.models import TFC_encoder, ContrastiveLoss, ClassifierModule
+from utils.models import TFC_encoder, ContrastiveLoss, ContrastiveLoss2, ClassifierModule
 from utils.dataset import TFC_Dataset
 from torch.optim import Adam
 from utils.plot_functions import plot_contrastive_losses
@@ -37,7 +37,10 @@ def main(args):
 
         optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
-        loss_fn = ContrastiveLoss(tau = 0.2, device = device)
+        if args.loss == 'poly':
+            loss_fn = ContrastiveLoss(tau = 0.2, device = device)
+        else:
+            loss_fn = ContrastiveLoss2(tau = 0.2, device = device)
 
         print('Training model')
         if args.train_TFC:
@@ -67,10 +70,13 @@ def main(args):
 
         if args.save_model:
             model.eval()
-            path = 'outputs/pretrained_model_classifier_{}_TFC_{}_stride_{}.pt'.format(args.train_classifier, args.train_TFC, args.stride)
+            path = 'outputs/pretrained_model_classifier_{}_TFC_{}_stride_{}_loss_{}.pt'.format(args.train_classifier, args.train_TFC, args.stride, args.loss)
             torch.save(model.state_dict(), path)
-        
-        outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
+        plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
+        plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
+
+        if args.evaluate_latent_space:
+            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
 
         time2 = datetime.datetime.now()   
         print('Evaluating the latent space took', time2-time, 's.')
@@ -78,8 +84,7 @@ def main(args):
         with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
             pickle.dump(outputs, file)
 
-        plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
-        plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
+        
         
         with open('outputs/losses_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
                 pickle.dump(losses, file)
@@ -87,13 +92,16 @@ def main(args):
         if args.pretrained_model_path is not None:
             pretrained_path = args.pretrained_model_path
         else:
-            pretrained_path = 'outputs/pretrained_model_classifier_{}_TFC_{}_stride_{}.pt'.format(args.train_classifier, args.train_TFC, args.stride)
+            pretrained_path = path = 'outputs/pretrained_model_classifier_{}_TFC_{}_stride_{}_loss_{}.pt'.format(args.train_classifier, args.train_TFC, args.stride, args.loss)
 
         model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
                             num_classes = TFC_dset.num_classes, stride = args.stride, classify = args.train_classifier)
         model.load_state_dict(torch.load(pretrained_path))
         model.to(device=device)
-        loss_fn = ContrastiveLoss(tau = 0.2, device = device)
+        if args.loss == 'poly':
+            loss_fn = ContrastiveLoss(tau = 0.2, device = device)
+        else:
+            loss_fn = ContrastiveLoss2(tau = 0.2, device = device)
 
 
     if args.finetune:
@@ -147,9 +155,10 @@ if __name__ == '__main__':
     # training arguments
     parser.add_argument('--train_TFC', type = eval, default = True)
     parser.add_argument('--train_classifier', type = eval, default = False)
+    parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
-    parser.add_argument('--pretrain', type = eval, default = False)
+    parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
@@ -157,8 +166,9 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type = int, default = 128)
     # augmentation arguments
     parser.add_argument('--abs_budget', type = eval, default = False)
-    parser.add_argument('--stride', type = int, default = 8)
+    parser.add_argument('--stride', type = int, default = 4)
     # optimizer arguments
+    parser.add_argument('--loss', type = str, default = 'poly')
     parser.add_argument('--delta', type = float, default = 0.5)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
