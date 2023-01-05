@@ -148,7 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_classifier', type = eval, default = False)
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
-    parser.add_argument('--pretrain', type = eval, default = True)
+    parser.add_argument('--pretrain', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
