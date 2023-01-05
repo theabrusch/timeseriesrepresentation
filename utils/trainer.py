@@ -282,7 +282,7 @@ def finetune_model(model,
                   epochs, 
                   device, 
                   delta = 0.5, 
-                  lambda_ = 0.2):
+                  lambda_ = 0.5):
 
     model.train()
     classifier.train()
