@@ -106,6 +106,7 @@ def main(args):
             loss_fn = ContrastiveLoss2(tau = 0.2, device = device)
 
     if args.evaluate_latent_space:
+            val = torch.load(args.data_path + 'val.pt')
             val_dset = TFC_Dataset(val['samples'], val['labels'], abs_budget=args.abs_budget)
             val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
             outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, save_h = False)
