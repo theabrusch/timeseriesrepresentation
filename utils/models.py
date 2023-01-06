@@ -99,9 +99,9 @@ class ClassifierModule(nn.Module):
 
 class ContrastiveLoss(nn.Module):
 
-    def __init__(self, device, temperature, use_cosine_similarity = True):
+    def __init__(self, device, tau, use_cosine_similarity = True):
         super(ContrastiveLoss, self).__init__()
-        self.temperature = temperature
+        self.temperature = tau
         self.device = device
         self.softmax = torch.nn.Softmax(dim=-1)
         self.mask_samples_from_same_repr = self._get_correlated_mask().type(torch.bool)
