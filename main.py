@@ -143,7 +143,7 @@ def main(args):
                                         class_optimizer = class_optimizer, 
                                         epochs = args.finetune_epochs, 
                                         device = device,
-                                        lambda_ = 0.8, 
+                                        lambda_ = 0.2, 
                                         delta = args.delta)
         time2 = datetime.datetime.now()     
         print('Finetuning the model for', args.finetune_epochs,'epochs took', time2-time, 's.')
