@@ -7,6 +7,7 @@ from utils.dataset import TFC_Dataset
 from torch.optim import Adam
 from utils.plot_functions import plot_contrastive_losses
 import pickle
+import os
 import datetime
 
 
@@ -14,6 +15,18 @@ def main(args):
     train = torch.load(args.data_path + 'train.pt')
     TFC_dset = TFC_Dataset(train['samples'], train['labels'], abs_budget=args.abs_budget)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    output_path = f'{args.output_path}/classifier_{args.train_classifier}_TFC_{args.train_TFC}_abs_budget_{args.abs_budget}_stride_{args.stride}_loss_{args.loss}'
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    elif len(os.listdir(output_path)) == 0:
+        output_path = output_path
+    else:
+        i = 1
+        while os.path.exists(output_path + f'_v_{i}'):
+            i+=1
+        output_path = output_path + f'_v_{i}'
+        os.makedirs(output_path)
 
     if args.pretrain:
         val = torch.load(args.data_path + 'val.pt')
@@ -70,29 +83,28 @@ def main(args):
 
         if args.save_model:
             model.eval()
-            path = 'outputs/pretrained_model_classifier_{}_TFC_{}_stride_{}_loss_{}.pt'.format(args.train_classifier, args.train_TFC, args.stride, args.loss)
+            path = f'{output_path}/pretrained_model.pt'
             torch.save(model.state_dict(), path)
-        plot_contrastive_losses(losses['train'], 'outputs/training_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
-        plot_contrastive_losses(losses['val'], 'outputs/validation_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
+        plot_contrastive_losses(losses['train'], f'{output_path}/pretrain_train_losses.png')
+        plot_contrastive_losses(losses['val'], f'{output_path}/pretrain_val_losses.png')
 
         if args.evaluate_latent_space:
             outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
 
-        time2 = datetime.datetime.now()   
-        print('Evaluating the latent space took', time2-time, 's.')
-        
-        with open('outputs/latents_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
-            pickle.dump(outputs, file)
+            time2 = datetime.datetime.now()   
+            print('Evaluating the latent space took', time2-time, 's.')
+            
+            with open(f'{output_path}/pretrain_latent_variables.pickle', 'wb') as file:
+                pickle.dump(outputs, file)
 
         
-        
-        with open('outputs/losses_train_classifier_{}_TFC_{}.pickle'.format(args.train_classifier, args.train_TFC), 'wb') as file:
+        with open(f'{output_path}/pretrain_losses.pickle', 'wb') as file:
                 pickle.dump(losses, file)
     else:
         if args.pretrained_model_path is not None:
             pretrained_path = args.pretrained_model_path
         else:
-            pretrained_path = path = 'outputs/pretrained_model_classifier_{}_TFC_{}_stride_{}_loss_{}.pt'.format(args.train_classifier, args.train_TFC, args.stride, args.loss)
+            pretrained_path = f'{output_path}/pretrained_model.pt'
 
         model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
                             num_classes = TFC_dset.num_classes, stride = args.stride, classify = args.train_classifier)
@@ -141,10 +153,10 @@ def main(args):
                                  test_loader = ft_test_loader,
                                  device = device)
         time2 = datetime.datetime.now()     
-        plot_contrastive_losses(losses, 'outputs/test_outputs_train_classifier_{}_TFC_{}.png'.format(args.train_classifier, args.train_TFC))
+        plot_contrastive_losses(losses, f'{output_path}/finetune_train_loss.png')
         print('Evaluating the finetuned model took', time2-time, 's.')
 
-        with open('outputs/results_train_{}_test{}.pickle'.format(args.data_path.split('/')[-2], args.finetune_path.split('/')[-2]), 'wb') as file:
+        with open(f'{output_path}/finetune_results.pt', 'wb') as file:
             pickle.dump(results, file)
     
     return None
@@ -164,6 +176,8 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
     parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
     parser.add_argument('--batch_size', type = int, default = 128)
+    parser.add_argument('--output_path', type = str, default = 'outputs')
+
     # augmentation arguments
     parser.add_argument('--abs_budget', type = eval, default = False)
     parser.add_argument('--stride', type = int, default = 4)
