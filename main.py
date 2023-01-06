@@ -88,16 +88,6 @@ def main(args):
         plot_contrastive_losses(losses['train'], f'{output_path}/pretrain_train_losses.png')
         plot_contrastive_losses(losses['val'], f'{output_path}/pretrain_val_losses.png')
 
-        if args.evaluate_latent_space:
-            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, save_h = False)
-
-            time2 = datetime.datetime.now()   
-            print('Evaluating the latent space took', time2-time, 's.')
-            
-            with open(f'{output_path}/pretrain_latent_variables.pickle', 'wb') as file:
-                pickle.dump(outputs, file)
-
-        
         with open(f'{output_path}/pretrain_losses.pickle', 'wb') as file:
                 pickle.dump(losses, file)
     else:
@@ -114,7 +104,17 @@ def main(args):
             loss_fn = ContrastiveLoss(tau = 0.2, device = device)
         else:
             loss_fn = ContrastiveLoss2(tau = 0.2, device = device)
+            
+    if args.evaluate_latent_space:
+            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, save_h = False)
 
+            time2 = datetime.datetime.now()   
+            print('Evaluating the latent space took', time2-time, 's.')
+            
+            with open(f'{output_path}/pretrain_latent_variables.pickle', 'wb') as file:
+                pickle.dump(outputs, file)
+
+        
 
     if args.finetune:
         time = datetime.datetime.now()   
