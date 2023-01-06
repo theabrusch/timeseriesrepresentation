@@ -89,7 +89,7 @@ def main(args):
         plot_contrastive_losses(losses['val'], f'{output_path}/pretrain_val_losses.png')
 
         if args.evaluate_latent_space:
-            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier)
+            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, save_h = False)
 
             time2 = datetime.datetime.now()   
             print('Evaluating the latent space took', time2-time, 's.')
@@ -120,7 +120,7 @@ def main(args):
         time = datetime.datetime.now()   
         ft_train = torch.load(args.finetune_path + 'train.pt')
         ft_test = torch.load(args.finetune_path + 'test.pt')
-        ft_TFC_dset = TFC_Dataset(ft_train['samples'], ft_train['labels'])
+        ft_TFC_dset = TFC_Dataset(ft_train['samples'], ft_train['labels'], fine_tune_mode=True)
         ft_train_loader = DataLoader(ft_TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=False)
         ft_test_dset = TFC_Dataset(ft_test['samples'], ft_test['labels'], test_mode = True)
         ft_test_loader = DataLoader(ft_test_dset, batch_size = args.batch_size)
@@ -156,7 +156,7 @@ def main(args):
         plot_contrastive_losses(losses, f'{output_path}/finetune_train_loss.png')
         print('Evaluating the finetuned model took', time2-time, 's.')
 
-        with open(f'{output_path}/finetune_results.pt', 'wb') as file:
+        with open(f'{output_path}/finetune_results.pickle', 'wb') as file:
             pickle.dump(results, file)
     
     return None
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     # training arguments
     parser.add_argument('--train_TFC', type = eval, default = True)
     parser.add_argument('--train_classifier', type = eval, default = False)
-    parser.add_argument('--evaluate_latent_space', type = eval, default = False)
+    parser.add_argument('--evaluate_latent_space', type = eval, default = True)
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--pretrain', type = eval, default = True)

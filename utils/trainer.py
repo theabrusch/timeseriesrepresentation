@@ -389,7 +389,7 @@ def evaluate_model(model,
 
 
 
-def evaluate_latent_space(model, data_loader, device, classifier):
+def evaluate_latent_space(model, data_loader, device, classifier, save_h = True):
     model.eval()
     for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(data_loader):
         x_t, x_f, x_t_aug, x_f_aug = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device)
@@ -403,16 +403,20 @@ def evaluate_latent_space(model, data_loader, device, classifier):
         z_latent_space = np.concatenate((normal_outputs[1][np.newaxis, :, :], normal_outputs[3][np.newaxis, :, :], augmented_outputs[1][np.newaxis, :, :], augmented_outputs[3][np.newaxis, :, :]), axis = 0)
 
         if i == 0:
-            collect_h_latent_space = h_latent_space
+            if save_h:
+                collect_h_latent_space = h_latent_space
             collect_z_latent_space = z_latent_space
             collect_y = y 
+            collect_x_t = x_t.detach().cpu().numpy()
             if classifier:
                 collect_y_out = normal_outputs[-1]
                 
         else:
-            collect_h_latent_space = np.concatenate((collect_h_latent_space, h_latent_space), axis = 1)
+            if save_h:
+                collect_h_latent_space = np.concatenate((collect_h_latent_space, h_latent_space), axis = 1)
             collect_z_latent_space = np.concatenate((collect_z_latent_space, z_latent_space), axis = 1)
             collect_y = np.concatenate((collect_y, y), axis = 0)
+            collect_x_t = np.concatenate((collect_x_t, x_t.detach().cpu().numpy()), axis = 0)
             if classifier:
                 collect_y_out = np.concatenate((collect_y_out, normal_outputs[-1]), axis = 0)
     
@@ -420,10 +424,17 @@ def evaluate_latent_space(model, data_loader, device, classifier):
     columns_z = ['z_t', 'z_f', 'z_t_aug', 'z_f_aug'] 
     outputs = dict()
 
-    for latent in [zip(columns_h, collect_h_latent_space), zip(columns_z, collect_z_latent_space)]:
+    if save_h:
+        output_columns = [zip(columns_h, collect_h_latent_space), zip(columns_z, collect_z_latent_space)]
+    else:
+        output_columns = [zip(columns_z, collect_z_latent_space)]
+
+    for latent in output_columns:
         for i, (name, var) in enumerate(latent):
             outputs[name] = var
+            
     outputs['y'] = collect_y
+    outputs['x'] = collect_x_t
     
     if classifier:
         outputs['y_pred'] = collect_y_out
