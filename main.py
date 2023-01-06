@@ -26,7 +26,7 @@ def main(args):
         while os.path.exists(output_path + f'_v_{i}') and not len(os.listdir(output_path + f'_v_{i}')) == 0:
             i+=1
         output_path = output_path + f'_v_{i}'
-        os.makedirs(output_path)
+        os.makedirs(output_path, exist_ok=True)
 
     if args.pretrain:
         val = torch.load(args.data_path + 'val.pt')
