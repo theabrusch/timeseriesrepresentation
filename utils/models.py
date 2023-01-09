@@ -77,6 +77,7 @@ class TFC_encoder(nn.Module):
         z_t = self.TimeCrossSpace(h_t)
         h_f = self.FrequencyEncoder(x_f)
         z_f = self.FreqCrossSpace(h_f)
+        
         if self.classify:
             out = self.classifier(torch.cat([z_t, z_f], dim = -1))
             return h_t, z_t, h_f, z_f, out

@@ -72,13 +72,12 @@ def TFC_trainer(model,
             time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
             loss_TFC = (time_freq_pos - time_freq_neg[0] + delta_) + (time_freq_pos - time_freq_neg[1] + delta_) + (time_freq_pos - time_freq_neg[2] + delta_)
 
-            loss = lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
-
             if train_classifier:
                 class_loss = class_loss_fn(out, y)
-                loss *= (1-eta_)
-                loss += eta_*class_loss
+                loss = class_loss + lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
                 epoch_class += class_loss.detach().cpu()
+            else:
+                loss = lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
 
             epoch_time += time_loss.detach().cpu()
             epoch_freq += freq_loss.detach().cpu()
