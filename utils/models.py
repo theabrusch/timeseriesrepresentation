@@ -172,12 +172,17 @@ class ContrastiveLoss(nn.Module):
 
 
 class ContrastiveLoss2(nn.Module):
-    def __init__(self, tau, device):
+    def __init__(self, tau, device, reduce):
         super().__init__()
         self.tau = tau
         self.device = device
         self.cosine_similarity = nn.CosineSimilarity(dim = -1)
-        self.criterion = nn.CrossEntropyLoss(reduction = 'sum')
+        self.reduce = reduce
+        if self.reduce:
+            reduction = 'sum'
+        else:
+            reduction = 'none'
+        self.criterion = nn.CrossEntropyLoss(reduction = reduction)
 
 
     def forward(self, z_orig, z_augment, reduce = True):
@@ -211,13 +216,9 @@ class ContrastiveLoss2(nn.Module):
         # other samples on the remaining indices - i.e. force the 0th "class"
         # to be large and all other to be smal
         labels = torch.zeros(2*batchsize).to(self.device).long()
-        
+        loss = self.criterion(logits, labels) 
         if reduce:
-            loss = self.criterion(logits, labels) / (2*batchsize)
-        else:
-            criterion = nn.CrossEntropyLoss(reduction = 'none')
-            loss = criterion(logits, labels)
-
+            loss = loss / (2*batchsize)
         return loss 
         
 

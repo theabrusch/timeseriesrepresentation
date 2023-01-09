@@ -395,11 +395,13 @@ def evaluate_latent_space(model, data_loader, device, classifier, loss_fn, save_
         x_t, x_f, x_t_aug, x_f_aug = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device)
         normal_outputs = model(x_t, x_f)
         augmented_outputs = model(x_t_aug, x_f_aug)
-        time_loss = loss_fn(normal_outputs[0], augmented_outputs[0])
-        freq_loss = loss_fn(normal_outputs[2], augmented_outputs[2])
+        time_loss = loss_fn(normal_outputs[0], augmented_outputs[0]).unsqueeze(1)
+        freq_loss = loss_fn(normal_outputs[2], augmented_outputs[2]).unsqueeze(1)
 
-        time_freq_pos = loss_fn(normal_outputs[1], normal_outputs[3])
-        time_freq_neg  = loss_fn(normal_outputs[1], augmented_outputs[3]), loss_fn(augmented_outputs[1], normal_outputs[3]), loss_fn(augmented_outputs[1], augmented_outputs[3])
+        time_freq_pos = loss_fn(normal_outputs[1], normal_outputs[3]).unsqueeze(1)
+        time_freq_neg = []
+        for pair in [[normal_outputs[1], augmented_outputs[3]], [augmented_outputs[1], normal_outputs[3]], [augmented_outputs[1], augmented_outputs[3]]]:
+            time_freq_neg.append(loss_fn(*pair).unsqueeze(1))
 
         normal_outputs = [out.detach().cpu().numpy() for out in normal_outputs]
         augmented_outputs = [out.detach().cpu().numpy() for out in augmented_outputs]

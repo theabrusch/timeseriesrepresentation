@@ -112,7 +112,7 @@ def main(args):
             val = torch.load(args.data_path + 'val.pt')
             val_dset = TFC_Dataset(val['samples'], val['labels'], abs_budget=args.abs_budget)
             val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
-            loss_fn = ContrastiveLoss2(tau = 0.2, device = device)
+            loss_fn = ContrastiveLoss2(tau = 0.2, device = device, reduce = False)
             outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, loss_fn = loss_fn, save_h = False)
 
             time2 = datetime.datetime.now()   
@@ -177,14 +177,14 @@ if __name__ == '__main__':
     parser.add_argument('--evaluate_latent_space', type = eval, default = True)
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
-    parser.add_argument('--pretrain', type = eval, default = True)
+    parser.add_argument('--pretrain', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
     parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--output_path', type = str, default = 'outputs')
-    parser.add_argument('--overwrite', type = eval, default = False)
+    parser.add_argument('--overwrite', type = eval, default = True)
 
     # augmentation arguments
     parser.add_argument('--abs_budget', type = eval, default = False)
