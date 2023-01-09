@@ -389,12 +389,17 @@ def evaluate_model(model,
 
 
 
-def evaluate_latent_space(model, data_loader, device, classifier, save_h = True):
+def evaluate_latent_space(model, data_loader, device, classifier, loss_fn, save_h = True):
     model.eval()
     for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(data_loader):
         x_t, x_f, x_t_aug, x_f_aug = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device)
         normal_outputs = model(x_t, x_f)
         augmented_outputs = model(x_t_aug, x_f_aug)
+        time_loss = loss_fn(normal_outputs[0], augmented_outputs[0])
+        freq_loss = loss_fn(normal_outputs[2], augmented_outputs[2])
+
+        time_freq_pos = loss_fn(normal_outputs[1], normal_outputs[3])
+        time_freq_neg  = loss_fn(normal_outputs[1], augmented_outputs[3]), loss_fn(augmented_outputs[1], normal_outputs[3]), loss_fn(augmented_outputs[1], augmented_outputs[3])
 
         normal_outputs = [out.detach().cpu().numpy() for out in normal_outputs]
         augmented_outputs = [out.detach().cpu().numpy() for out in augmented_outputs]
@@ -408,6 +413,8 @@ def evaluate_latent_space(model, data_loader, device, classifier, save_h = True)
             collect_z_latent_space = z_latent_space
             collect_y = y 
             collect_x_t = x_t.detach().cpu().numpy()
+            collect_h_losses = torch.cat((time_loss, freq_loss), dim = 1).detach().cpu().numpy()
+            collect_z_losses = torch.cat((time_freq_pos,0* time_freq_neg), dim = 1).detach().cpu().numpy()
             if classifier:
                 collect_y_out = normal_outputs[-1]
                 
@@ -417,6 +424,8 @@ def evaluate_latent_space(model, data_loader, device, classifier, save_h = True)
             collect_z_latent_space = np.concatenate((collect_z_latent_space, z_latent_space), axis = 1)
             collect_y = np.concatenate((collect_y, y), axis = 0)
             collect_x_t = np.concatenate((collect_x_t, x_t.detach().cpu().numpy()), axis = 0)
+            collect_h_losses = np.concatenate((collect_h_losses, torch.cat((time_loss, freq_loss), dim = 1).detach().cpu().numpy()), axis = 0)
+            collect_z_losses = np.concatenate((collect_z_losses, torch.cat((time_freq_pos,0* time_freq_neg), dim = 1).detach().cpu().numpy()), axis = 0)
             if classifier:
                 collect_y_out = np.concatenate((collect_y_out, normal_outputs[-1]), axis = 0)
     
@@ -435,6 +444,8 @@ def evaluate_latent_space(model, data_loader, device, classifier, save_h = True)
             
     outputs['y'] = collect_y
     outputs['x'] = collect_x_t
+    outputs['z_losses'] = collect_z_losses
+    outputs['h_losses'] = collect_h_losses
     
     if classifier:
         outputs['y_pred'] = collect_y_out

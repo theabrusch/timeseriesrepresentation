@@ -17,17 +17,19 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = f'{args.output_path}/classifier_{args.train_classifier}_TFC_{args.train_TFC}_abs_budget_{args.abs_budget}_stride_{args.stride}_loss_{args.loss}'
 
-    if args.pretrain:
-        if not os.path.exists(output_path):
+    if not os.path.exists(output_path):
             os.makedirs(output_path)
-        elif len(os.listdir(output_path)) == 0:
-            output_path = output_path
-        else:
-            i = 1
-            while os.path.exists(output_path + f'_v_{i}') and not len(os.listdir(output_path + f'_v_{i}')) == 0:
-                i+=1
-            output_path = output_path + f'_v_{i}'
-            os.makedirs(output_path, exist_ok=True)
+    elif len(os.listdir(output_path)) == 0:
+        output_path = output_path
+    else:
+        i = 1
+        while os.path.exists(output_path + f'_v_{i}') and not len(os.listdir(output_path + f'_v_{i}')) == 0:
+            i+=1
+        output_path = output_path + f'_v_{i}'
+        os.makedirs(output_path, exist_ok=True)
+    print('Saving outputs in', output_path)
+    
+    if args.pretrain:
         val = torch.load(args.data_path + 'val.pt')
         test = torch.load(args.data_path + 'test.pt')
         
@@ -109,7 +111,8 @@ def main(args):
             val = torch.load(args.data_path + 'val.pt')
             val_dset = TFC_Dataset(val['samples'], val['labels'], abs_budget=args.abs_budget)
             val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
-            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, save_h = False)
+            loss_fn = ContrastiveLoss2(tau = 0.2, device = device)
+            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, loss_fn = loss_fn, save_h = False)
 
             time2 = datetime.datetime.now()   
             print('Evaluating the latent space took', time2-time, 's.')

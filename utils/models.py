@@ -137,7 +137,7 @@ class ContrastiveLoss(nn.Module):
         v = self._cosine_similarity(x.unsqueeze(1), y.unsqueeze(0))
         return v
 
-    def forward(self, zis, zjs):
+    def forward(self, zis, zjs, reduce = True):
         batch_size = zis.shape[0]
         representations = torch.cat([zjs, zis], dim=0)
 
@@ -180,7 +180,7 @@ class ContrastiveLoss2(nn.Module):
         self.criterion = nn.CrossEntropyLoss(reduction = 'sum')
 
 
-    def forward(self, z_orig, z_augment):
+    def forward(self, z_orig, z_augment, reduce = True):
         batchsize = z_orig.shape[0]
         collect_z = torch.cat([z_augment, z_orig], dim = 0)
         # calculate cosine similarity between all augmented and
@@ -211,9 +211,14 @@ class ContrastiveLoss2(nn.Module):
         # other samples on the remaining indices - i.e. force the 0th "class"
         # to be large and all other to be smal
         labels = torch.zeros(2*batchsize).to(self.device).long()
-         
-        loss = self.criterion(logits, labels)
-        return loss / (2*batchsize)
+        
+        if reduce:
+            loss = self.criterion(logits, labels) / (2*batchsize)
+        else:
+            criterion = nn.CrossEntropyLoss(reduction = 'none')
+            loss = criterion(logits, labels)
+
+        return loss 
         
 
 class TimeFrequencyLoss(nn.Module):
