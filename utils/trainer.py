@@ -2,6 +2,7 @@ import torch
 import pandas as pd
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_auc_score, average_precision_score
+from utils.models import ContrastiveLoss2
 
 def TFC_trainer(model, 
                 train_loader, 
@@ -389,8 +390,9 @@ def evaluate_model(model,
 
 
 
-def evaluate_latent_space(model, data_loader, device, classifier, loss_fn, save_h = True):
+def evaluate_latent_space(model, data_loader, device, classifier = False, save_h = True):
     model.eval()
+    loss_fn = ContrastiveLoss2(tau = 0.2, device = device, reduce = False)
     for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(data_loader):
         x_t, x_f, x_t_aug, x_f_aug = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device)
         normal_outputs = model(x_t, x_f)

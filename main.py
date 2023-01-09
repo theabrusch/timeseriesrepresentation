@@ -114,8 +114,7 @@ def main(args):
             val = torch.load(args.data_path + 'val.pt')
             val_dset = TFC_Dataset(val['samples'], val['labels'], abs_budget=args.abs_budget)
             val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
-            loss_fn = ContrastiveLoss2(tau = 0.2, device = device, reduce = False)
-            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, loss_fn = loss_fn, save_h = False)
+            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, save_h = False)
 
             time2 = datetime.datetime.now()   
             print('Evaluating the latent space took', time2-time, 's.')
@@ -128,11 +127,19 @@ def main(args):
     if args.finetune:
         time = datetime.datetime.now()   
         ft_train = torch.load(args.finetune_path + 'train.pt')
+        ft_val = torch.load(args.finetune_path + 'val.pt')
         ft_test = torch.load(args.finetune_path + 'test.pt')
         ft_TFC_dset = TFC_Dataset(ft_train['samples'], ft_train['labels'], fine_tune_mode=True)
         ft_train_loader = DataLoader(ft_TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=False)
+        ft_val_dset = TFC_Dataset(ft_val['samples'], ft_val['labels'], fine_tune_mode=True)
+        ft_val_loader = DataLoader(ft_val_dset, batch_size = args.batch_size, shuffle = True, drop_last=False)
         ft_test_dset = TFC_Dataset(ft_test['samples'], ft_test['labels'], test_mode = True)
         ft_test_loader = DataLoader(ft_test_dset, batch_size = args.batch_size)
+
+        # evaluate latent space prior to finetune
+        outputs = evaluate_latent_space(model = model, data_loader = ft_val_loader, device = device, classifier = args.train_classifier, save_h = False)
+        with open(f'{output_path}/prior_finetune_latent_variables.pickle', 'wb') as file:
+                pickle.dump(outputs, file)
 
         time2 = datetime.datetime.now()     
         print('Loading the finetuning data took', time2-time, 's.')
@@ -156,6 +163,10 @@ def main(args):
                                         delta = args.delta)
         time2 = datetime.datetime.now()     
         print('Finetuning the model for', args.finetune_epochs,'epochs took', time2-time, 's.')
+        # evaluate latent space prior to finetune
+        outputs = evaluate_latent_space(model = model, data_loader = ft_val_loader, device = device, classifier = args.train_classifier, save_h = False)
+        with open(f'{output_path}/post_finetune_latent_variables.pickle', 'wb') as file:
+                pickle.dump(outputs, file)
         time = time2
         results = evaluate_model(model = model,
                                  classifier = Classifier, 
