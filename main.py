@@ -144,13 +144,13 @@ def main(args):
             ft_test_lat_loader = DataLoader(ft_test_lat_dset, batch_size = args.batch_size)
             outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = args.train_classifier, save_h = False)
             outputs_train = evaluate_latent_space(model = model, data_loader = ft_train_loader, device = device, classifier = args.train_classifier, save_h = False)
-            with open(f'{output_path}/prior_finetune_val_latent_variables.pickle', 'wb') as file:
+            with open(f'{output_path}/prior_finetune_val_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_val, file)
-            with open(f'{output_path}/prior_finetune_test_latent_variables.pickle', 'wb') as file:
+            with open(f'{output_path}/prior_finetune_test_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_test, file)
-            with open(f'{output_path}/prior_finetune_train_latent_variables.pickle', 'wb') as file:
+            with open(f'{output_path}/prior_finetune_train_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_train, file)
-
+        finetune_dset = args.finetune_path.split('/')[-2]
         time2 = datetime.datetime.now()     
         print('Loading the finetuning data took', time2-time, 's.')
 
@@ -182,11 +182,11 @@ def main(args):
             outputs_val = evaluate_latent_space(model = model, data_loader = ft_val_loader, device = device, classifier = args.train_classifier, save_h = False)
             outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = args.train_classifier, save_h = False)
             outputs_train = evaluate_latent_space(model = model, data_loader = ft_train_loader, device = device, classifier = args.train_classifier, save_h = False)
-            with open(f'{output_path}/post_finetune_val_latent_variables.pickle', 'wb') as file:
+            with open(f'{output_path}/post_finetune_val_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_val, file)
-            with open(f'{output_path}/post_finetune_test_latent_variables.pickle', 'wb') as file:
+            with open(f'{output_path}/post_finetune_test_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_test, file)
-            with open(f'{output_path}/post_finetune_train_latent_variables.pickle', 'wb') as file:
+            with open(f'{output_path}/post_finetune_train_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_train, file)
         time = time2
         results = evaluate_model(model = model,
@@ -194,10 +194,10 @@ def main(args):
                                 test_loader = ft_test_loader,
                                 device = device)
         time2 = datetime.datetime.now()     
-        plot_contrastive_losses(losses, f'{output_path}/finetune_train_loss_optenc_{args.optimize_encoder}.png')
+        plot_contrastive_losses(losses, f'{output_path}/finetune_train_loss_optenc_{args.optimize_encoder}_{finetune_dset}.png')
         print('Evaluating the finetuned model took', time2-time, 's.')
 
-        with open(f'{output_path}/finetune_results_optenc_{args.optimize_encoder}.pickle', 'wb') as file:
+        with open(f'{output_path}/finetune_results_optenc_{args.optimize_encoder}_{finetune_dset}.pickle', 'wb') as file:
             pickle.dump(results, file)
     
     return None
