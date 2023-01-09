@@ -17,6 +17,9 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = f'{args.output_path}/classifier_{args.train_classifier}_TFC_{args.train_TFC}_abs_budget_{args.abs_budget}_stride_{args.stride}_loss_{args.loss}'
 
+    if not args.pretrain and (args.evaluate_latent_space or args.finetune):
+        args.overwrite = True
+    
     if not args.overwrite:
         if not os.path.exists(output_path):
                 os.makedirs(output_path)
@@ -29,7 +32,6 @@ def main(args):
             output_path = output_path + f'_v_{i}'
             os.makedirs(output_path, exist_ok=True)
     print('Saving outputs in', output_path)
-    
     if args.pretrain:
         val = torch.load(args.data_path + 'val.pt')
         test = torch.load(args.data_path + 'test.pt')
@@ -184,7 +186,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--output_path', type = str, default = 'outputs')
-    parser.add_argument('--overwrite', type = eval, default = True)
+    parser.add_argument('--overwrite', type = eval, default = False)
 
     # augmentation arguments
     parser.add_argument('--abs_budget', type = eval, default = False)
