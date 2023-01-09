@@ -1,1 +1,1 @@
-rsync -Pav -e ssh theb@login.gbar.dtu.dk:/zhome/89/a/117273/Desktop/timeseriesrepresentation/outputs/classifier_False_TFC_True_abs_budget_False_stride_1_loss_poly ~/Documents/PhD/code/timeseriesrepresentation/outputs/
+rsync -Pav -e ssh theb@login.gbar.dtu.dk:/zhome/89/a/117273/Desktop/timeseriesrepresentation/outputs/classifier_False_TFC_True_abs_budget_True_stride_1_loss_poly ~/Documents/PhD/code/timeseriesrepresentation/outputs/

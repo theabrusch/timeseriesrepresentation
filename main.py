@@ -137,9 +137,18 @@ def main(args):
         ft_test_loader = DataLoader(ft_test_dset, batch_size = args.batch_size)
 
         # evaluate latent space prior to finetune
-        outputs = evaluate_latent_space(model = model, data_loader = ft_val_loader, device = device, classifier = args.train_classifier, save_h = False)
-        with open(f'{output_path}/prior_finetune_latent_variables.pickle', 'wb') as file:
-                pickle.dump(outputs, file)
+        if args.finetune_latentspace:
+            outputs_val = evaluate_latent_space(model = model, data_loader = ft_val_loader, device = device, classifier = args.train_classifier, save_h = False)
+            ft_test_lat_dset = TFC_Dataset(ft_test['samples'], ft_test['labels'], test_mode = False, fine_tune_mode=True)
+            ft_test_lat_loader = DataLoader(ft_test_lat_dset, batch_size = args.batch_size)
+            outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = args.train_classifier, save_h = False)
+            outputs_train = evaluate_latent_space(model = model, data_loader = ft_train_loader, device = device, classifier = args.train_classifier, save_h = False)
+            with open(f'{output_path}/prior_finetune_val_latent_variables.pickle', 'wb') as file:
+                    pickle.dump(outputs_val, file)
+            with open(f'{output_path}/prior_finetune_test_latent_variables.pickle', 'wb') as file:
+                    pickle.dump(outputs_test, file)
+            with open(f'{output_path}/prior_finetune_train_latent_variables.pickle', 'wb') as file:
+                    pickle.dump(outputs_train, file)
 
         time2 = datetime.datetime.now()     
         print('Loading the finetuning data took', time2-time, 's.')
@@ -164,14 +173,21 @@ def main(args):
         time2 = datetime.datetime.now()     
         print('Finetuning the model for', args.finetune_epochs,'epochs took', time2-time, 's.')
         # evaluate latent space prior to finetune
-        outputs = evaluate_latent_space(model = model, data_loader = ft_val_loader, device = device, classifier = args.train_classifier, save_h = False)
-        with open(f'{output_path}/post_finetune_latent_variables.pickle', 'wb') as file:
-                pickle.dump(outputs, file)
+        if args.finetune_latentspace:
+            outputs_val = evaluate_latent_space(model = model, data_loader = ft_val_loader, device = device, classifier = args.train_classifier, save_h = False)
+            outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = args.train_classifier, save_h = False)
+            outputs_train = evaluate_latent_space(model = model, data_loader = ft_train_loader, device = device, classifier = args.train_classifier, save_h = False)
+            with open(f'{output_path}/post_finetune_val_latent_variables.pickle', 'wb') as file:
+                    pickle.dump(outputs_val, file)
+            with open(f'{output_path}/post_finetune_test_latent_variables.pickle', 'wb') as file:
+                    pickle.dump(outputs_test, file)
+            with open(f'{output_path}/post_finetune_train_latent_variables.pickle', 'wb') as file:
+                    pickle.dump(outputs_train, file)
         time = time2
         results = evaluate_model(model = model,
-                                 classifier = Classifier, 
-                                 test_loader = ft_test_loader,
-                                 device = device)
+                                classifier = Classifier, 
+                                test_loader = ft_test_loader,
+                                device = device)
         time2 = datetime.datetime.now()     
         plot_contrastive_losses(losses, f'{output_path}/finetune_train_loss.png')
         print('Evaluating the finetuned model took', time2-time, 's.')
@@ -190,6 +206,7 @@ if __name__ == '__main__':
     parser.add_argument('--evaluate_latent_space', type = eval, default = True)
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
+    parser.add_argument('--finetune_latentspace', type = eval, default = True)
     parser.add_argument('--pretrain', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     # data arguments
