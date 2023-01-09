@@ -303,7 +303,8 @@ def finetune_model(model,
         epoch_time_freq_loss = 0
 
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(data_loader):
-            optimizer.zero_grad()
+            if optimizer is not None:
+                optimizer.zero_grad()
             class_optimizer.zero_grad()
             x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
             h_t, z_t, h_f, z_f = model(x_t, x_f)
@@ -320,7 +321,8 @@ def finetune_model(model,
             class_loss = class_loss_fn(y_out, y)
             loss = delta*class_loss + (1-delta)*(lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC)
             loss.backward()
-            optimizer.step()
+            if optimizer is not None:
+                optimizer.step()
             class_optimizer.step()
             epoch_loss += loss.detach().cpu()
             epoch_class_loss += class_loss.detach().cpu()

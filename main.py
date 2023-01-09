@@ -122,7 +122,8 @@ def main(args):
             with open(f'{output_path}/pretrain_latent_variables.pickle', 'wb') as file:
                 pickle.dump(outputs, file)
 
-        
+    if not args.optimize_encoder:
+        args.finetune_latentspace = False
 
     if args.finetune:
         time = datetime.datetime.now()   
@@ -156,10 +157,14 @@ def main(args):
         Classifier = ClassifierModule(ft_TFC_dset.num_classes)
 
         Classifier.to(device)
-        optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
         class_optimizer = Adam(Classifier.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
         time = datetime.datetime.now()  
+        if args.optimize_encoder:
+            optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
+        else:
+            optimizer = None
+
         model, losses = finetune_model(model = model, 
                                         classifier = Classifier, 
                                         data_loader = ft_train_loader, 
@@ -189,10 +194,10 @@ def main(args):
                                 test_loader = ft_test_loader,
                                 device = device)
         time2 = datetime.datetime.now()     
-        plot_contrastive_losses(losses, f'{output_path}/finetune_train_loss.png')
+        plot_contrastive_losses(losses, f'{output_path}/finetune_train_loss_optenc_{args.optimize_encoder}.png')
         print('Evaluating the finetuned model took', time2-time, 's.')
 
-        with open(f'{output_path}/finetune_results.pickle', 'wb') as file:
+        with open(f'{output_path}/finetune_results_optenc_{args.optimize_encoder}.pickle', 'wb') as file:
             pickle.dump(results, file)
     
     return None
@@ -207,6 +212,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--finetune_latentspace', type = eval, default = True)
+    parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrain', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     # data arguments
