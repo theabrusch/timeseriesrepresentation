@@ -49,7 +49,7 @@ def main(args):
         
         print('Initializing model')
         model = TFC_encoder(in_channels = TFC_dset.channels, input_size = TFC_dset.time_length, 
-                            num_classes = TFC_dset.num_classes, stride = args.stride, classify = args.train_classifier)
+                            num_classes = TFC_dset.num_classes, stride = args.stride, classify = False)
         model.to(device)
 
         optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
@@ -62,6 +62,14 @@ def main(args):
         print('Training model')
         if args.train_TFC:
             time = datetime.datetime.now()
+            if args.train_classifier:
+                Classifier = ClassifierModule(TFC_dset.num_classes)
+                Classifier.to(device)
+                class_optimizer = Adam(Classifier.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
+            else:
+                Classifier = None
+                class_optimizer = None
+
             model, losses = TFC_trainer(model = model, 
                                         train_loader = train_loader, 
                                         optimizer = optimizer, 
@@ -69,7 +77,8 @@ def main(args):
                                         epochs = args.epochs, 
                                         val_loader = val_loader, 
                                         device = device, 
-                                        train_classifier = args.train_classifier)
+                                        classifier = Classifier,
+                                        class_optimizer = class_optimizer)
             time2 = datetime.datetime.now()    
             print('Pre-training for',args.epochs,'epochs took', time2-time, 's.')
         else:

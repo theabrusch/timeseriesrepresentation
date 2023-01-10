@@ -11,7 +11,8 @@ def TFC_trainer(model,
                 epochs, 
                 val_loader, 
                 device, 
-                train_classifier, 
+                classifier = None,
+                class_optimizer = None, 
                 delta_ = 1, 
                 lambda_ = 0.5, 
                 eta_ = 0.5):
@@ -44,7 +45,7 @@ def TFC_trainer(model,
     val_time_freq_loss_total = []
     val_loss_total = []
 
-    if train_classifier:
+    if classifier is not None:
         class_loss_fn = torch.nn.CrossEntropyLoss()
         class_loss_total = []
         val_class_loss_total = []
@@ -57,13 +58,8 @@ def TFC_trainer(model,
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(train_loader):
             optimizer.zero_grad()
             x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
-
-            if train_classifier:
-                h_t, z_t, h_f, z_f, out = model(x_t, x_f)
-                h_t_aug, z_t_aug, h_f_aug, z_f_aug, _ = model(x_t_aug, x_f_aug)
-            else:
-                h_t, z_t, h_f, z_f = model(x_t, x_f)
-                h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
+            h_t, z_t, h_f, z_f = model(x_t, x_f)
+            h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
 
             time_loss = loss_fn(h_t, h_t_aug)
             freq_loss = loss_fn(h_f, h_f_aug)
@@ -72,9 +68,11 @@ def TFC_trainer(model,
             time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
             loss_TFC = (time_freq_pos - time_freq_neg[0] + delta_) + (time_freq_pos - time_freq_neg[1] + delta_) + (time_freq_pos - time_freq_neg[2] + delta_)
 
-            if train_classifier:
-                class_loss = class_loss_fn(out, y)
-                loss = class_loss + lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
+            if classifier is not None:
+                classifier.train()
+                y_out = classifier(torch.cat([z_t, z_f], dim = -1))
+                class_loss = class_loss_fn(y_out, y)
+                loss = eta_*class_loss + (1-eta_)*(lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC)
                 epoch_class += class_loss.detach().cpu()
             else:
                 loss = lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
@@ -86,6 +84,8 @@ def TFC_trainer(model,
 
             loss.backward()
             optimizer.step()
+            if classifier is not None:
+                class_optimizer.step()
         
         print('\nTraining losses:')
         print('Time consistency loss:', epoch_time/(i+1))
@@ -97,7 +97,7 @@ def TFC_trainer(model,
         freq_loss_total.append(epoch_freq/(i+1))
         time_freq_loss_total.append(epoch_time_freq/(i+1))
         loss_total.append(epoch_loss/(i+1))
-        if train_classifier:
+        if classifier is not None:
             class_loss_total.append(epoch_class/(i+1))
             print('Classification loss:', epoch_class/(i+1))
 
@@ -105,12 +105,8 @@ def TFC_trainer(model,
         model.eval()
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(val_loader):
             x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
-            if train_classifier:
-                h_t, z_t, h_f, z_f, out = model(x_t, x_f)
-                h_t_aug, z_t_aug, h_f_aug, z_f_aug, _ = model(x_t_aug, x_f_aug)
-            else:
-                h_t, z_t, h_f, z_f = model(x_t, x_f)
-                h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
+            h_t, z_t, h_f, z_f = model(x_t, x_f)
+            h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
 
             time_loss = loss_fn(h_t, h_t_aug)
             freq_loss = loss_fn(h_f, h_f_aug)
@@ -121,16 +117,18 @@ def TFC_trainer(model,
 
             loss = lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
 
-            if train_classifier:
-                class_loss = class_loss_fn(out, y)
+            if classifier is not None:
+                classifier.eval()
+                y_out = classifier(torch.cat([z_t, z_f], dim = -1))
+                class_loss = class_loss_fn(y_out, y)
                 loss += class_loss
                 val_epoch_class += class_loss.detach().cpu()
 
                 if i == 0:
-                    y_pred = torch.argmax(out.detach().cpu(), dim = 1)
+                    y_pred = torch.argmax(y_out.detach().cpu(), dim = 1)
                     y_true = y.detach().cpu()
                 else:
-                    y_pred = torch.cat((y_pred, torch.argmax(out.detach().cpu(), dim = 1)), dim = 0)
+                    y_pred = torch.cat((y_pred, torch.argmax(y_out.detach().cpu(), dim = 1)), dim = 0)
                     y_true = torch.cat((y_true, y.detach().cpu()), dim = 0)
                 
 
@@ -149,7 +147,7 @@ def TFC_trainer(model,
         val_freq_loss_total.append(val_epoch_freq/(i+1))
         val_time_freq_loss_total.append(val_epoch_time_freq/(i+1))
         val_loss_total.append(val_epoch_loss/(i+1))
-        if train_classifier:
+        if classifier is not None:
             val_class_loss_total.append(val_epoch_class/(i+1))
             acc = accuracy_score(y_true, y_pred)
             print('Accuracy:', acc)
@@ -169,7 +167,7 @@ def TFC_trainer(model,
             'time_freq_loss': val_time_freq_loss_total,
             'loss': val_loss_total}
         }
-    if train_classifier:
+    if classifier is not None:
         losses['train']['class_loss'] = class_loss_total
         losses['val']['class_loss'] = val_class_loss_total
 
