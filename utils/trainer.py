@@ -117,7 +117,7 @@ def TFC_trainer(model,
 
             time_freq_pos = loss_fn(z_t, z_f)
             time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
-            loss_TFC = 3*time_freq_pos - time_freq_neg[0] - time_freq_neg[1] - time_freq_neg[2] + 3*delta_
+            loss_TFC = (time_freq_pos - time_freq_neg[0] + 1) + (time_freq_pos - time_freq_neg[1] + 1) + (time_freq_pos - time_freq_neg[2] + 1)
 
             loss = lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
 
