@@ -177,6 +177,7 @@ def main(args):
         model, losses = finetune_model(model = model, 
                                         classifier = Classifier, 
                                         data_loader = ft_train_loader, 
+                                        val_loader = ft_val_loader,
                                         loss_fn = loss_fn, 
                                         optimizer = optimizer, 
                                         class_optimizer = class_optimizer, 
