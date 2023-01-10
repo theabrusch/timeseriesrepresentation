@@ -3,7 +3,7 @@ import torch
 from utils.augmentations import frequency_augmentation, time_augmentation
 
 class TFC_Dataset(Dataset):
-    def __init__(self, X, Y, abs_budget = False, fine_tune_mode = False, test_mode = False:
+    def __init__(self, X, Y, abs_budget = False, fine_tune_mode = False, test_mode = False):
         super().__init__()
         self.X_t = X
         self.Y = Y
