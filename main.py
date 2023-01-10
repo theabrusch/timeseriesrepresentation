@@ -203,8 +203,9 @@ def main(args):
                                 test_loader = ft_test_loader,
                                 device = device)
         time2 = datetime.datetime.now()     
-        plot_contrastive_losses(losses, f'{output_path}/finetune_train_loss_optenc_{args.optimize_encoder}_{finetune_dset}.png')
         print('Evaluating the finetuned model took', time2-time, 's.')
+        plot_contrastive_losses(losses['train'], f'{output_path}/finetune_train_loss_optenc_{args.optimize_encoder}_{finetune_dset}.png')
+        plot_contrastive_losses(losses['val'], f'{output_path}/finetune_val_loss_optenc_{args.optimize_encoder}_{finetune_dset}.png')
 
         with open(f'{output_path}/finetune_results_optenc_{args.optimize_encoder}_{finetune_dset}.pickle', 'wb') as file:
             pickle.dump(results, file)

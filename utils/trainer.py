@@ -274,6 +274,7 @@ def train_classifier(model,
 def finetune_model(model, 
                   classifier, 
                   data_loader, 
+                  val_loader,
                   loss_fn, 
                   optimizer, 
                   class_optimizer, 
@@ -292,13 +293,20 @@ def finetune_model(model,
     collect_freq_loss = torch.zeros(epochs)
     collect_time_freq_loss = torch.zeros(epochs)
 
+    collect_val_class_loss = torch.zeros(epochs)
+    collect_val_loss = torch.zeros(epochs)
+    collect_val_time_loss = torch.zeros(epochs)
+    collect_val_freq_loss = torch.zeros(epochs)
+    collect_val_time_freq_loss = torch.zeros(epochs)
+
     for epoch in range(epochs):
         epoch_loss = 0
         epoch_class_loss = 0
         epoch_time_loss = 0
         epoch_freq_loss = 0
         epoch_time_freq_loss = 0
-
+        model.train()
+        classifier.train()
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(data_loader):
             if optimizer is not None:
                 optimizer.zero_grad()
@@ -335,13 +343,59 @@ def finetune_model(model,
 
         print('Epoch loss:', epoch_loss/(i+1))
         print('Class. loss:', epoch_class_loss/(i+1))
+
+        epoch_loss = 0
+        epoch_class_loss = 0
+        epoch_time_loss = 0
+        epoch_freq_loss = 0
+        epoch_time_freq_loss = 0
+
+        model.eval()
+        classifier.eval()
+        for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(val_loader):
+            x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
+            h_t, z_t, h_f, z_f = model(x_t, x_f)
+            h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
+
+            time_loss = loss_fn(h_t, h_t_aug)
+            freq_loss = loss_fn(h_f, h_f_aug)
+
+            time_freq_pos = loss_fn(z_t, z_f)
+            time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
+            loss_TFC = (time_freq_pos - time_freq_neg[0] + 1) + (time_freq_pos - time_freq_neg[1] + 1) + (time_freq_pos - time_freq_neg[2] + 1)
+
+            y_out = classifier(torch.cat([z_t, z_f], dim = -1))
+            class_loss = class_loss_fn(y_out, y)
+            loss = delta*class_loss + (1-delta)*(lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC)
+
+            epoch_loss += loss.detach().cpu()
+            epoch_class_loss += class_loss.detach().cpu()
+            epoch_time_loss += time_loss.detach().cpu()
+            epoch_freq_loss += freq_loss.detach().cpu()
+            epoch_time_freq_loss += loss_TFC.detach().cpu()
+        
+        collect_val_class_loss[epoch] = epoch_class_loss / (i+1)
+        collect_val_loss[epoch] = epoch_loss / (i+1)
+        collect_val_time_loss[epoch] = epoch_time_loss / (i+1)
+        collect_val_freq_loss[epoch] = epoch_freq_loss / (i+1)
+        collect_val_time_freq_loss[epoch] = epoch_time_freq_loss / (i+1)
+
     
-    losses = {
+    losses = {'train': {
         'Loss': collect_loss,
         'Class loss': collect_class_loss,
         'Time loss': collect_time_loss,
         'Freq loss': collect_freq_loss,
         'Time freq loss': collect_time_freq_loss
+        },
+        'val': {
+        'Loss': collect_val_loss,
+        'Class loss': collect_val_class_loss,
+        'Time loss': collect_val_time_loss,
+        'Freq loss': collect_val_freq_loss,
+        'Time freq loss': collect_val_time_freq_loss
+
+        }
     }
     return model, losses
 

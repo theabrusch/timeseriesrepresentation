@@ -8,6 +8,8 @@ from sklearn.metrics import accuracy_score
 temp = None
 path = 'outputs/classifier_False_TFC_True_abs_budget_True_stride_1_loss_poly/'
 finetune = 'post'
+with open(f'{path}pretrain_latent_variables.pickle', 'rb') as file:
+    outputs_pretrain = pickle.load(file) 
 with open(f'{path}{finetune}_finetune_train_latent_variables.pickle', 'rb') as file:
     outputs_train = pickle.load(file) 
 
@@ -17,20 +19,24 @@ with open(f'{path}{finetune}_finetune_test_latent_variables.pickle', 'rb') as fi
 with open(f'{path}{finetune}_finetune_val_latent_variables.pickle', 'rb') as file:
     outputs_val = pickle.load(file) 
 
+with open(f'{path}finetune_results.pickle', 'rb') as file:
+    results = pickle.load(file) 
 
-transform = umap.UMAP(n_neighbors=20, min_dist = 0.2, metric = 'cosine').fit_transform(np.concatenate((outputs_train['z_t'], outputs_train['z_f']), axis = 0))
+transform = umap.UMAP(n_neighbors=20, min_dist = 0.2, metric = 'cosine').fit_transform(np.concatenate((outputs_pretrain['z_t'][idx], outputs_pretrain['z_f'][idx]), axis = 0))
 transform_t = transform[:int(len(transform)/2),:]
 transform_f = transform[int(len(transform)/2):,:]
 
 colors = ['red', 'blue', 'green', 'yellow']
 #colors = ['blue', 'blue', 'blue', 'blue']
-color = [colors[i] for i in outputs_train['y']]
+color = [colors[i] for i in outputs_pretrain['y']]
 color_test = [colors[i] for i in outputs_test['y']]
 color_val = [colors[i] for i in outputs_val['y']]
 
+idx = np.arange(len(outputs_pretrain['z_t']))
+idx = np.random.choice(idx, size = 1000)
 
-plt.scatter(transform_t[:,0], transform_t[:,1], marker = 'o', c = color, label = 'time embeddings')
-plt.scatter(transform_f[:,0], transform_f[:,1], marker = 's', c = color, label = 'frequency embeddings')
+plt.scatter(transform_t[idx,0], transform_t[idx,1], marker = 'o', c = np.array(color)[idx], label = 'time embeddings')
+plt.scatter(transform_f[idx,0], transform_f[idx,1], marker = 's', c = np.array(color)[idx], label = 'frequency embeddings')
 plt.legend()
 plt.show()
 
