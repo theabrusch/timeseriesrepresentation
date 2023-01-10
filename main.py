@@ -13,10 +13,11 @@ import datetime
 
 def main(args):
     train = torch.load(args.data_path + 'train.pt')
-    TFC_dset = TFC_Dataset(train['samples'], train['labels'], abs_budget=args.abs_budget)
+    dset = args.data_path.split('/')[-2]
+    TFC_dset = TFC_Dataset(train['samples'], train['labels'], abs_budget=args.abs_budget, dset=dset)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = f'{args.output_path}/classifier_{args.train_classifier}_TFC_{args.train_TFC}_abs_budget_{args.abs_budget}_stride_{args.stride}_loss_{args.loss}'
-    dset = args.datapath.split('/')[-2]
+    
     if not args.pretrain and (args.evaluate_latent_space or args.finetune):
         args.overwrite = True
     
@@ -80,7 +81,7 @@ def main(args):
                                         classifier = Classifier,
                                         class_optimizer = class_optimizer)
             time2 = datetime.datetime.now()    
-            print('Pre-training for',args.epochs,'epochs took', time2-time, 's.')
+            print('Pre-training for', args.epochs,'epochs took', time2-time, 's.')
         else:
             args.train_classifier = True
             time = datetime.datetime.now()
