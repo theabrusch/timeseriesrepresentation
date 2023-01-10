@@ -16,7 +16,7 @@ def main(args):
     TFC_dset = TFC_Dataset(train['samples'], train['labels'], abs_budget=args.abs_budget)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = f'{args.output_path}/classifier_{args.train_classifier}_TFC_{args.train_TFC}_abs_budget_{args.abs_budget}_stride_{args.stride}_loss_{args.loss}'
-
+    dset = args.datapath.split('/')[-2]
     if not args.pretrain and (args.evaluate_latent_space or args.finetune):
         args.overwrite = True
     
@@ -145,7 +145,7 @@ def main(args):
         ft_val_loader = DataLoader(ft_val_dset, batch_size = args.batch_size, shuffle = True, drop_last=False)
         ft_test_dset = TFC_Dataset(ft_test['samples'], ft_test['labels'], test_mode = True)
         ft_test_loader = DataLoader(ft_test_dset, batch_size = args.batch_size)
-
+        finetune_dset = args.finetune_path.split('/')[-2]
         # evaluate latent space prior to finetune
         if args.finetune_latentspace:
             outputs_val = evaluate_latent_space(model = model, data_loader = ft_val_loader, device = device, classifier = args.train_classifier, save_h = False)
@@ -159,7 +159,7 @@ def main(args):
                     pickle.dump(outputs_test, file)
             with open(f'{output_path}/prior_finetune_train_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_train, file)
-        finetune_dset = args.finetune_path.split('/')[-2]
+        
         time2 = datetime.datetime.now()     
         print('Loading the finetuning data took', time2-time, 's.')
 
@@ -216,16 +216,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # training arguments
     parser.add_argument('--train_TFC', type = eval, default = True)
-    parser.add_argument('--train_classifier', type = eval, default = False)
+    parser.add_argument('--train_classifier', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = True)
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--finetune_latentspace', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
-    parser.add_argument('--pretrain', type = eval, default = False)
+    parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     # data arguments
-    parser.add_argument('--data_path', type = str, default = 'datasets/ECG/')
+    parser.add_argument('--data_path', type = str, default = 'datasets/HAR/')
     parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--output_path', type = str, default = 'outputs')

@@ -7,7 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
 path = 'outputs/classifier_False_TFC_True_abs_budget_True_stride_1_loss_poly/'
-finetune = 'prior'
+finetune = 'post'
 with open(f'{path}{finetune}_finetune_train_latent_variables.pickle', 'rb') as file:
     outputs_train = pickle.load(file) 
 
@@ -22,8 +22,6 @@ transform = umap.UMAP(n_neighbors=20, min_dist = 0.2, metric = 'cosine').fit_tra
 transform_t = transform[:int(len(transform)/2),:]
 transform_f = transform[int(len(transform)/2):,:]
 
-#transform_f = umap.UMAP(n_neighbors=20, min_dist = 0.2, metric = 'cosine').fit_transform(outputs['z_f'])
-
 colors = ['red', 'blue', 'green', 'yellow']
 #colors = ['blue', 'blue', 'blue', 'blue']
 color = [colors[i] for i in outputs_train['y']]
@@ -34,6 +32,9 @@ color_val = [colors[i] for i in outputs_val['y']]
 plt.scatter(transform_t[:,0], transform_t[:,1], marker = 'o', c = color, label = 'time embeddings')
 plt.scatter(transform_f[:,0], transform_f[:,1], marker = 's', c = color, label = 'frequency embeddings')
 plt.legend()
+plt.show()
+
+plt.plot(outputs_test['x'][6,0,:])
 plt.show()
 
 val_accuracy = []
