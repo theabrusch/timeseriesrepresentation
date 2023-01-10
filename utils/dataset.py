@@ -3,16 +3,16 @@ import torch
 from utils.augmentations import frequency_augmentation, time_augmentation
 
 class TFC_Dataset(Dataset):
-    def __init__(self, X, Y, abs_budget = False, fine_tune_mode = False, test_mode = False, dset = None):
+    def __init__(self, X, Y, abs_budget = False, fine_tune_mode = False, test_mode = False:
         super().__init__()
         self.X_t = X
         self.Y = Y
-        if dset == 'HAR':
-            self.Y = self.Y-1
 
         self.channels = X.shape[1]
         self.time_length = X.shape[2]
         self.num_classes = len(torch.unique(Y))
+        if int(torch.max(self.Y)) == self.num_classes:
+            self.Y = self.Y-1
         self.test_mode = test_mode
         self.fine_tune_mode = fine_tune_mode
 

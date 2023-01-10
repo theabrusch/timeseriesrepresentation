@@ -5,7 +5,7 @@ import umap
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
-
+temp = None
 path = 'outputs/classifier_False_TFC_True_abs_budget_True_stride_1_loss_poly/'
 finetune = 'post'
 with open(f'{path}{finetune}_finetune_train_latent_variables.pickle', 'rb') as file:
