@@ -122,8 +122,8 @@ def main(args):
     if args.evaluate_latent_space:
             time = datetime.datetime.now() 
             val = torch.load(args.data_path + 'val.pt')
-            val_dset = TFC_Dataset(val['samples'], val['labels'], abs_budget=args.abs_budget)
-            val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
+            val_dset = TFC_Dataset(val['samples'], val['labels'], dset = dset, abs_budget=args.abs_budget)
+            val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=False)
             outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, save_h = False)
 
             time2 = datetime.datetime.now()   
@@ -140,18 +140,20 @@ def main(args):
         ft_train = torch.load(args.finetune_path + 'train.pt')
         ft_val = torch.load(args.finetune_path + 'val.pt')
         ft_test = torch.load(args.finetune_path + 'test.pt')
-        ft_TFC_dset = TFC_Dataset(ft_train['samples'], ft_train['labels'], fine_tune_mode=True)
-        ft_train_loader = DataLoader(ft_TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=False)
-        ft_val_dset = TFC_Dataset(ft_val['samples'], ft_val['labels'], fine_tune_mode=True)
-        ft_val_loader = DataLoader(ft_val_dset, batch_size = args.batch_size, shuffle = True, drop_last=False)
-        ft_test_dset = TFC_Dataset(ft_test['samples'], ft_test['labels'], test_mode = True)
-        ft_test_loader = DataLoader(ft_test_dset, batch_size = args.batch_size)
         finetune_dset = args.finetune_path.split('/')[-2]
+
+        ft_TFC_dset = TFC_Dataset(ft_train['samples'], ft_train['labels'], dset = finetune_dset, fine_tune_mode=True)
+        ft_train_loader = DataLoader(ft_TFC_dset, batch_size = args.target_batch_size, shuffle = True, drop_last=False)
+        ft_val_dset = TFC_Dataset(ft_val['samples'], ft_val['labels'], dset = finetune_dset, fine_tune_mode=True)
+        ft_val_loader = DataLoader(ft_val_dset, batch_size = args.target_batch_size, shuffle = True, drop_last=False)
+        ft_test_dset = TFC_Dataset(ft_test['samples'], ft_test['labels'], dset = finetune_dset, test_mode = True)
+        ft_test_loader = DataLoader(ft_test_dset, batch_size = args.target_batch_size)
+        
         # evaluate latent space prior to finetune
         if args.finetune_latentspace:
             outputs_val = evaluate_latent_space(model = model, data_loader = ft_val_loader, device = device, classifier = args.train_classifier, save_h = False)
-            ft_test_lat_dset = TFC_Dataset(ft_test['samples'], ft_test['labels'], test_mode = False, fine_tune_mode=True)
-            ft_test_lat_loader = DataLoader(ft_test_lat_dset, batch_size = args.batch_size)
+            ft_test_lat_dset = TFC_Dataset(ft_test['samples'], ft_test['labels'], dset = finetune_dset, test_mode = False, fine_tune_mode=True)
+            ft_test_lat_loader = DataLoader(ft_test_lat_dset, batch_size = args.target_batch_size)
             outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = args.train_classifier, save_h = False)
             outputs_train = evaluate_latent_space(model = model, data_loader = ft_train_loader, device = device, classifier = args.train_classifier, save_h = False)
             with open(f'{output_path}/prior_finetune_val_latent_variables_{finetune_dset}.pickle', 'wb') as file:
@@ -228,9 +230,10 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     # data arguments
-    parser.add_argument('--data_path', type = str, default = 'datasets/HAR/')
+    parser.add_argument('--data_path', type = str, default = 'datasets/Gesture/')
     parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
     parser.add_argument('--batch_size', type = int, default = 128)
+    parser.add_argument('--target_batch_size', type = int, default = 22)
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--overwrite', type = eval, default = False)
 

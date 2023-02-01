@@ -1,1 +1,1 @@
-rsync -Pav -a ~/Documents/PhD/code/timeseriesrepresentation/datasets/Epilepsy --rsh=ssh theb@transfer.gbar.dtu.dk:/work3/theb/timeseries/
+rsync -Pav -a ~/Documents/PhD/code/timeseriesrepresentation/datasets/Gesture --rsh=ssh theb@transfer.gbar.dtu.dk:/work3/theb/timeseries/
