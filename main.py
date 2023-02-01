@@ -41,8 +41,8 @@ def main(args):
         time = datetime.datetime.now()
         train_loader = DataLoader(TFC_dset, batch_size = args.batch_size, shuffle = True, drop_last=True)
 
-        val_dset = TFC_Dataset(val['samples'], val['labels'], abs_budget=args.abs_budget)
-        test_dset = TFC_Dataset(test['samples'], test['labels'], test_mode = True)
+        val_dset = TFC_Dataset(val['samples'], val['labels'], dset = dset, abs_budget=args.abs_budget)
+        test_dset = TFC_Dataset(test['samples'], test['labels'], dset = dset, test_mode = True)
         val_loader = DataLoader(val_dset, batch_size = args.batch_size, drop_last=True)
         test_loader = DataLoader(test_dset, batch_size = args.batch_size)
         time2 = datetime.datetime.now()     
