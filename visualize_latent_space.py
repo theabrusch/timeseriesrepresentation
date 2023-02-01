@@ -4,10 +4,10 @@ import numpy as np
 import umap
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 temp = None
 path = 'outputs/classifier_False_TFC_True_abs_budget_True_stride_1_loss_poly/'
-finetune = 'post'
+finetune = 'prior'
 with open(f'{path}pretrain_latent_variables.pickle', 'rb') as file:
     outputs_pretrain = pickle.load(file) 
 with open(f'{path}{finetune}_finetune_train_latent_variables.pickle', 'rb') as file:
@@ -22,30 +22,64 @@ with open(f'{path}{finetune}_finetune_val_latent_variables.pickle', 'rb') as fil
 with open(f'{path}finetune_results.pickle', 'rb') as file:
     results = pickle.load(file) 
 
-transform = umap.UMAP(n_neighbors=20, min_dist = 0.2, metric = 'cosine').fit_transform(np.concatenate((outputs_pretrain['z_t'][idx], outputs_pretrain['z_f'][idx]), axis = 0))
+UM = umap.UMAP(n_neighbors=20, min_dist = 0.2, metric = 'cosine')
+transform = UM.fit_transform(np.concatenate((outputs_train['z_t'], outputs_train['z_f']), axis = 0))
 transform_t = transform[:int(len(transform)/2),:]
 transform_f = transform[int(len(transform)/2):,:]
 
+transform_test = UM.transform(np.concatenate((outputs_test['z_t'], outputs_test['z_f']), axis = 0))
+transform_t_test = transform_test[:int(len(transform_test)/2),:]
+transform_f_test = transform_test[int(len(transform_test)/2):,:]
+
+transform_val = UM.transform(np.concatenate((outputs_val['z_t'], outputs_val['z_f']), axis = 0))
+transform_t_val = transform_val[:int(len(transform_val)/2),:]
+transform_f_val = transform_val[int(len(transform_val)/2):,:]
+
 colors = ['red', 'blue', 'green', 'yellow']
 #colors = ['blue', 'blue', 'blue', 'blue']
-color = [colors[i] for i in outputs_pretrain['y']]
+color = [colors[i] for i in outputs_train['y']]
 color_test = [colors[i] for i in outputs_test['y']]
 color_val = [colors[i] for i in outputs_val['y']]
 
-idx = np.arange(len(outputs_pretrain['z_t']))
-idx = np.random.choice(idx, size = 1000)
+idx = np.arange(len(outputs_train['z_t']))
+#idx = np.random.choice(idx, size = 200)
 
-plt.scatter(transform_t[idx,0], transform_t[idx,1], marker = 'o', c = np.array(color)[idx], label = 'time embeddings')
-plt.scatter(transform_f[idx,0], transform_f[idx,1], marker = 's', c = np.array(color)[idx], label = 'frequency embeddings')
-plt.legend()
+fig, ax = plt.subplots(nrows = 1, ncols = 3, figsize = (15,5))
+ax[0].scatter(transform_t[idx,0], transform_t[idx,1], marker = 'v', c = np.array(color)[idx], label = 'time embeddings')
+ax[0].scatter(transform_f[idx,0], transform_f[idx,1], marker = 's', c = np.array(color)[idx], label = 'frequency embeddings')
+ax[0].set_title('Train set embeddings', fontsize = 14)
+
+ax[0].legend(fontsize = 14)
+ax[2].scatter(transform_t_test[:,0], transform_t_test[:,1], marker = 'v', c = np.array(color_test), label = 'time embeddings')
+ax[2].scatter(transform_f_test[:,0], transform_f_test[:,1], marker = 's', c = np.array(color_test), label = 'frequency embeddings')
+ax[2].set_title('Test set embeddings', fontsize = 14)
+ax[2].legend(fontsize = 14)
+
+ax[1].scatter(transform_t_val[:,0], transform_t_val[:,1], marker = 'v', c = np.array(color_val), label = 'time embeddings')
+ax[1].scatter(transform_f_val[:,0], transform_f_val[:,1], marker = 's', c = np.array(color_val), label = 'frequency embeddings')
+ax[1].set_title('Val. set embeddings', fontsize = 14)
+ax[1].legend(fontsize = 14)
+plt.tight_layout()
 plt.show()
 
 plt.plot(outputs_test['x'][6,0,:])
 plt.show()
 
-val_accuracy = []
-test_accuracy = []
-input_type = 'time'
+val_res = {
+    'acc': [],
+    'prec': [],
+    'rec': [],
+    'f1': [],
+}
+
+test_res = {
+    'acc': [],
+    'prec': [],
+    'rec': [],
+    'f1': [],
+}
+
+input_type = 'both'
 if input_type == 'both':
     train_input = np.concatenate((outputs_train['z_t'], outputs_train['z_f']), axis = 1)
     val_input = np.concatenate((outputs_val['z_t'], outputs_val['z_f']), axis = 1)
@@ -67,9 +101,17 @@ if classifier == 'knn':
         classifier = KNeighborsClassifier(n_neighbors=neighbors)
         classifier.fit(train_input, outputs_train['y'])
         val_out = classifier.predict(val_input)
-        val_accuracy.append(accuracy_score(outputs_val['y'], val_out))
+        val_res['acc'].append(accuracy_score(outputs_val['y'], val_out))
+        prec, rec, f1, _ = precision_recall_fscore_support(outputs_val['y'], val_out)
+        val_res['prec'].append(np.mean(prec))
+        val_res['rec'].append(np.mean(rec))
+        val_res['f1'].append(np.mean(f1))
         test_out = classifier.predict(test_input)
-        test_accuracy.append(accuracy_score(outputs_test['y'], test_out))
+        test_res['acc'].append(accuracy_score(outputs_test['y'], test_out))
+        prec, rec, f1, _ = precision_recall_fscore_support(outputs_test['y'], test_out)
+        test_res['prec'].append(np.mean(prec))
+        test_res['rec'].append(np.mean(rec))
+        test_res['f1'].append(np.mean(f1))
 else:
     classifier = LogisticRegression()
     classifier.fit(train_input, outputs_train['y'])
@@ -77,8 +119,8 @@ else:
     val_accuracy = accuracy_score(outputs_val['y'], val_out)
     test_out = classifier.predict(test_input)
     test_accuracy = accuracy_score(outputs_test['y'], test_out)
-print('Validation accuracy', val_accuracy)
-print('Test accuracy', test_accuracy)
+print('Validation accuracy', val_res)
+print('Test accuracy', test_res)
 
 
 umapper = umap.UMAP(n_neighbors=20, min_dist = 0.2, metric = 'cosine')
@@ -96,6 +138,6 @@ test_accuracy = accuracy_score(outputs_test['y'], val_out)
 plt.scatter(transform_train[:,0], transform_train[:,1], marker = 'o', c = color, label = 'train embeddings')
 plt.scatter(transform_test[:,0], transform_test[:,1], marker = 's', c = color_test, label = 'test embeddings')
 plt.scatter(transform_val[:,0], transform_val[:,1], marker = 'v', c = color_val, label = 'val embeddings')
-plt.legend()
+plt.legend(fontsize = 14)
 plt.show()
 
