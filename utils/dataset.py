@@ -1,14 +1,21 @@
 from torch.utils.data import Dataset
 import torch
 from utils.augmentations import frequency_augmentation, time_augmentation
+from torch.nn import functional as F
 
 class TFC_Dataset(Dataset):
-    def __init__(self, X, Y, abs_budget = False, fine_tune_mode = False, test_mode = False):
+    def __init__(self, X, Y, dset, abs_budget = False, fine_tune_mode = False, test_mode = False):
         super().__init__()
+
+        if not dset == 'HAR':
+            self.channels = X.shape[1]
+        else:
+            self.channels = 3
+            X = X[:,:3,:]
+            X = F.pad(X, (0,int(206-X.shape[2])))
+
         self.X_t = X
         self.Y = Y
-
-        self.channels = X.shape[1]
         self.time_length = X.shape[2]
         self.num_classes = len(torch.unique(Y))
         if int(torch.max(self.Y)) == self.num_classes:
