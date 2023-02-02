@@ -39,7 +39,7 @@ def resample_signal(data, labels, old_fs):
     num = int(len(data)/(old_fs/new_fs))
     resampled_data = scipy.signal.resample(data, num = num, axis = 0)
     resampled_labels = labels[::int((old_fs/new_fs)),:]
-    return resampled_data, resampled_labels
+    return resampled_data.astype(np.int16), resampled_labels.astype(np.int16)
 
 
 def preprocess_EEG(folder,remove_files = False, out_folder = None):
@@ -67,10 +67,12 @@ def preprocess_EEG(folder,remove_files = False, out_folder = None):
             hdf5_path = f'{out_folder}/data.hdf5'
         else:
             hdf5_path = f'{folder}/data.hdf5'
+        if os.path.exists(hdf5_path):
+            os.remove(hdf5_path)
 
         hdf5_file = h5py.File(hdf5_path, 'w')
         hdf5_data = hdf5_file.create_group("data")
-        _ = hdf5_data.create_dataset('EEG', data=resampled_data.astype(np.int16))
+        _ = hdf5_data.create_dataset('EEG', data=resampled_data)
         _ = hdf5_data.create_dataset('labels', data=resampled_labels.astype(int))
 
         hdf5_file.close()
@@ -79,8 +81,10 @@ def relocate_EEG_data(folder, remove_files = True):
     data_file = h5py.File(f'{folder}/data.hdf5', 'r')
     data = data_file["data"]["EEG"][:]
     labels = data_file["data"]["labels"][:]
-    collect_data = {"data": data, "labels": labels}
+    collect_data = {"data": data.astype(np.int16), "labels": labels.astype(np.int16)}
     savemat(f'{folder}/data.mat', collect_data)
+    if remove_files:
+        os.remove(f'{folder}/data.hdf5')
     
 
 
@@ -88,12 +92,26 @@ def relocate_EEG_data(folder, remove_files = True):
 
 out_folder = '/Users/theb/Desktop/physionet.org/physionet.org/files/challenge-2018/1.0.0/training/'
 root_folder = '/Volumes/SED/training/'
-subjects = os.listdir(root_folder)
 
-for i, subject in enumerate(subjects):
-    print('Processing subject', i+1, 'of', len(subjects))
-    subj_folder = os.path.join(root_folder, subject)
-    try:
-        preprocess_EEG(subj_folder, out_folder = out_folder, remove_files = False)
-    except:
-        print('Issue with subject', subject)
+make_hdf5 = False
+relocate_data = True
+if make_hdf5:
+    subjects = os.listdir(root_folder)
+    for i, subject in enumerate(subjects):
+        print('Processing subject', i+1, 'of', len(subjects))
+        subj_folder = os.path.join(root_folder, subject)
+        try:
+            preprocess_EEG(subj_folder, out_folder = out_folder, remove_files = False)
+        except:
+            print('Issue with subject', subject)
+
+if relocate_data:
+    subjects = os.listdir(out_folder)
+    for i, subject in enumerate(subjects):
+        print('Processing subject', i+1, 'of', len(subjects))
+        subj_folder = os.path.join(out_folder, subject)
+        try:
+            relocate_EEG_data(subj_folder, remove_files = True)
+        except:
+            print('Issue with subject', subject)
+
