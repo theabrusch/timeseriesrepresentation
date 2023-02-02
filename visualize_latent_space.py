@@ -6,20 +6,22 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 temp = None
-path = 'outputs/classifier_False_TFC_True_abs_budget_True_stride_1_loss_poly/'
+path = 'outputs/classifier_False_TFC_True_abs_budget_False_stride_1_loss_poly_HAR/'
 finetune = 'prior'
+finetune_dset = 'Gesture'
 with open(f'{path}pretrain_latent_variables.pickle', 'rb') as file:
     outputs_pretrain = pickle.load(file) 
-with open(f'{path}{finetune}_finetune_train_latent_variables.pickle', 'rb') as file:
+
+with open(f'{path}{finetune}_finetune_train_latent_variables_{finetune_dset}.pickle', 'rb') as file:
     outputs_train = pickle.load(file) 
 
-with open(f'{path}{finetune}_finetune_test_latent_variables.pickle', 'rb') as file:
+with open(f'{path}{finetune}_finetune_test_latent_variables_{finetune_dset}.pickle', 'rb') as file:
     outputs_test = pickle.load(file) 
 
-with open(f'{path}{finetune}_finetune_val_latent_variables.pickle', 'rb') as file:
+with open(f'{path}{finetune}_finetune_val_latent_variables_{finetune_dset}.pickle', 'rb') as file:
     outputs_val = pickle.load(file) 
 
-with open(f'{path}finetune_results.pickle', 'rb') as file:
+with open(f'{path}finetune_results_optenc_True_{finetune_dset}.pickle', 'rb') as file:
     results = pickle.load(file) 
 
 UM = umap.UMAP(n_neighbors=20, min_dist = 0.2, metric = 'cosine')
@@ -35,11 +37,11 @@ transform_val = UM.transform(np.concatenate((outputs_val['z_t'], outputs_val['z_
 transform_t_val = transform_val[:int(len(transform_val)/2),:]
 transform_f_val = transform_val[int(len(transform_val)/2):,:]
 
-colors = ['red', 'blue', 'green', 'yellow']
+colors = ['red', 'blue', 'green', 'yellow', 'purple', 'lightgreen', 'pink', 'black']
 #colors = ['blue', 'blue', 'blue', 'blue']
-color = [colors[i] for i in outputs_train['y']]
-color_test = [colors[i] for i in outputs_test['y']]
-color_val = [colors[i] for i in outputs_val['y']]
+color = [colors[int(i)] for i in outputs_train['y']]
+color_test = [colors[int(i)] for i in outputs_test['y']]
+color_val = [colors[int(i)] for i in outputs_val['y']]
 
 idx = np.arange(len(outputs_train['z_t']))
 #idx = np.random.choice(idx, size = 200)
@@ -93,7 +95,7 @@ else:
     val_input = outputs_val['z_t']
     test_input = outputs_test['z_t']
 
-classifier = 'knn'
+classifier = 'linear'
 
 if classifier == 'knn':
     # train KNeighborsClassifier
@@ -113,7 +115,7 @@ if classifier == 'knn':
         test_res['rec'].append(np.mean(rec))
         test_res['f1'].append(np.mean(f1))
 else:
-    classifier = LogisticRegression()
+    classifier = LogisticRegression(max_iter = 10000)
     classifier.fit(train_input, outputs_train['y'])
     val_out = classifier.predict(val_input)
     val_accuracy = accuracy_score(outputs_val['y'], val_out)

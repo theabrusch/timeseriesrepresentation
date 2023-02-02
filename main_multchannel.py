@@ -230,7 +230,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     # data arguments
-    parser.add_argument('--data_path', type = str, default = 'datasets/HAR/')
+    parser.add_argument('--data_path', type = str, default = 'datasets/Gesture/')
     parser.add_argument('--finetune_path', type = str, default = 'datasets/EMG/')
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 22)
