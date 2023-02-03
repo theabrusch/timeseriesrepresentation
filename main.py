@@ -85,9 +85,9 @@ def main(args):
         else:
             pretrained_path = f'{output_path}/pretrained_model.pt'
 
-        channels, time_length = get_dset_info(args.data_path, sample_channel = True)
-        model = TFC_encoder(in_channels = channels, input_size = time_length, 
-                            num_classes = 2, stride = args.stride, avg_channels=True)
+        channels, time_length = get_dset_info(args.data_path, sample_channel = args.sample_channel)
+        model = TFC_encoder(in_channels = channels, input_size = time_length, classify = False, 
+                            num_classes = 6, stride = args.stride, avg_channels=args.sample_channel)
         model.load_state_dict(torch.load(pretrained_path))
         model.to(device=device)
         if args.loss == 'poly':
