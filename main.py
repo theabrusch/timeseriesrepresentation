@@ -87,7 +87,7 @@ def main(args):
 
         channels, time_length = get_dset_info(args.data_path, sample_channel = True)
         model = TFC_encoder(in_channels = channels, input_size = time_length, 
-                            num_classes = 2, stride = args.stride)
+                            num_classes = 2, stride = args.stride, avg_channels=True)
         model.load_state_dict(torch.load(pretrained_path))
         model.to(device=device)
         if args.loss == 'poly':
