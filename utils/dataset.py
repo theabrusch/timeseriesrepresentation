@@ -75,11 +75,7 @@ class TFC_Dataset(Dataset):
         freq_aug = torch.randint(high = 2, size = [1])
         time_aug = torch.randint(high = 3, size = [1])
         if not self.test_mode and not self.fine_tune_mode:
-            if not self.sample_channel:
-                return self.X_t[idx], self.X_f[idx], self.X_t_aug[idx][time_aug].squeeze(0), self.X_f_aug[idx][freq_aug].squeeze(0), self.Y[idx]
-            else:
-                ch = torch.randint(high = self.num_channels, size = [1])
-                return self.X_t[idx][ch,:], self.X_f[idx][ch,:], self.X_t_aug[idx][time_aug,ch,:], self.X_f_aug[idx][freq_aug,ch,:], self.Y[idx]
+            return self.X_t[idx], self.X_f[idx], self.X_t_aug[idx][time_aug].squeeze(0), self.X_f_aug[idx][freq_aug].squeeze(0), self.Y[idx]
         elif self.fine_tune_mode:
             return self.X_t[idx], self.X_f[idx], self.X_t[idx], self.X_f[idx], self.Y[idx]
         else:

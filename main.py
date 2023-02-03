@@ -33,6 +33,15 @@ def main(args):
         output_path = check_output_path(output_path)
         
     print('Saving outputs in', output_path)
+    if args.avg_channels == 'after':
+        args.sample_channel = True
+        avg_channels_before = False
+        avg_channels_after = True
+    elif args.avg_channels == 'before':
+        args.sample_channel = False
+        avg_channels_before = True
+        avg_channels_after = False
+
     if args.pretrain:
         # get datasets
         train_loader, val_loader, test_loader, (channels, time_length, num_classes) = get_datasets(data_path = args.data_path, 
@@ -41,7 +50,7 @@ def main(args):
                                                                                                     batch_size=args.batch_size)
         
         print('Initializing model')
-        model = TFC_encoder(in_channels = channels, input_size = time_length, avg_channels=args.sample_channel,
+        model = TFC_encoder(in_channels = channels, input_size = time_length, avg_channels_before = avg_channels_before, avg_channels_after=avg_channels_after,
                             num_classes = num_classes, stride = args.stride, classify = False)
         model.to(device)
         optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
@@ -84,7 +93,9 @@ def main(args):
 
         channels, time_length = get_dset_info(args.data_path, sample_channel = args.sample_channel)
         model = TFC_encoder(in_channels = channels, input_size = time_length, classify = False, 
-                            num_classes = 6, stride = args.stride, avg_channels=args.sample_channel)
+                            num_classes = 6, stride = args.stride, avg_channels_before = avg_channels_before, 
+                            avg_channels_after = avg_channels_after)
+
         model.load_state_dict(torch.load(pretrained_path, map_location=device))
         model.to(device=device)
         if args.loss == 'poly':
@@ -130,7 +141,7 @@ def main(args):
             with open(f'{output_path}/prior_finetune_train_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_train, file)
 
-        Classifier = ClassifierModule(num_classes, avg_channels=args.sample_channel)
+        Classifier = ClassifierModule(num_classes, avg_channels=avg_channels_after)
         Classifier.to(device)
         class_optimizer = Adam(Classifier.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
@@ -209,7 +220,7 @@ if __name__ == '__main__':
     # augmentation arguments
     parser.add_argument('--abs_budget', type = eval, default = False)
     parser.add_argument('--stride', type = int, default = 4)
-    parser.add_argument('--sample_channel', type = eval, default = True)
+    parser.add_argument('--avg_channels', type = str, default = 'before')
     # optimizer arguments
     parser.add_argument('--loss', type = str, default = 'poly')
     parser.add_argument('--delta', type = float, default = 0.5)

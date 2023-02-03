@@ -28,7 +28,7 @@ for set in train_test:
 X_train, X_val_test, y_train, y_val_test = train_test_split(x_collect, y_collect, test_size=0.3)
 X_test, X_val, y_test, y_val = train_test_split(X_val_test, y_val_test, test_size=0.5)
 
-X_train, y_train = torch.from_numpy(X_train), torch.from_numpy(y_train)
+X_train, y_train = torch.from_numpy(np.append(X_train, X_val, axis = 0)), torch.from_numpy(np.append(y_train, y_val, axis = 0))
 X_val, y_val = torch.from_numpy(X_val), torch.from_numpy(y_val)
 X_test, y_test = torch.from_numpy(X_test), torch.from_numpy(y_test)
 

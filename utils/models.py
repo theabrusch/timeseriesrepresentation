@@ -31,11 +31,13 @@ class PrintShape(nn.Module):
         return x
 
 class TFC_encoder(nn.Module):
-    def __init__(self, in_channels, input_size, stride = 1,  avg_channels = False, num_classes = None, classify = True):
+    def __init__(self, in_channels, input_size, stride = 1,  avg_channels_before = False, avg_channels_after=False, num_classes = None, classify = True):
         super().__init__()
         self.classify = classify
-        self.avg_channels = avg_channels
-        if self.avg_channels:
+        self.avg_channels_before = avg_channels_before
+        self.avg_channels_after = avg_channels_after
+
+        if self.avg_channels_before or self.avg_channels_after:
             in_channels = 1
 
         self.TimeEncoder = nn.Sequential(
@@ -84,15 +86,21 @@ class TFC_encoder(nn.Module):
             x_f = torch.reshape(x_f, (batch_size*n_channels, 1, time_len))
         
         h_t = self.TimeEncoder(x_t)
+        if self.avg_channels_before:
+            n_h_features = h_t.shape[-1]
+            h_t = torch.reshape(h_t, (batch_size, n_channels, n_h_features)).mean(dim = 1)
         z_t = self.TimeCrossSpace(h_t)
+
         h_f = self.FrequencyEncoder(x_f)
+        if self.avg_channels_before:
+            h_f = torch.reshape(h_f, (batch_size, n_channels, n_h_features)).mean(dim = 1)
         z_f = self.FreqCrossSpace(h_f)
 
         if self.classify:
             out = self.classifier(torch.cat([z_t, z_f], dim = -1))
             return h_t, z_t, h_f, z_f, out
         
-        if finetune and self.avg_channels:
+        if finetune and self.avg_channels_after:
             n_h_features = h_t.shape[-1]
             n_z_features = z_t.shape[-1]
             h_t = torch.reshape(h_t, (batch_size, n_channels, n_h_features))
