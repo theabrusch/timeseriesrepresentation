@@ -13,7 +13,7 @@ def get_datasets(data_path, abs_budget, batch_size, finetune_mode = False, sampl
     train_loader = DataLoader(TFC_dset, batch_size = batch_size, shuffle = True, drop_last=False)
 
     val_dset = TFC_Dataset(val['samples'], val['labels'], dset = dset, abs_budget = abs_budget, fine_tune_mode=finetune_mode, sample_channel=sample_channel)
-    test_dset = TFC_Dataset(test['samples'], test['labels'], dset = dset, test_mode = True, fine_tune_mode=finetune_mode, sample_channel=sample_channel)
+    test_dset = TFC_Dataset(test['samples'], test['labels'], dset = dset, test_mode = True, fine_tune_mode=False, sample_channel=sample_channel)
     val_loader = DataLoader(val_dset, batch_size = batch_size, drop_last=False)
     test_loader = DataLoader(test_dset, batch_size = batch_size, drop_last=False)
 
