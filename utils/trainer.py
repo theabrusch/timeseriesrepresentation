@@ -354,8 +354,8 @@ def finetune_model(model,
         classifier.eval()
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(val_loader):
             x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
-            h_t, z_t, h_f, z_f = model(x_t, x_f)
-            h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
+            h_t, z_t, h_f, z_f = model(x_t, x_f, finetune = True)
+            h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug, finetune = True)
 
             time_loss = loss_fn(h_t, h_t_aug)
             freq_loss = loss_fn(h_f, h_f_aug)
