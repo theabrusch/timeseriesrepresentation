@@ -111,7 +111,7 @@ def main(args):
         ft_train_loader, ft_val_loader, ft_test_loader, (_,_,num_classes) = get_datasets(data_path = args.finetune_path, 
                                                                                          abs_budget = args.abs_budget, 
                                                                                          batch_size = args.batch_size,
-                                                                                         finetune_mode = False)
+                                                                                         finetune_mode = True)
         finetune_dset = args.finetune_path.split('/')[-2]
         # evaluate latent space prior to finetune
         if args.finetune_latentspace:
