@@ -31,9 +31,12 @@ class PrintShape(nn.Module):
         return x
 
 class TFC_encoder(nn.Module):
-    def __init__(self, in_channels, input_size, stride = 1, num_classes = None, classify = True):
+    def __init__(self, in_channels, input_size, stride = 1,  avg_channels = False, num_classes = None, classify = True):
         super().__init__()
         self.classify = classify
+        self.avg_channels = avg_channels
+        if self.avg_channels:
+            in_channels = 1
 
         self.TimeEncoder = nn.Sequential(
             conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = 0.35),
@@ -72,21 +75,38 @@ class TFC_encoder(nn.Module):
                 nn.Linear(in_features=64, out_features=num_classes),
             )
 
-    def forward(self, x_t, x_f):
+    def forward(self, x_t, x_f, finetune = False):
+        if finetune and self.avg_channels:
+            batch_size = x_t.shape[0]
+            n_channels = x_t.shape[1]
+            time_len = x_t.shape[2]
+            x_t = torch.reshape(x_t, (batch_size*n_channels, 1, time_len))
+            x_f = torch.reshape(x_f, (batch_size*n_channels, 1, time_len))
+        
         h_t = self.TimeEncoder(x_t)
         z_t = self.TimeCrossSpace(h_t)
         h_f = self.FrequencyEncoder(x_f)
         z_f = self.FreqCrossSpace(h_f)
-        
+
         if self.classify:
             out = self.classifier(torch.cat([z_t, z_f], dim = -1))
             return h_t, z_t, h_f, z_f, out
+        
+        if finetune and self.avg_channels:
+            n_h_features = h_t.shape[-1]
+            n_z_features = z_t.shape[-1]
+            h_t = torch.reshape(h_t, (batch_size, n_channels, n_h_features))
+            h_f = torch.reshape(h_f, (batch_size, n_channels, n_h_features))
+            z_t = torch.reshape(z_t, (batch_size, n_channels, n_z_features))
+            z_f = torch.reshape(z_f, (batch_size, n_channels, n_z_features))
+
 
         return h_t, z_t, h_f, z_f
 
 class ClassifierModule(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, avg_channels = False):
         super().__init__()
+        self.avg_channels = avg_channels
         self.classifier = nn.Sequential(
                 nn.Sigmoid(),
                 nn.Linear(in_features=256, out_features=64),
@@ -95,6 +115,8 @@ class ClassifierModule(nn.Module):
                 nn.Linear(in_features=64, out_features=num_classes),
             )
     def forward(self, x):
+        if self.avg_channels:
+            x = x.mean(dim = 1)
         return self.classifier(x)
 
 
@@ -145,6 +167,8 @@ class ContrastiveLoss(nn.Module):
         mask_samples_from_same_repr = self._get_correlated_mask(batch_size=batch_size).type(torch.bool)
 
         similarity_matrix = self.similarity_function(representations, representations)
+        if len(similarity_matrix.shape) > 2:
+            similarity_matrix = similarity_matrix.mean(dim = 2)
 
         # filter out the scores from the positive samples
         l_pos = torch.diag(similarity_matrix, batch_size)
