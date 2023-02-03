@@ -78,7 +78,7 @@ class TFC_encoder(nn.Module):
             )
 
     def forward(self, x_t, x_f, finetune = False):
-        if finetune and self.avg_channels:
+        if self.avg_channels_before or self.avg_channels_after:
             batch_size = x_t.shape[0]
             n_channels = x_t.shape[1]
             time_len = x_t.shape[2]
