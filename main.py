@@ -88,7 +88,7 @@ def main(args):
         channels, time_length = get_dset_info(args.data_path, sample_channel = args.sample_channel)
         model = TFC_encoder(in_channels = channels, input_size = time_length, classify = False, 
                             num_classes = 6, stride = args.stride, avg_channels=args.sample_channel)
-        model.load_state_dict(torch.load(pretrained_path))
+        model.load_state_dict(torch.load(pretrained_path, map_location=device))
         model.to(device=device)
         if args.loss == 'poly':
             loss_fn = ContrastiveLoss(tau = 0.2, device = device)
