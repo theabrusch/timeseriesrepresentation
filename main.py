@@ -28,10 +28,7 @@ def main(args):
     dset = args.data_path.split('/')[-2]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = f'{args.output_path}/classifier_{args.train_classifier}_TFC_{args.train_TFC}_abs_budget_{args.abs_budget}_stride_{args.stride}_loss_{args.loss}_{dset}'
-    
-    if not args.pretrain and (args.evaluate_latent_space or args.finetune):
-        args.overwrite = True
-    
+
     if not args.overwrite:
         output_path = check_output_path(output_path)
         
