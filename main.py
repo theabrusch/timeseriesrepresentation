@@ -41,7 +41,7 @@ def main(args):
         avg_channels_before = True
         avg_channels_after = False
     elif args.avg_channels == 'None':
-        args.sample_channel = True
+        args.sample_channel = False
         avg_channels_before = False
         avg_channels_after = False
 
