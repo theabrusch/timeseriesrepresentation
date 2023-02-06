@@ -224,8 +224,8 @@ if __name__ == '__main__':
     # augmentation arguments
     parser.add_argument('--abs_budget', type = eval, default = False)
     parser.add_argument('--stride', type = int, default = 4)
-    parser.add_argument('--avg_channels', type = str, default = 'before')
-    parser.add_argument('--sample_channel', type = eval, default = True)
+    parser.add_argument('--avg_channels', type = str, default = 'None')
+    parser.add_argument('--sample_channel', type = eval, default = False)
     # optimizer arguments
     parser.add_argument('--loss', type = str, default = 'poly')
     parser.add_argument('--delta', type = float, default = 0.5)
