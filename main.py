@@ -34,11 +34,10 @@ def main(args):
         
     print('Saving outputs in', output_path)
     if args.avg_channels == 'after':
-        args.sample_channel = True
         avg_channels_before = False
         avg_channels_after = True
     elif args.avg_channels == 'before':
-        args.sample_channel = False
+        args.sample_channel = True
         avg_channels_before = True
         avg_channels_after = False
 
@@ -221,6 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('--abs_budget', type = eval, default = False)
     parser.add_argument('--stride', type = int, default = 4)
     parser.add_argument('--avg_channels', type = str, default = 'before')
+    parser.add_argument('--sample_channel', type = eval, default = True)
     # optimizer arguments
     parser.add_argument('--loss', type = str, default = 'poly')
     parser.add_argument('--delta', type = float, default = 0.5)
