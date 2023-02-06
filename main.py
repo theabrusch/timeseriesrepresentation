@@ -40,6 +40,11 @@ def main(args):
         args.sample_channel = True
         avg_channels_before = True
         avg_channels_after = False
+    elif args.avg_channels == 'None':
+        args.sample_channel = True
+        avg_channels_before = False
+        avg_channels_after = False
+
 
     if args.pretrain:
         # get datasets
