@@ -126,7 +126,7 @@ def main(args):
 
     if args.finetune:
         if args.test_mode:
-            sample_subjects = 6
+            sample_subjects = 8
             train_subjects = subjects
         else:
             sample_subjects = False
