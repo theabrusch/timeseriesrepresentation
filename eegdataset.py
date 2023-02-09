@@ -32,7 +32,7 @@ def construct_eeg_datasets(config_path, dset, batchsize, sample_subjects = False
         'jitter_ratio': 0.8,
         'max_seg': 8
     }
-    train_dset, val_dset, test_dset = EEG_dataset(train_dset, aug_config), EEG_dataset(val_dset, aug_config), EEG_dataset(test_dset, aug_config)
+    train_dset, val_dset, test_dset = EEG_dataset(train_dset, aug_config), EEG_dataset(val_dset, aug_config), EEG_dataset(test_dset, aug_config, fine_tune_mode=True)
     train_loader, val_loader, test_loader = DataLoader(train_dset, batch_size=batchsize), DataLoader(val_dset, batch_size=batchsize), DataLoader(test_dset, batch_size=batchsize)
     return train_loader, val_loader, test_loader, list(thinkers.keys()), (len(config.picks), config.tlen*train_dset.dn3_dset.sfreq, len(config.events.keys()))
 
