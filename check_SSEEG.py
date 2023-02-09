@@ -58,12 +58,16 @@ def preprocess_EEG(folder,remove_files = False, out_folder = None):
             if remove_files:
                 os.remove(file)
         elif 'mat' in file:
-            data = loadmat(file)['val'][:7, :]
+            data = loadmat(file)['val'][:6, :]
             if remove_files:
                 os.remove(file)
 
     if not data is None:
-        info = mne.create_info(s[:7], Fs, ch_types = 'eeg')
+        diff = np.diff(labels, axis = 0)
+        cutoff = np.where(diff[:,4] != 0)[0]+1
+        data, labels = data[:, cutoff[0]+1:], labels[cutoff[0]+1:,:]
+
+        info = mne.create_info(s[:6], Fs, ch_types = 'eeg')
         mne_dataset = mne.io.RawArray(data, info)
 
         events = process_labels_to_events(labels, label_names)
@@ -72,25 +76,32 @@ def preprocess_EEG(folder,remove_files = False, out_folder = None):
         event_dict = dict(zip(label_names, np.arange(0,6)))
         f = lambda x: label_dict[x]
         annotations = mne.Annotations(onset = events[:,0]/Fs, duration = events[:,1]/Fs, description  = list(map(f,events[:,2])))
-        #annotation = mne.annotations_from_events(events, sfreq = Fs, event_desc = label_dict)
         mne_dataset.set_annotations(annotations)
 
         mne_dataset.resample(sfreq = 100)
-        epoch_events = mne.events_from_annotations(mne_dataset, event_id = event_dict, chunk_duration = 30)
+        epoch_events = mne.events_from_annotations(mne_dataset, chunk_duration = 30)
+        info = mne.create_info(['STI'], mne_dataset.info['sfreq'], ['stim'])
+        stim_data = np.zeros((1, len(mne_dataset.times)))
+        stim_raw = mne.io.RawArray(stim_data, info)
+        mne_dataset.add_channels([stim_raw], force_update_info=True)
+        mne_dataset.add_events(epoch_events[0], stim_channel = 'STI')
+        mne_dataset.save(f'{out_folder}/001_30s_raw.fif', overwrite = True)
+        
         tmax = 30. - 1. / mne_dataset.info['sfreq']
-        epochs_train = mne.Epochs(raw=mne_dataset, events=epoch_events[0], event_id=event_dict, tmin=0., tmax=tmax, baseline=None)
+        epochs_train = mne.Epochs(raw=mne_dataset, events=epoch_events[0], tmin=0., tmax=tmax, baseline=None)
 
-        epochs_train.save(f'{out_folder}/001_30s.fif')
+        #epochs_train.save(f'{out_folder}/001_30s-epo.fif', overwrite = True)
 
 
 def relocate_EEG_data(folder, remove_files = True):
-    data_file = h5py.File(f'{folder}/data.hdf5', 'r')
-    data = data_file["data"]["EEG"][:]
-    labels = data_file["data"]["labels"][:]
-    collect_data = {"data": data.astype(np.int16), "labels": labels.astype(np.int16)}
-    savemat(f'{folder}/data.mat', collect_data)
+
+    data_file = mne.read_epochs(f'{folder}/001_30s.fif')
+    #h5py.File(f'{folder}/data.hdf5', 'r')
+    new_name = f'{folder}/001_30s_epo.fif'
+    data_file.save(new_name)
     if remove_files:
-        os.remove(f'{folder}/data.hdf5')
+        os.remove(f'{folder}/data.mat')
+        os.remove(f'{folder}/001_30s.fif')
 
 def process_labels_to_events(labels, label_names):
     new_labels = np.argmax(labels, axis = 1)
@@ -112,6 +123,7 @@ def process_labels_to_events(labels, label_names):
 
 
 out_folder = '/Users/theb/Desktop/physionet.org/physionet.org/files/challenge-2018/1.0.0/training/'
+out_folder = '/Users/theb/Desktop/training_raw/'
 root_folder = '/Volumes/SED/training/'
 
 make_hdf5 = True
@@ -122,6 +134,8 @@ if make_hdf5:
         print('Processing subject', i+1, 'of', len(subjects))
         subj_folder = os.path.join(root_folder, subject)
         subj_out_folder = os.path.join(out_folder, subject)
+        if not os.path.exists(subj_out_folder):
+            os.makedirs(subj_out_folder, exist_ok = True)
         try:
             preprocess_EEG(subj_folder, out_folder = subj_out_folder, remove_files = False)
         except:
@@ -137,3 +151,11 @@ if relocate_data:
         except:
             print('Issue with subject', subject)
 
+
+
+config = {'augmentations': {
+                        'jitter_scale_ratio': 1.1,
+                        'jitter_ratio': 0.8,
+                        'max_seg': 8
+                        }
+            }

@@ -2,15 +2,20 @@ Configuratron:
   preload: True
 
 use_gpu: False
+deep1010: False
 
 datasets:
   sleepeeg:
     name: "EEG data"
-    toplevel: /Volumes/SED/training/
+    toplevel: /Users/theb/Desktop/training_raw/
+    events: {'nonrem1': 1, 'nonrem2': 2, 'nonrem3': 3, 'rem': 4, 'wake': 5}
     tmin: 0
-    tlen: 6
-    data_max: 0.001
-    data_min: -0.001
+    tlen: 30
+    chunk_duration: None
+    exclude_channels: ['STI']
+    preload: True
+    deep1010: None
+    #toplevel: /Users/theb/Desktop/physionet.org/physionet.org/files/challenge-2018/1.0.0/training/∂
     train_params:
       epochs: 7
       batch_size: 4
