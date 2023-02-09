@@ -318,7 +318,7 @@ def finetune_model(model,
             #time_loss = loss_fn(h_t, h_t_aug)
             time_loss = 0
             freq_loss = 0
-            loss-TFC = 0
+            loss_TFC = 0
             #freq_loss = loss_fn(h_f, h_f_aug)
 
             #time_freq_pos = loss_fn(z_t, z_f)
