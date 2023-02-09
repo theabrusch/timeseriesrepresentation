@@ -18,7 +18,7 @@ def construct_eeg_datasets(config_path, dset, batchsize, sample_subjects = False
         config.chunk_duration = str(config.tlen)
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects
-        
+
     thinkers = load_thinkers(config, sample_subjects=sample_subjects)
     info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
                         targets=config._targets if config._targets is not None else len(config._unique_events))
