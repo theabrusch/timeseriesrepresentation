@@ -315,15 +315,15 @@ def finetune_model(model,
             h_t, z_t, h_f, z_f = model(x_t, x_f, finetune = True)
             h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug, finetune = True)
 
-            #time_loss = loss_fn(h_t, h_t_aug)
-            time_loss = 0
-            freq_loss = 0
-            loss_TFC = 0
-            #freq_loss = loss_fn(h_f, h_f_aug)
+            time_loss = loss_fn(h_t, h_t_aug)
+            #time_loss = 0
+            #freq_loss = 0
+            #loss_TFC = 0
+            freq_loss = loss_fn(h_f, h_f_aug)
 
-            #time_freq_pos = loss_fn(z_t, z_f)
-            #time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
-            #loss_TFC = (time_freq_pos - time_freq_neg[0] + 1) + (time_freq_pos - time_freq_neg[1] + 1) + (time_freq_pos - time_freq_neg[2] + 1)
+            time_freq_pos = loss_fn(z_t, z_f)
+            time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
+            loss_TFC = (time_freq_pos - time_freq_neg[0] + 1) + (time_freq_pos - time_freq_neg[1] + 1) + (time_freq_pos - time_freq_neg[2] + 1)
 
             y_out = classifier(torch.cat([z_t, z_f], dim = -1))
             class_loss = class_loss_fn(y_out, y)
