@@ -50,7 +50,7 @@ def main(args):
     if args.pretrain:
         # get datasets
         if args.test_mode:
-            sample_subjects = 12
+            sample_subjects = args.sample_subjs
         else:
             sample_subjects = False
         train_loader, val_loader, test_loader, subjects, (channels, time_length, num_classes) = construct_eeg_datasets(args.config_path, 'sleepeeg', batchsize = args.batch_size, sample_subjects=sample_subjects)
@@ -126,7 +126,7 @@ def main(args):
 
     if args.finetune:
         if args.test_mode:
-            sample_subjects = 8
+            sample_subjects = int(args.sample_subjs/2)
             train_subjects = subjects
         else:
             sample_subjects = False
@@ -217,6 +217,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_TFC', type = eval, default = True)
     parser.add_argument('--train_classifier', type = eval, default = True)
     parser.add_argument('--test_mode', type = eval, default = True)
+    parser.add_argument('--sample_subjs', type = int, default = 12)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
@@ -242,8 +243,8 @@ if __name__ == '__main__':
     parser.add_argument('--delta', type = float, default = 0.5)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 0)
-    parser.add_argument('--finetune_epochs', type = int, default = 1)
+    parser.add_argument('--epochs', type = int, default = 1)
+    parser.add_argument('--finetune_epochs', type = int, default = 0)
     args = parser.parse_args()
     main(args)
 
