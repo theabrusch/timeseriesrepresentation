@@ -1,7 +1,7 @@
 #!/bin/sh
 #BSUB -q gpuv100
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -J train_selfsupervised_pretrain_HAR_mult
+#BSUB -J pretrain_HAR_multtrain_orig
 ### number of core
 #BSUB -n 1 
 ### specify that all cores should be on the same host
@@ -12,9 +12,9 @@
 #BSUB -N 
 #BSUB -W 24:00
 ### added outputs and errors to files
-#BSUB -o logs/Output_selfsuper_pretrain_HAR_mult_%J.out
-#BSUB -e logs/Error_selfsuper_pretrain_HAR_mult_%J.err
+#BSUB -o logs/Output_pretrain_HAR_multtrain_orig_%J.out
+#BSUB -e logs/Error_pretrain_HAR_multtrain_orig_%J.err
 
 module load python3/3.9.11
 
-python3 main.py --data_path /work3/theb/timeseries/HAR/ --epochs 40 --train_classifier False --finetune_path /work3/theb/timeseries/Gesture/ --finetune_epochs 40 --batch_size 32 --pretrain True --delta 0.5 --stride 1 --abs_budget False --loss poly --finetune True --learning_rate 3e-4 --sample_channel True
+python3 main.py --data_path /work3/theb/timeseries/HAR/ --epochs 40 --train_classifier False --finetune_path /work3/theb/timeseries/Gesture/ --finetune_epochs 40 --batch_size 16 --pretrain True --delta 0.5 --stride 1 --abs_budget True --loss poly --finetune True --learning_rate 3e-4 --evaluate_latent_space False --finetune_latentspace False --optimize_encoder True --avg_channels 'None' --sample_channel False
