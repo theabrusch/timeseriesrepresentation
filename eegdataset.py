@@ -20,6 +20,7 @@ def construct_eeg_datasets(config_path, dset, batchsize, sample_subjects = False
         config.exclude_people = exclude_subjects
 
     thinkers = load_thinkers(config, sample_subjects=sample_subjects)
+    print('Subjects', list(thinkers.keys()))
     info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
                         targets=config._targets if config._targets is not None else len(config._unique_events))
 
@@ -60,7 +61,7 @@ def load_thinkers(config, sample_subjects = False):
     subjects = os.listdir(config.toplevel)
     subjects = [subject for subject in subjects if not subject in config.exclude_people]
     if sample_subjects:
-        subjects = np.random.choice(subjects, sample_subjects)
+        subjects = np.random.choice(subjects, sample_subjects, replace = False)
     thinkers = dict()
     for i, subject in enumerate(subjects):
         print('Loading subject', i+1, 'of', len(subjects))

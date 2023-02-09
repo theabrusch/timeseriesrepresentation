@@ -132,7 +132,7 @@ def main(args):
             sample_subjects = False
             train_subjects = None
 
-        ft_train_loader, ft_val_loader, ft_test_loader, (_,_,num_classes) = construct_eeg_datasets(args.config_path, 'sleepeeg', 
+        ft_train_loader, ft_val_loader, ft_test_loader, subjects, (_,_,num_classes) = construct_eeg_datasets(args.config_path, 'sleepeeg', 
                                                                                                    batchsize = args.batch_size, 
                                                                                                    sample_subjects=sample_subjects,
                                                                                                    finetune=True, exclude_subjects=train_subjects)
@@ -225,7 +225,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     # data arguments
-    parser.add_argument('--config_path', type = str, default = 'sleepeeg.yml')
+    parser.add_argument('--config_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'datasets/Gesture/')
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 22)
