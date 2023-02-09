@@ -133,9 +133,9 @@ def main(args):
             train_subjects = None
 
         ft_train_loader, ft_val_loader, ft_test_loader, subjects, (_,_,num_classes) = construct_eeg_datasets(args.config_path, 'sleepeeg', 
-                                                                                                   batchsize = args.batch_size, 
-                                                                                                   sample_subjects=sample_subjects,
-                                                                                                   finetune=True, exclude_subjects=train_subjects)
+                                                                                                                batchsize = args.batch_size, 
+                                                                                                                sample_subjects=sample_subjects,
+                                                                                                                finetune=True, exclude_subjects=train_subjects)
         finetune_dset = dset
         # evaluate latent space prior to finetune
         if args.finetune_latentspace:
