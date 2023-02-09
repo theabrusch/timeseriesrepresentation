@@ -1,1 +1,1 @@
-rsync -Pav -a ~/Documents/PhD/code/timeseriesrepresentation/datasets/HAR --rsh=ssh theb@transfer.gbar.dtu.dk:/work3/theb/timeseries/
+rsync -Pav -a ~/Desktop/training_raw --rsh=ssh theb@transfer.gbar.dtu.dk:/work3/theb/timeseries/

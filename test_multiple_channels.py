@@ -1,14 +1,13 @@
-import dn3
-from dn3_.dn3 import configuratron
-from dn3_.dn3.configuratron import ExperimentConfig
+
+from dn3.configuratron import ExperimentConfig
 from dn3.data.dataset import EpochTorchRecording, Thinker, DatasetInfo, Dataset
-import matplotlib.pyplot as plt
 import mne
 from dn3_.dn3.utils import make_epochs_from_raw
 from eegdataset import load_thinkers, EEG_dataset
 from torch.utils.data import DataLoader
-import os
+from sklearn.model_selection import train_test_split
 from scipy.fft import fft
+import copy
 
 
 config_filename = 'sleepeeg.yml'
@@ -16,11 +15,15 @@ experiment = ExperimentConfig(config_filename)
 ds_config = experiment.datasets['sleepeeg']
 
 thinkers = load_thinkers(ds_config, sample_subjects=10)
+train, val_test = train_test_split(list(thinkers.keys()), test_size = 0.4)
+val, test = train_test_split(val_test, test_size = 0.5)
 
 info = DatasetInfo(ds_config.name, ds_config.data_max, ds_config.data_min, ds_config._excluded_people,
                            targets=ds_config._targets if ds_config._targets is not None else len(ds_config._unique_events))
 
 dset = Dataset(thinkers = thinkers, dataset_info=info)
+splits = dset.lmso(test_splits=[test], validation_splits=[val])
+
 config = { 
         'jitter_scale_ratio': 1.1,
         'jitter_ratio': 0.8,

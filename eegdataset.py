@@ -1,10 +1,60 @@
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset as TorchDataset
+from torch.utils.data import DataLoader
 import os
 import glob
 import mne 
-from dn3.data.dataset import EpochTorchRecording, Thinker
+from dn3.configuratron import ExperimentConfig
+from dn3.data.dataset import EpochTorchRecording, Thinker, Dataset, DatasetInfo
 import numpy as np
+from sklearn.model_selection import train_test_split
+import warnings
+warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning) 
+
+def construct_eeg_datasets(config_path, dset, batchsize, sample_subjects = False, finetune = False, exclude_subjects = None):
+    experiment = ExperimentConfig(config_path)
+    config = experiment.datasets[dset]
+    if finetune:
+        config.chunk_duration = str(config.tlen)
+    if not exclude_subjects is None:
+        config.exclude_people = exclude_subjects
+        
+    thinkers = load_thinkers(config, sample_subjects=sample_subjects)
+    info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
+                        targets=config._targets if config._targets is not None else len(config._unique_events))
+
+    train_thinkers, test_thinkers, val_thinkers = divide_thinkers(thinkers, finetune)
+    train_dset, val_dset, test_dset = Dataset(train_thinkers, dataset_info=info), Dataset(val_thinkers, dataset_info=info), Dataset(test_thinkers, dataset_info=info)
+
+    aug_config = { 
+        'jitter_scale_ratio': 1.1,
+        'jitter_ratio': 0.8,
+        'max_seg': 8
+    }
+    train_dset, val_dset, test_dset = EEG_dataset(train_dset, aug_config), EEG_dataset(val_dset, aug_config), EEG_dataset(test_dset, aug_config)
+    train_loader, val_loader, test_loader = DataLoader(train_dset, batch_size=batchsize), DataLoader(val_dset, batch_size=batchsize), DataLoader(test_dset, batch_size=batchsize)
+    return train_loader, val_loader, test_loader, list(thinkers.keys()), (len(config.picks), config.tlen*train_dset.dn3_dset.sfreq, len(config.events.keys()))
+
+def divide_thinkers(thinkers, finetune):
+    if finetune:
+        test_ratio = 0.5
+    else:
+        test_ratio = 0.3
+    train, val_test = train_test_split(list(thinkers.keys()), test_size = test_ratio, random_state=0)
+    val, test = train_test_split(val_test, test_size = 0.5, random_state=0)
+    train_thinkers = dict()
+    for subj in train:
+        train_thinkers[subj] = thinkers[subj]
+    
+    val_thinkers = dict()
+    for subj in val:
+        val_thinkers[subj] = thinkers[subj]
+    
+    test_thinkers = dict()
+    for subj in test:
+        test_thinkers[subj] = thinkers[subj]
+    return train_thinkers, test_thinkers, val_thinkers
+
 
 def load_thinkers(config, sample_subjects = False):
     subjects = os.listdir(config.toplevel)
@@ -84,11 +134,13 @@ def add_frequency(x, pertub_ratio=0,):
     pertub_matrix = mask*random_am
     return x+pertub_matrix
 
-class EEG_dataset(Dataset):
-    def __init__(self, dn3_dset, augmentation_config):
+class EEG_dataset(TorchDataset):
+    def __init__(self, dn3_dset, augmentation_config, preloaded = False, fine_tune_mode = False):
         super().__init__()
         self.dn3_dset = dn3_dset
         self.aug_config = augmentation_config
+        self.preloaded = preloaded
+        self.fine_tune_mode = fine_tune_mode
     
     def _time_augmentations(self, signal):
         time_augs = [jitter, scaling, permutation]
@@ -104,14 +156,17 @@ class EEG_dataset(Dataset):
     def __len__(self):
         return len(self.dn3_dset)
     
-    def _perform_augmentations(self, signal):
+    def _perform_augmentations(self, signal, fft):
         time_aug = self._time_augmentations(signal)
-        fft = torch.fft.fft(signal, axis = -1).abs()
         freq_aug = self._freq_augmentations(fft)
 
-        return fft, time_aug, freq_aug
+        return time_aug, freq_aug
     
     def __getitem__(self, index):
         signal, label = self.dn3_dset.__getitem__(index)
-        fft, time_aug, freq_aug = self._perform_augmentations(signal)
-        return signal, fft, time_aug, freq_aug, label
+        fft = torch.fft.fft(signal, axis = -1).abs()
+        if not self.fine_tune_mode:
+            time_aug, freq_aug = self._perform_augmentations(signal, fft)
+            return signal, fft, time_aug, freq_aug, label
+        else:
+            return signal, fft, label
