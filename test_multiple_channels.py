@@ -7,14 +7,26 @@ from eegdataset import load_thinkers, EEG_dataset
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from scipy.fft import fft
-import copy
+import numpy as np
+import json
+import os
 
-
-config_filename = 'sleepeeg.yml'
+config_filename = 'sleepeeg_local.yml'
 experiment = ExperimentConfig(config_filename)
 ds_config = experiment.datasets['sleepeeg']
 
-thinkers = load_thinkers(ds_config, sample_subjects=10)
+subjects = os.listdir(ds_config.toplevel)
+subjects = [subject for subject in subjects if 'tr' in subject]
+train, test_val = train_test_split(subjects, train_size = 596)
+test, val = train_test_split(test_val, train_size = 200)
+
+splits = {'pretrain': train, 'finetune': val, 'test': test}
+
+with open('sleepeeg_local_splits.txt', 'w') as split_file:
+    split_file.write(json.dumps(splits))
+
+thinkers = load_thinkers(ds_config, sample_subjects=20)
+
 train, val_test = train_test_split(list(thinkers.keys()), test_size = 0.4)
 val, test = train_test_split(val_test, test_size = 0.5)
 
@@ -22,7 +34,6 @@ info = DatasetInfo(ds_config.name, ds_config.data_max, ds_config.data_min, ds_co
                            targets=ds_config._targets if ds_config._targets is not None else len(ds_config._unique_events))
 
 dset = Dataset(thinkers = thinkers, dataset_info=info)
-splits = dset.lmso(test_splits=[test], validation_splits=[val])
 
 config = { 
         'jitter_scale_ratio': 1.1,
@@ -31,6 +42,12 @@ config = {
 }
 
 eeg_dset = EEG_dataset(dset, config)
+
+targets = eeg_dset.dn3_dset.get_targets()
+
+np.unique(targets, return_counts=True)
+splits = dset.lmso(test_splits=[test], validation_splits=[val])
+
 dloader = DataLoader(eeg_dset, batch_size=64)
 temp = next(iter(dloader))
 

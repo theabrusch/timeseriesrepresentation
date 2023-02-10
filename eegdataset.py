@@ -3,6 +3,7 @@ from torch.utils.data import Dataset as TorchDataset
 from torch.utils.data import DataLoader
 import os
 import glob
+import json
 import mne 
 from dn3.configuratron import ExperimentConfig
 from dn3.data.dataset import EpochTorchRecording, Thinker, Dataset, DatasetInfo
@@ -11,54 +12,96 @@ from sklearn.model_selection import train_test_split
 import warnings
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning) 
 
-def construct_eeg_datasets(config_path, dset, batchsize, sample_subjects = False, finetune = False, exclude_subjects = None):
+def construct_eeg_datasets(config_path, 
+                           finetune_path,
+                           batchsize, 
+                           target_batchsize,
+                           sample_subjects = False, 
+                           exclude_subjects = None,
+                           train_mode = 'both'):
     experiment = ExperimentConfig(config_path)
+    dset = config_path.split('/')[-1].strip('.yml')
     config = experiment.datasets[dset]
-    if finetune:
-        config.chunk_duration = str(config.tlen)
+
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects
-
-    thinkers = load_thinkers(config, sample_subjects=sample_subjects)
-    print('Subjects', list(thinkers.keys()))
-    info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
-                        targets=config._targets if config._targets is not None else len(config._unique_events))
-
-    train_thinkers, test_thinkers, val_thinkers = divide_thinkers(thinkers, finetune)
-    train_dset, val_dset, test_dset = Dataset(train_thinkers, dataset_info=info), Dataset(val_thinkers, dataset_info=info), Dataset(test_thinkers, dataset_info=info)
-
-    aug_config = { 
-        'jitter_scale_ratio': 1.1,
-        'jitter_ratio': 0.8,
-        'max_seg': 8
-    }
-    train_dset, val_dset, test_dset = EEG_dataset(train_dset, aug_config), EEG_dataset(val_dset, aug_config), EEG_dataset(test_dset, aug_config, fine_tune_mode=True)
-    train_loader, val_loader, test_loader = DataLoader(train_dset, batch_size=batchsize), DataLoader(val_dset, batch_size=batchsize), DataLoader(test_dset, batch_size=batchsize)
-    return train_loader, val_loader, test_loader, list(thinkers.keys()), (len(config.picks), config.tlen*train_dset.dn3_dset.sfreq, len(config.events.keys()))
-
-def divide_thinkers(thinkers, finetune):
-    if finetune:
-        test_ratio = 0.5
+    
+    if finetune_path == 'same':
+        split_path = config_path.strip('.yml') + '_splits.txt'
+        with open(split_path, 'r') as split_file:
+            splits = json.load(split_file)
+        pretrain_subjects = splits['pretrain']
     else:
-        test_ratio = 0.3
-    train, val_test = train_test_split(list(thinkers.keys()), test_size = test_ratio, random_state=0)
-    val, test = train_test_split(val_test, test_size = 0.5, random_state=0)
+        subjects = None
+
+    # construct pretraining datasets
+    if train_mode == 'pretrain' or train_mode == 'both':
+        pretrain_thinkers = load_thinkers(config, sample_subjects=sample_subjects, subjects = pretrain_subjects)
+        info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
+                            targets=config._targets if config._targets is not None else len(config._unique_events))
+
+        pretrain_train_thinkers, pretrain_val_thinkers = divide_thinkers(pretrain_thinkers)
+        pretrain_dset, pretrain_val_dset = Dataset(pretrain_train_thinkers, dataset_info=info), Dataset(pretrain_val_thinkers, dataset_info=info)
+
+        aug_config = { 
+            'jitter_scale_ratio': 1.1,
+            'jitter_ratio': 0.8,
+            'max_seg': 8
+        }
+        pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config), EEG_dataset(pretrain_val_dset, aug_config)
+        pretrain_loader, pretrain_val_loader = DataLoader(pretrain_dset, batch_size=batchsize), DataLoader(pretrain_val_dset, batch_size=batchsize)
+    else:
+        pretrain_loader, pretrain_val_loader = None, None
+    
+    # construct finetuning dataset
+    if train_mode == 'finetune' or train_mode == 'both':
+        sample_subjects = int(sample_subjects/2) if sample_subjects else sample_subjects
+        if not finetune_path == 'same':
+            experiment = ExperimentConfig(finetune_path)
+            dset = config_path.split('/')[-1].strip('.yml')
+            config = experiment.datasets[dset]
+            finetunesubjects = None
+            test_subjects = None
+        else:
+            config.chunk_duration = str(config.tlen)
+            finetunesubjects = splits['finetune']
+            test_subjects = splits['test']
+        finetune_thinkers = load_thinkers(config, sample_subjects=sample_subjects, subjects = finetunesubjects)
+        finetune_train_thinkers, finetune_val_thinkers = divide_thinkers(finetune_thinkers)
+        finetune_train_dset, finetune_val_dset = Dataset(finetune_train_thinkers, dataset_info=info), Dataset(finetune_val_thinkers, dataset_info=info)
+
+        aug_config = { 
+            'jitter_scale_ratio': 1.1,
+            'jitter_ratio': 0.8,
+            'max_seg': 8
+        }
+        finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config), EEG_dataset(finetune_val_dset, aug_config)
+        finetune_loader, finetune_val_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize), DataLoader(finetune_val_dset, batch_size=target_batchsize)
+        # get test set
+        test_thinkers = load_thinkers(config, sample_subjects=sample_subjects, subjects = test_subjects)
+        test_dset = Dataset(test_thinkers, dataset_info=info)
+        test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False)
+        test_loader = DataLoader(test_dset, batch_size=batchsize)
+    else:
+        finetune_loader, finetune_val_loader, test_loader = None
+
+    return pretrain_loader, pretrain_val_loader,finetune_loader, finetune_val_loader, test_loader, (len(config.picks), config.tlen*100, len(config.events.keys()))
+
+def divide_thinkers(thinkers):
+    train, val = train_test_split(list(thinkers.keys()), test_size = 0.2, random_state=0)
     train_thinkers = dict()
     for subj in train:
         train_thinkers[subj] = thinkers[subj]
-    
     val_thinkers = dict()
     for subj in val:
         val_thinkers[subj] = thinkers[subj]
-    
-    test_thinkers = dict()
-    for subj in test:
-        test_thinkers[subj] = thinkers[subj]
-    return train_thinkers, test_thinkers, val_thinkers
+
+    return train_thinkers, val_thinkers
 
 
-def load_thinkers(config, sample_subjects = False):
-    subjects = os.listdir(config.toplevel)
+def load_thinkers(config, sample_subjects = False, subjects = None):
+    if subjects is None:
+        subjects = os.listdir(config.toplevel)        
     subjects = [subject for subject in subjects if not subject in config.exclude_people]
     if sample_subjects:
         subjects = np.random.choice(subjects, sample_subjects, replace = False)
