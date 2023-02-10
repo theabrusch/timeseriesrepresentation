@@ -67,7 +67,8 @@ def main(args):
     train_mode = 'both' if args.pretrain and args.finetune else 'finetune' if args.finetune else 'pretrain'
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(args.config_path, 
                                                                                                                                                            args.finetune_path, 
-                                                                                                                                                           batchsize = args.batch_size, 
+                                                                                                                                                           batchsize = args.batch_size,
+                                                                                                                                                           normalize = args.normalize, 
                                                                                                                                                            target_batchsize = args.target_batch_size,
                                                                                                                                                            sample_subjects = args.sample_subjs,
                                                                                                                                                            sample_test_subjects = args.sample_test_subjs,
@@ -251,6 +252,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 128)
     parser.add_argument('--output_path', type = str, default = 'outputs')
+    parser.add_argument('--normalize', type = eval, default = False)
 
     # augmentation arguments
     parser.add_argument('--abs_budget', type = eval, default = False)
