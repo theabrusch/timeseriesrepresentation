@@ -16,6 +16,7 @@ def construct_eeg_datasets(config_path,
                            finetune_path,
                            batchsize, 
                            target_batchsize,
+                           normalize = False,
                            sample_subjects = False, 
                            sample_test_subjects = False,
                            exclude_subjects = None,
@@ -23,6 +24,7 @@ def construct_eeg_datasets(config_path,
     experiment = ExperimentConfig(config_path)
     dset = config_path.split('/')[-1].strip('.yml').split('_')[0]
     config = experiment.datasets[dset]
+    config.normalize = normalize
 
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects
@@ -125,7 +127,9 @@ def load_thinkers(config, sample_subjects = False, subjects = None):
 
 
 def construct_epoch_dset(file, config):
-    raw = mne.io.read_raw_fif(file)
+    raw = mne.io.read_raw_fif(file, preload = config.preload)
+    if config.normalize and config.preload:
+        raw.apply_function(lambda x: (x-np.mean(x))/np.std(x))
     sfreq = raw.info['sfreq']
     event_map = {v: v for v in config.events.values()}
     events = mne.events_from_annotations(raw, event_id=config.events, chunk_duration=eval(config.chunk_duration))[0]
