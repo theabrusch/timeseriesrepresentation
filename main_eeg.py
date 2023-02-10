@@ -241,8 +241,8 @@ if __name__ == '__main__':
 
     # data arguments
     parser.add_argument('--test_mode', type = eval, default = True)
-    parser.add_argument('--sample_subjs', type = int, default = 12)
-    parser.add_argument('--sample_test_subjs', type = int, default = 6)
+    parser.add_argument('--sample_subjs', type = eval, default = 60)
+    parser.add_argument('--sample_test_subjs', type = eval, default = 20)
     parser.add_argument('--config_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'same')
     parser.add_argument('--batch_size', type = int, default = 128)
