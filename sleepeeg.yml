@@ -22,21 +22,3 @@ datasets:
       batch_size: 4
     lr: 0.0001
     folds: 5
-  
-  sleepedf:
-    name: "sleep edf data"
-      toplevel: '/work3/theb/timeseries/sleep_edf/'
-      events: {'nonrem1': 0, 'nonrem2': 1, 'nonrem3': 2, 'rem': 3, 'wake': 4}
-      tmin: 0
-      tlen: 30
-      chunk_duration: None
-      exclude_channels: ['STI']
-      preload: True
-      picks: ['F3-M2', 'F4-M1', 'C3-M2', 'C4-M1', 'O1-M2', 'O2-M1']
-      deep1010: None
-      #toplevel: /Users/theb/Desktop/physionet.org/physionet.org/files/challenge-2018/1.0.0/training/∂
-      train_params:
-        epochs: 7
-        batch_size: 4
-      lr: 0.0001
-      folds: 5
