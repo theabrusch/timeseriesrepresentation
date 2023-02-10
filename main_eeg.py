@@ -83,7 +83,8 @@ def main(args):
         loss_fn = ContrastiveLoss(tau = 0.2, device = device)
         print('='*45)
         print('Pre-training model on', len(pretrain_loader.dataset), 'samples')
-        print('With target distribution ', np.unique(pretrain_loader.dataset.dn3_dset.get_targets(), return_counts = True))
+        try:
+            print('With target distribution ', np.unique(pretrain_loader.dataset.dn3_dset.get_targets(), return_counts = True))
         time = datetime.datetime.now()
         # pretrain model
 
