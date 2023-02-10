@@ -388,12 +388,12 @@ def finetune_model(model,
         collect_val_freq_loss[epoch] = epoch_freq_loss / (i+1)
         collect_val_time_freq_loss[epoch] = epoch_time_freq_loss / (i+1)
 
-        if epochs%2 == 0:
-            results = evaluate_model(model, classifier, val_loader, device)
-            print('Validation accuracy:', results['Accuracy'])
-            print('Validation precision:', np.mean(results['Precision']))
-            print('Validation recall:', np.mean(results['Recall']))
-            print('Validation F1:', np.mean(results['F1 score']))
+        #if epochs%2 == 0:
+        #    results = evaluate_model(model, classifier, val_loader, device)
+        #    print('Validation accuracy:', results['Accuracy'])
+        #    print('Validation precision:', np.mean(results['Precision']))
+        #    print('Validation recall:', np.mean(results['Recall']))
+        #    print('Validation F1:', np.mean(results['F1 score']))
 
     
     losses = {'train': {
