@@ -85,6 +85,8 @@ def main(args):
         print('Pre-training model on', len(pretrain_loader.dataset), 'samples')
         try:
             print('With target distribution ', np.unique(pretrain_loader.dataset.dn3_dset.get_targets(), return_counts = True))
+        except:
+            print('hej')
         time = datetime.datetime.now()
         # pretrain model
 
