@@ -9,6 +9,7 @@ from torch.optim import Adam
 from utils.plot_functions import plot_contrastive_losses
 import pickle
 import os
+import numpy as np
 import datetime
 from prettytable import PrettyTable
 #from torch.utils.tensorboard import SummaryWriter
@@ -80,10 +81,12 @@ def main(args):
         optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
         loss_fn = ContrastiveLoss(tau = 0.2, device = device)
-
-        print('Training model')
+        print('='*45)
+        print('Pre-training model on', len(pretrain_loader.dataset), 'samples')
+        print('With target distribution ', np.unique(pretrain_loader.dataset.dn3_dset.get_targets(), return_counts = True))
         time = datetime.datetime.now()
         # pretrain model
+
         model, losses = TFC_trainer(model = model, 
                                     train_loader = pretrain_loader, 
                                     optimizer = optimizer, 
@@ -170,6 +173,10 @@ def main(args):
         else:
             optimizer = None
         # finetune model
+        print('='*45)
+        print('Finetuning model on', len(finetune_loader.dataset), 'samples')
+        print('With target distribution ', np.unique(finetune_loader.dataset.dn3_dset.get_targets(), return_counts = True))
+
         model, losses = finetune_model(model = model, 
                                         classifier = Classifier, 
                                         data_loader = finetune_loader, 
@@ -198,6 +205,9 @@ def main(args):
         time = time2
         # evaluate on test set
         test_loader.fine_tune_mode = False
+        print('='*45)
+        print('Testing model on', len(test_loader.dataset), 'samples')
+        print('With target distribution ', np.unique(test_loader.dataset.dn3_dset.get_targets(), return_counts = True))
         results = evaluate_model(model = model,
                                 classifier = Classifier, 
                                 test_loader = test_loader,

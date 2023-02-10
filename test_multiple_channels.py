@@ -20,6 +20,9 @@ subjects = [subject for subject in subjects if 'tr' in subject]
 train, test_val = train_test_split(subjects, train_size = 596)
 test, val = train_test_split(test_val, train_size = 200)
 
+subjects = np.concatenate((np.arange(39), np.arange(40, 68), np.arange(70,78), np.arange(80, 83)))
+mne.datasets.sleep_physionet.age.fetch_data(subjects, on_missing='ignore', path = '/Users/theb/Desktop/sleep_edf/')
+
 splits = {'pretrain': train, 'finetune': val, 'test': test}
 
 with open('sleepeeg_local_splits.txt', 'r') as split_file:

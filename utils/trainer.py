@@ -300,6 +300,7 @@ def finetune_model(model,
     collect_val_time_freq_loss = torch.zeros(epochs)
 
     for epoch in range(epochs):
+        print('\n', epoch + 1 , 'of', epochs)
         epoch_loss = 0
         epoch_class_loss = 0
         epoch_time_loss = 0
@@ -343,7 +344,7 @@ def finetune_model(model,
         collect_time_loss[epoch] = epoch_time_loss / (i+1)
         collect_freq_loss[epoch] = epoch_freq_loss / (i+1)
         collect_time_freq_loss[epoch] = epoch_time_freq_loss / (i+1)
-
+        print('\nTraining loss')
         print('Epoch loss:', epoch_loss/(i+1))
         print('Class. loss:', epoch_class_loss/(i+1))
 
@@ -377,11 +378,22 @@ def finetune_model(model,
             epoch_freq_loss += freq_loss.detach().cpu()
             epoch_time_freq_loss += loss_TFC.detach().cpu()
         
+        print('\nValidation loss')
+        print('Epoch loss:', epoch_loss/(i+1))
+        print('Class. loss:', epoch_class_loss/(i+1))
+
         collect_val_class_loss[epoch] = epoch_class_loss / (i+1)
         collect_val_loss[epoch] = epoch_loss / (i+1)
         collect_val_time_loss[epoch] = epoch_time_loss / (i+1)
         collect_val_freq_loss[epoch] = epoch_freq_loss / (i+1)
         collect_val_time_freq_loss[epoch] = epoch_time_freq_loss / (i+1)
+
+        if epochs%2 == 0:
+            results = evaluate_model(model, classifier, val_loader, device)
+            print('Validation accuracy:', results['Accuracy'])
+            print('Validation precision:', np.mean(results['Precision']))
+            print('Validation recall:', np.mean(results['Recall']))
+            print('Validation F1:', np.mean(results['F1 score']))
 
     
     losses = {'train': {
