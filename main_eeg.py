@@ -63,15 +63,16 @@ def main(args):
         avg_channels_before = False
         avg_channels_after = False
 
-    pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(args.config_path, 'sleepeeg', batchsize = args.batch_size, sample_subjects=sample_subjects)
+    train_mode = 'both' if args.pretrain and args.finetune else 'finetune' if args.finetune else 'pretrain'
+    pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(args.config_path, 
+                                                                                                                                                           args.finetune_path, 
+                                                                                                                                                           batchsize = args.batch_size, 
+                                                                                                                                                           target_batchsize = args.target_batch_size,
+                                                                                                                                                           sample_subjects = args.sample_subjs,
+                                                                                                                                                           sample_test_subjects = args.sample_test_subjs,
+                                                                                                                                                           train_mode = train_mode)
 
     if args.pretrain:
-        # get datasets
-        if args.test_mode:
-            sample_subjects = args.sample_subjs
-        else:
-            sample_subjects = False
-        
         print('Initializing model')
         model = TFC_encoder(in_channels = channels, input_size = time_length, avg_channels_before = avg_channels_before, avg_channels_after=avg_channels_after,
                             num_classes = num_classes, stride = args.stride, classify = False)
@@ -231,6 +232,7 @@ if __name__ == '__main__':
     # data arguments
     parser.add_argument('--test_mode', type = eval, default = True)
     parser.add_argument('--sample_subjs', type = int, default = 12)
+    parser.add_argument('--sample_test_subjs', type = int, default = 6)
     parser.add_argument('--config_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'same')
     parser.add_argument('--batch_size', type = int, default = 128)

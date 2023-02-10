@@ -17,17 +17,18 @@ def construct_eeg_datasets(config_path,
                            batchsize, 
                            target_batchsize,
                            sample_subjects = False, 
+                           sample_test_subjects = False,
                            exclude_subjects = None,
                            train_mode = 'both'):
     experiment = ExperimentConfig(config_path)
-    dset = config_path.split('/')[-1].strip('.yml')
+    dset = config_path.split('/')[-1].strip('.yml').split('_')[0]
     config = experiment.datasets[dset]
 
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects
     
     if finetune_path == 'same':
-        split_path = config_path.strip('.yml') + '_splits.txt'
+        split_path = config_path.removesuffix('.yml') + '_splits.txt'
         with open(split_path, 'r') as split_file:
             splits = json.load(split_file)
         pretrain_subjects = splits['pretrain']
@@ -36,10 +37,11 @@ def construct_eeg_datasets(config_path,
 
     # construct pretraining datasets
     if train_mode == 'pretrain' or train_mode == 'both':
+        print('Loading pre-training data')
         pretrain_thinkers = load_thinkers(config, sample_subjects=sample_subjects, subjects = pretrain_subjects)
         info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
                             targets=config._targets if config._targets is not None else len(config._unique_events))
-
+        
         pretrain_train_thinkers, pretrain_val_thinkers = divide_thinkers(pretrain_thinkers)
         pretrain_dset, pretrain_val_dset = Dataset(pretrain_train_thinkers, dataset_info=info), Dataset(pretrain_val_thinkers, dataset_info=info)
 
@@ -66,6 +68,7 @@ def construct_eeg_datasets(config_path,
             config.chunk_duration = str(config.tlen)
             finetunesubjects = splits['finetune']
             test_subjects = splits['test']
+        print('Loading finetuning data')
         finetune_thinkers = load_thinkers(config, sample_subjects=sample_subjects, subjects = finetunesubjects)
         finetune_train_thinkers, finetune_val_thinkers = divide_thinkers(finetune_thinkers)
         finetune_train_dset, finetune_val_dset = Dataset(finetune_train_thinkers, dataset_info=info), Dataset(finetune_val_thinkers, dataset_info=info)
@@ -78,9 +81,10 @@ def construct_eeg_datasets(config_path,
         finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config), EEG_dataset(finetune_val_dset, aug_config)
         finetune_loader, finetune_val_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize), DataLoader(finetune_val_dset, batch_size=target_batchsize)
         # get test set
-        test_thinkers = load_thinkers(config, sample_subjects=sample_subjects, subjects = test_subjects)
+        print('Loading test data')
+        test_thinkers = load_thinkers(config, sample_subjects = sample_test_subjects, subjects = test_subjects)
         test_dset = Dataset(test_thinkers, dataset_info=info)
-        test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False)
+        test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=True)
         test_loader = DataLoader(test_dset, batch_size=batchsize)
     else:
         finetune_loader, finetune_val_loader, test_loader = None
@@ -104,6 +108,7 @@ def load_thinkers(config, sample_subjects = False, subjects = None):
         subjects = os.listdir(config.toplevel)        
     subjects = [subject for subject in subjects if not subject in config.exclude_people]
     if sample_subjects:
+        np.random.seed(0)
         subjects = np.random.choice(subjects, sample_subjects, replace = False)
     thinkers = dict()
     for i, subject in enumerate(subjects):

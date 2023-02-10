@@ -22,8 +22,8 @@ test, val = train_test_split(test_val, train_size = 200)
 
 splits = {'pretrain': train, 'finetune': val, 'test': test}
 
-with open('sleepeeg_local_splits.txt', 'w') as split_file:
-    split_file.write(json.dumps(splits))
+with open('sleepeeg_local_splits.txt', 'r') as split_file:
+    splits = json.load(split_file)
 
 thinkers = load_thinkers(ds_config, sample_subjects=20)
 
