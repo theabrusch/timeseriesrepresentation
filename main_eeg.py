@@ -11,7 +11,7 @@ import pickle
 import os
 import datetime
 from prettytable import PrettyTable
-from torch.utils.tensorboard import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
 
 def params_to_tb(writer, args):
     t = PrettyTable(['Argument', 'Value'])
@@ -44,8 +44,8 @@ def main(args):
     output_path = f'{args.output_path}/TFC_{args.train_TFC}_multchannel_{args.avg_channels}_{dset}'
 
     # write to tensorboard
-    writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_{str(datetime.now())}')
-    params_to_tb(writer, args)
+    #writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_{str(datetime.now())}')
+    #params_to_tb(writer, args)
 
     output_path = check_output_path(output_path)
         
