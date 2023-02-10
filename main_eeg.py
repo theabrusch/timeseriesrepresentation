@@ -83,7 +83,7 @@ def main(args):
         loss_fn = ContrastiveLoss(tau = 0.2, device = device)
         print('='*45)
         print('Pre-training model on', len(pretrain_loader.dataset), 'samples')
-        print('With target distribution ', np.unique(pretrain_loader.dataset.dn3_dset.get_targets(), return_counts = True))
+        #print('With target distribution ', np.unique(pretrain_loader.dataset.dn3_dset.get_targets(), return_counts = True))
         time = datetime.datetime.now()
         # pretrain model
 
@@ -175,7 +175,7 @@ def main(args):
         # finetune model
         print('='*45)
         print('Finetuning model on', len(finetune_loader.dataset), 'samples')
-        print('With target distribution ', np.unique(finetune_loader.dataset.dn3_dset.get_targets(), return_counts = True))
+        #print('With target distribution ', np.unique(finetune_loader.dataset.dn3_dset.get_targets(), return_counts = True))
 
         model, losses = finetune_model(model = model, 
                                         classifier = Classifier, 
@@ -207,7 +207,7 @@ def main(args):
         test_loader.fine_tune_mode = False
         print('='*45)
         print('Testing model on', len(test_loader.dataset), 'samples')
-        print('With target distribution ', np.unique(test_loader.dataset.dn3_dset.get_targets(), return_counts = True))
+        #print('With target distribution ', np.unique(test_loader.dataset.dn3_dset.get_targets(), return_counts = True))
         results = evaluate_model(model = model,
                                 classifier = Classifier, 
                                 test_loader = test_loader,
