@@ -38,13 +38,12 @@ def construct_eeg_datasets(config_path,
         pretrain_subjects = splits['pretrain']
     else:
         pretrain_subjects = None
-
+    info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
+                            targets=config._targets if config._targets is not None else len(config._unique_events))
     # construct pretraining datasets
     if train_mode == 'pretrain' or train_mode == 'both':
         print('Loading pre-training data')
         pretrain_thinkers = load_thinkers(config, sample_subjects=sample_pretrain_subjects, subjects = pretrain_subjects)
-        info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
-                            targets=config._targets if config._targets is not None else len(config._unique_events))
         pretrain_train_thinkers, pretrain_val_thinkers = divide_thinkers(pretrain_thinkers)
         pretrain_dset, pretrain_val_dset = Dataset(pretrain_train_thinkers, dataset_info=info), Dataset(pretrain_val_thinkers, dataset_info=info)
 
@@ -145,7 +144,7 @@ def construct_epoch_dset(file, config):
             idx = np.where(events[:,2] == lab)[0]
             sub_sample = np.random.choice(idx, size = min_count, replace = False)
             new_events[i*min_count:(i+1)*min_count] = events[sub_sample,:]
-        events = new_events 
+        events = new_events[new_events[:, 0].argsort()]
     epochs = mne.Epochs(raw, events, tmin=config.tmin, tmax=config.tmin + config.tlen - 1 / sfreq, preload=config.preload, decim=config.decimate,
                         baseline=config.baseline, reject_by_annotation=config.drop_bad)
     recording = EpochTorchRecording(epochs, ch_ind_picks=config.picks, event_mapping=event_map,
