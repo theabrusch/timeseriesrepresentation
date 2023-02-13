@@ -29,7 +29,7 @@ raw_train = mne.io.read_raw_edf(alice_files[0], stim_channel='Event marker')
 annot_train = mne.read_annotations(alice_files[1])
 raw_train.set_annotations(annot_train, emit_warning=False)
 
-events = mne.events_from_annotations(raw_train, chunk_duration = 30)[0]
+events = mne.events_from_annotations(raw_train, chunk_duration = 30)
 epochs = mne.Epochs(raw_train, events, tmin=0, tmax=30 - 1 / 100, baseline = None)
 
 root_folder = '/Users/theb/Desktop/sleep_edf/physionet-sleep-data/*-PSG.edf'

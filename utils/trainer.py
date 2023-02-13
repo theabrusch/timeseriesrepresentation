@@ -422,7 +422,8 @@ def evaluate_model(model,
     
     model.eval()
     classifier.eval()
-    for i, (x_t, x_f, y) in enumerate(test_loader):
+    for i, variables in enumerate(test_loader):
+        x_t, x_f, y = variables[0], variables[1], variables[-1]
         x_t, x_f, y = x_t.float().to(device), x_f.float().to(device), y.long()
         _, z_t, _, z_f = model(x_t, x_f, finetune = True)
         y_out = classifier(torch.cat([z_t, z_f], dim = -1))

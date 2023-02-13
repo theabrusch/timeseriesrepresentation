@@ -69,8 +69,10 @@ def main(args):
                                                                                                                                                            args.finetune_path, 
                                                                                                                                                            batchsize = args.batch_size,
                                                                                                                                                            normalize = args.normalize, 
+                                                                                                                                                           balanced_sampling= args.balanced_sampling,
                                                                                                                                                            target_batchsize = args.target_batch_size,
-                                                                                                                                                           sample_subjects = args.sample_subjs,
+                                                                                                                                                           sample_pretrain_subjects = args.sample_pretrain_subjs,
+                                                                                                                                                           sample_finetune_subjects = args.sample_finetune_subjs,
                                                                                                                                                            sample_test_subjects = args.sample_test_subjs,
                                                                                                                                                            train_mode = train_mode)
 
@@ -150,7 +152,7 @@ def main(args):
         if args.finetune_latentspace:
             # get a test dataset with augmented samples
             ft_test_lat_dset = test_loader
-            ft_test_lat_dset.dataset.fine_tune_mode = True
+            ft_test_lat_dset.dataset.fine_tune_mode = False
             ft_test_lat_loader = DataLoader(ft_test_lat_dset, batch_size = args.target_batch_size)
             # evaluate latent space for test, val and train set
             outputs_val = evaluate_latent_space(model = model, data_loader = finetune_val_loader, device = device, classifier = args.train_classifier, save_h = False)
@@ -205,14 +207,27 @@ def main(args):
                     pickle.dump(outputs_train, file)
         time = time2
         # evaluate on test set
-        test_loader.fine_tune_mode = False
+        test_loader.fine_tune_mode = True
         print('='*45)
-        print('Testing model on', len(test_loader.dataset), 'samples')
+        print('Testing model on test set with', len(test_loader.dataset), 'samples')
         #print('With target distribution ', np.unique(test_loader.dataset.dn3_dset.get_targets(), return_counts = True))
-        results = evaluate_model(model = model,
-                                classifier = Classifier, 
-                                test_loader = test_loader,
-                                device = device)
+        test_results = evaluate_model(model = model,
+                                 classifier = Classifier, 
+                                 test_loader = test_loader,
+                                 device = device)
+        print('='*45)
+        print('Testing model on train set with', len(finetune_loader.dataset), 'samples')
+        train_results = evaluate_model(model = model,
+                                 classifier = Classifier, 
+                                 test_loader = finetune_loader,
+                                 device = device)
+        print('='*45)
+        print('Testing model on val set with', len(finetune_val_loader.dataset), 'samples')
+        validation_results = evaluate_model(model = model,
+                                 classifier = Classifier, 
+                                 test_loader = finetune_val_loader,
+                                 device = device)
+        results = {'test':test_results, 'train': train_results, 'val':validation_results}
         time2 = datetime.datetime.now()     
         print('Evaluating the finetuned model took', time2-time, 's.')
 
@@ -240,16 +255,19 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
 
-    # data arguments
-    parser.add_argument('--test_mode', type = eval, default = True)
-    parser.add_argument('--sample_subjs', type = eval, default = 60)
+    # subsampling
+    parser.add_argument('--sample_pretrain_subjs', type = eval, default = 60)
+    parser.add_argument('--sample_finetune_subjs', type = eval, default = 60)
     parser.add_argument('--sample_test_subjs', type = eval, default = 20)
+
+    # data arguments
     parser.add_argument('--config_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'same')
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 128)
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--normalize', type = eval, default = False)
+    parser.add_argument('--balanced_sampling', type = eval, default = True)
 
     # augmentation arguments
     parser.add_argument('--abs_budget', type = eval, default = False)

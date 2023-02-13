@@ -17,7 +17,9 @@ def construct_eeg_datasets(config_path,
                            batchsize, 
                            target_batchsize,
                            normalize = False,
-                           sample_subjects = False, 
+                           balanced_sampling = False,
+                           sample_pretrain_subjects = False, 
+                           sample_finetune_subjects = False,
                            sample_test_subjects = False,
                            exclude_subjects = None,
                            train_mode = 'both'):
@@ -25,7 +27,7 @@ def construct_eeg_datasets(config_path,
     dset = config_path.split('/')[-1].strip('.yml').split('_')[0]
     config = experiment.datasets[dset]
     config.normalize = normalize
-
+    
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects
     
@@ -35,12 +37,12 @@ def construct_eeg_datasets(config_path,
             splits = json.load(split_file)
         pretrain_subjects = splits['pretrain']
     else:
-        subjects = None
+        pretrain_subjects = None
 
     # construct pretraining datasets
     if train_mode == 'pretrain' or train_mode == 'both':
         print('Loading pre-training data')
-        pretrain_thinkers = load_thinkers(config, sample_subjects=sample_subjects, subjects = pretrain_subjects)
+        pretrain_thinkers = load_thinkers(config, sample_subjects=sample_pretrain_subjects, subjects = pretrain_subjects)
         info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
                             targets=config._targets if config._targets is not None else len(config._unique_events))
         pretrain_train_thinkers, pretrain_val_thinkers = divide_thinkers(pretrain_thinkers)
@@ -58,7 +60,8 @@ def construct_eeg_datasets(config_path,
     
     # construct finetuning dataset
     if train_mode == 'finetune' or train_mode == 'both':
-        sample_subjects = int(sample_subjects/2) if sample_subjects else sample_subjects
+        #sample_subjects = int(sample_subjects/2) if sample_subjects else sample_subjects
+        config.balanced_sampling = balanced_sampling
         if not finetune_path == 'same':
             experiment = ExperimentConfig(finetune_path)
             dset = config_path.split('/')[-1].strip('.yml')
@@ -70,7 +73,7 @@ def construct_eeg_datasets(config_path,
             finetunesubjects = splits['finetune']
             test_subjects = splits['test']
         print('Loading finetuning data')
-        finetune_thinkers = load_thinkers(config, sample_subjects=sample_subjects, subjects = finetunesubjects)
+        finetune_thinkers = load_thinkers(config, sample_subjects=sample_finetune_subjects, subjects = finetunesubjects)
         finetune_train_thinkers, finetune_val_thinkers = divide_thinkers(finetune_thinkers)
         finetune_train_dset, finetune_val_dset = Dataset(finetune_train_thinkers, dataset_info=info), Dataset(finetune_val_thinkers, dataset_info=info)
 
@@ -83,6 +86,7 @@ def construct_eeg_datasets(config_path,
         finetune_loader, finetune_val_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize), DataLoader(finetune_val_dset, batch_size=target_batchsize)
         # get test set
         print('Loading test data')
+        config.balanced_sampling = False
         test_thinkers = load_thinkers(config, sample_subjects = sample_test_subjects, subjects = test_subjects)
         test_dset = Dataset(test_thinkers, dataset_info=info)
         test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=True)
@@ -133,6 +137,15 @@ def construct_epoch_dset(file, config):
     sfreq = raw.info['sfreq']
     event_map = {v: v for v in config.events.values()}
     events = mne.events_from_annotations(raw, event_id=config.events, chunk_duration=eval(config.chunk_duration))[0]
+    if config.balanced_sampling:
+        labs, counts = np.unique(events[:,2], return_counts = True)
+        min_count = np.min(counts)
+        new_events = np.zeros((min_count*len(labs), 3), np.int64)
+        for i, lab in enumerate(labs):
+            idx = np.where(events[:,2] == lab)[0]
+            sub_sample = np.random.choice(idx, size = min_count, replace = False)
+            new_events[i*min_count:(i+1)*min_count] = events[sub_sample,:]
+        events = new_events 
     epochs = mne.Epochs(raw, events, tmin=config.tmin, tmax=config.tmin + config.tlen - 1 / sfreq, preload=config.preload, decim=config.decimate,
                         baseline=config.baseline, reject_by_annotation=config.drop_bad)
     recording = EpochTorchRecording(epochs, ch_ind_picks=config.picks, event_mapping=event_map,

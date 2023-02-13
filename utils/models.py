@@ -42,15 +42,15 @@ class TFC_encoder(nn.Module):
 
         self.TimeEncoder = nn.Sequential(
             conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = 0.35),
-            conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.),
-            conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.),
+            conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.35),
+            conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.35),
             nn.Flatten()
             )
         
         self.FrequencyEncoder = nn.Sequential(
             conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = 0.35),
-            conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.),
-            conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.),
+            conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.35),
+            conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.35),
             nn.Flatten()
             )
 
@@ -60,12 +60,14 @@ class TFC_encoder(nn.Module):
             nn.Linear(in_features=out_shape*128, out_features=256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
+            nn.Dropout(0.35),
             nn.Linear(in_features=256, out_features=128),            
         )
         self.FreqCrossSpace = nn.Sequential(
             nn.Linear(in_features=out_shape*128, out_features=256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
+            nn.Dropout(0.35),
             nn.Linear(in_features=256, out_features=128),            
         )
 
@@ -120,6 +122,7 @@ class ClassifierModule(nn.Module):
                 nn.Linear(in_features=256, out_features=64),
                 nn.BatchNorm1d(64),
                 nn.ReLU(),
+                nn.Dropout(0.35),
                 nn.Linear(in_features=64, out_features=num_classes),
             )
     def forward(self, x):
