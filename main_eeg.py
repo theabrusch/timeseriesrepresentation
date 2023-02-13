@@ -124,10 +124,8 @@ def main(args):
 
         model.load_state_dict(torch.load(pretrained_path, map_location=device))
         model.to(device=device)
-        if args.loss == 'poly':
-            loss_fn = ContrastiveLoss(tau = 0.2, device = device)
-        else:
-            loss_fn = ContrastiveLoss2(tau = 0.2, device = device)
+        loss_fn = ContrastiveLoss(tau = 0.2, device = device)
+        
 
     if args.evaluate_latent_space:
             # evaluate and save latent space for pretraining dataset
