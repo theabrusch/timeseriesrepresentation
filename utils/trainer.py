@@ -399,17 +399,10 @@ def finetune_model(model,
     losses = {'train': {
         'Loss': collect_loss,
         'Class loss': collect_class_loss,
-        'Time loss': collect_time_loss,
-        'Freq loss': collect_freq_loss,
-        'Time freq loss': collect_time_freq_loss
         },
         'val': {
         'Loss': collect_val_loss,
         'Class loss': collect_val_class_loss,
-        'Time loss': collect_val_time_loss,
-        'Freq loss': collect_val_freq_loss,
-        'Time freq loss': collect_val_time_freq_loss
-
         }
     }
     return model, losses
