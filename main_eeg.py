@@ -23,12 +23,10 @@ def params_to_tb(writer, args):
 
 def check_output_path(output_path):
     if not os.path.exists(output_path):
-                os.makedirs(output_path)
-    elif len(os.listdir(output_path)) == 0:
-        output_path = output_path
+        os.makedirs(output_path)
     else:
         i = 1
-        while os.path.exists(output_path + f'_v_{i}') and not len(os.listdir(output_path + f'_v_{i}')) == 0:
+        while os.path.exists(output_path + f'_v_{i}'):
             i+=1
         output_path = output_path + f'_v_{i}'
         os.makedirs(output_path, exist_ok=True)
