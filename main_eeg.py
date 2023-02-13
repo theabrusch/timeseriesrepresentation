@@ -118,9 +118,8 @@ def main(args):
         else:
             pretrained_path = f'{output_path}/pretrained_model.pt'
 
-        channels, time_length = get_dset_info(args.data_path, sample_channel = args.sample_channel)
         model = TFC_encoder(in_channels = channels, input_size = time_length, classify = False, 
-                            num_classes = 6, stride = args.stride, avg_channels_before = avg_channels_before, 
+                            num_classes = num_classes, stride = args.stride, avg_channels_before = avg_channels_before, 
                             avg_channels_after = avg_channels_after)
 
         model.load_state_dict(torch.load(pretrained_path, map_location=device))
