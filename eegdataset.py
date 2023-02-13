@@ -27,6 +27,7 @@ def construct_eeg_datasets(config_path,
     dset = config_path.split('/')[-1].strip('.yml').split('_')[0]
     config = experiment.datasets[dset]
     config.normalize = normalize
+    config.balanced_sampling = False
     
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects

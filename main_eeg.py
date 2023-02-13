@@ -10,9 +10,9 @@ from utils.plot_functions import plot_contrastive_losses
 import pickle
 import os
 import numpy as np
-import datetime
+from datetime import datetime
 from prettytable import PrettyTable
-#from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 def params_to_tb(writer, args):
     t = PrettyTable(['Argument', 'Value'])
@@ -43,12 +43,13 @@ def main(args):
     output_path = f'{args.output_path}/TFC_{args.train_TFC}_multchannel_{args.avg_channels}_{dset}'
 
     # write to tensorboard
-    #writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_{str(datetime.now())}')
-    #params_to_tb(writer, args)
+    writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_{str(datetime.now())}')
+    params_to_tb(writer, args)
 
     output_path = check_output_path(output_path)
         
     print('Saving outputs in', output_path)
+    writer.add_text("Output folder", output_path)
     if args.avg_channels == 'after':
         args.sample_channel = True
         avg_channels_before = False
@@ -85,7 +86,7 @@ def main(args):
         print('='*45)
         print('Pre-training model on', len(pretrain_loader.dataset), 'samples')
 
-        time = datetime.datetime.now()
+        time = datetime.now()
         # pretrain model
 
         model, losses = TFC_trainer(model = model, 
@@ -97,7 +98,7 @@ def main(args):
                                     device = device, 
                                     classifier = None,
                                     class_optimizer = None)
-        time2 = datetime.datetime.now()    
+        time2 = datetime.now()    
         print('Pre-training for', args.epochs,'epochs took', time2-time, 's.')
 
         if args.save_model:
@@ -127,14 +128,14 @@ def main(args):
 
     if args.evaluate_latent_space:
             # evaluate and save latent space for pretraining dataset
-            time = datetime.datetime.now() 
+            time = datetime.now() 
             _, val_loader, _, _ = get_datasets(data_path = args.data_path, 
                                                 abs_budget=args.abs_budget, 
                                                 batch_size=args.batch_size)
 
             outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, save_h = False)
 
-            time2 = datetime.datetime.now()   
+            time2 = datetime.now()   
             print('Evaluating the latent space took', time2-time, 's.')
             
             with open(f'{output_path}/pretrain_latent_variables.pickle', 'wb') as file:
@@ -164,7 +165,7 @@ def main(args):
         Classifier.to(device)
         class_optimizer = Adam(Classifier.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
-        time = datetime.datetime.now()  
+        time = datetime.now()  
         # define optimizer for encoder, if not frozen
         if args.optimize_encoder:
             optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
@@ -174,6 +175,7 @@ def main(args):
         print('='*45)
         print('Finetuning model on', len(finetune_loader.dataset), 'samples')
         #print('With target distribution ', np.unique(finetune_loader.dataset.dn3_dset.get_targets(), return_counts = True))
+
 
         model, losses = finetune_model(model = model, 
                                         classifier = Classifier, 
@@ -186,7 +188,7 @@ def main(args):
                                         device = device,
                                         lambda_ = 0.2, 
                                         delta = args.delta)
-        time2 = datetime.datetime.now()     
+        time2 = datetime.now()     
         print('Finetuning the model for', args.finetune_epochs,'epochs took', time2-time, 's.')
 
         # evaluate latent space post finetune
@@ -223,7 +225,7 @@ def main(args):
                                  test_loader = finetune_val_loader,
                                  device = device)
         results = {'test':test_results, 'train': train_results, 'val':validation_results}
-        time2 = datetime.datetime.now()     
+        time2 = datetime.now()     
         print('Evaluating the finetuned model took', time2-time, 's.')
 
         # plot and save losses
@@ -251,8 +253,8 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained_model_path', type = str, default = None)
 
     # subsampling
-    parser.add_argument('--sample_pretrain_subjs', type = eval, default = 60)
-    parser.add_argument('--sample_finetune_subjs', type = eval, default = 60)
+    parser.add_argument('--sample_pretrain_subjs', type = eval, default = 10)
+    parser.add_argument('--sample_finetune_subjs', type = eval, default = 6)
     parser.add_argument('--sample_test_subjs', type = eval, default = 20)
 
     # data arguments
@@ -274,8 +276,8 @@ if __name__ == '__main__':
     parser.add_argument('--delta', type = float, default = 0.5)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 1)
-    parser.add_argument('--finetune_epochs', type = int, default = 0)
+    parser.add_argument('--epochs', type = int, default = 0)
+    parser.add_argument('--finetune_epochs', type = int, default = 1)
     args = parser.parse_args()
     main(args)
 

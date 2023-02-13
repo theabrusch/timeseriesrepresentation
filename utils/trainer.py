@@ -11,6 +11,7 @@ def TFC_trainer(model,
                 epochs, 
                 val_loader, 
                 device, 
+                writer = None,
                 classifier = None,
                 class_optimizer = None, 
                 delta_ = 1, 
@@ -92,6 +93,12 @@ def TFC_trainer(model,
         print('Frequency consistency loss:', epoch_freq/(i+1))
         print('Time-freq consistency loss:', epoch_time_freq/(i+1))
         print('Total loss:', epoch_loss/(i+1))
+
+        if not writer is None:
+            writer.add_scalar('train_pretrain/time_loss', epoch_time/(i+1), epoch)
+            writer.add_scalar('train_pretrain/freq_loss', epoch_freq/(i+1), epoch)
+            writer.add_scalar('train_pretrain/time_freq', epoch_time_freq/(i+1), epoch)
+            writer.add_scalar('train_pretrain/total_loss', epoch_loss/(i+1), epoch)
             
         time_loss_total.append(epoch_time/(i+1))
         freq_loss_total.append(epoch_freq/(i+1))
@@ -142,6 +149,12 @@ def TFC_trainer(model,
         print('Frequency consistency loss:', val_epoch_freq/(i+1))
         print('Time-freq consistency loss:', val_epoch_time_freq/(i+1))
         print('Total loss:', val_epoch_loss/(i+1))
+
+        if not writer is None:
+            writer.add_scalar('val_pretrain/time_loss', epoch_time/(i+1), epoch)
+            writer.add_scalar('val_pretrain/freq_loss', epoch_freq/(i+1), epoch)
+            writer.add_scalar('val_pretrain/time_freq', epoch_time_freq/(i+1), epoch)
+            writer.add_scalar('val_pretrain/total_loss', epoch_loss/(i+1), epoch)
         
         val_time_loss_total.append(val_epoch_time/(i+1))
         val_freq_loss_total.append(val_epoch_freq/(i+1))
@@ -279,7 +292,8 @@ def finetune_model(model,
                   optimizer, 
                   class_optimizer, 
                   epochs, 
-                  device, 
+                  device,
+                  writer = None, 
                   delta = 0.5, 
                   lambda_ = 0.5):
 
@@ -347,6 +361,12 @@ def finetune_model(model,
         print('\nTraining loss')
         print('Epoch loss:', epoch_loss/(i+1))
         print('Class. loss:', epoch_class_loss/(i+1))
+        if not writer is None:
+            writer.add_scalar('train_finetune/class_loss', epoch_class_loss / (i+1), epoch)
+            writer.add_scalar('train_finetune/total_loss', epoch_loss / (i+1), epoch)
+            writer.add_scalar('train_finetune/time_loss', epoch_time_loss/(i+1), epoch)
+            writer.add_scalar('train_finetune/time_freq_loss', epoch_time_freq_loss/(i+1), epoch)
+            writer.add_scalar('train_finetune/freq_loss', epoch_freq_loss/(i+1), epoch)
 
         epoch_loss = 0
         epoch_class_loss = 0
@@ -388,13 +408,25 @@ def finetune_model(model,
         collect_val_freq_loss[epoch] = epoch_freq_loss / (i+1)
         collect_val_time_freq_loss[epoch] = epoch_time_freq_loss / (i+1)
 
-        #if epochs%2 == 0:
-        #    results = evaluate_model(model, classifier, val_loader, device)
-        #    print('Validation accuracy:', results['Accuracy'])
-        #    print('Validation precision:', np.mean(results['Precision']))
-        #    print('Validation recall:', np.mean(results['Recall']))
-        #    print('Validation F1:', np.mean(results['F1 score']))
+        if not writer is None:
+            writer.add_scalar('val_finetune/class_loss', epoch_class_loss / (i+1), epoch)
+            writer.add_scalar('val_finetune/total_loss', epoch_loss / (i+1), epoch)
+            writer.add_scalar('val_finetune/time_loss', epoch_time_loss/(i+1), epoch)
+            writer.add_scalar('val_finetune/time_freq_loss', epoch_time_freq_loss/(i+1), epoch)
+            writer.add_scalar('val_finetune/freq_loss', epoch_freq_loss/(i+1), epoch)
 
+        if epochs%2 == 0:
+            results = evaluate_model(model, classifier, val_loader, device)
+            print('Validation accuracy:', results['Accuracy'])
+            print('Validation precision:', np.mean(results['Precision']))
+            print('Validation recall:', np.mean(results['Recall']))
+            print('Validation F1:', np.mean(results['F1 score']))
+
+            if not writer is None:
+                writer.add_scalar('val_finetune/accuracy', results['Accuracy'], epoch)
+                writer.add_scalar('val_finetune/precision', np.mean(results['Precision']), epoch)
+                writer.add_scalar('val_finetune/recall', np.mean(results['Recall']), epoch)
+                writer.add_scalar('val_finetune/f1', np.mean(results['F1 score']), epoch)
     
     losses = {'train': {
         'Loss': collect_loss,
