@@ -12,7 +12,7 @@ import os
 import numpy as np
 from datetime import datetime
 from prettytable import PrettyTable
-#from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 def params_to_tb(writer, args):
     t = PrettyTable(['Argument', 'Value'])
@@ -43,13 +43,13 @@ def main(args):
     output_path = f'{args.output_path}/TFC_{args.train_TFC}_encoder_{args.encoder_type}_multchannel_{args.avg_channels}_{dset}'
 
     # write to tensorboard
-    #writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_{str(datetime.now())}')
-    #params_to_tb(writer, args)
+    writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_{str(datetime.now())}')
+    params_to_tb(writer, args)
 
     output_path = check_output_path(output_path)
         
     print('Saving outputs in', output_path)
-    #writer.add_text("Output folder", output_path)
+    writer.add_text("Output folder", output_path)
     if args.avg_channels == 'after':
         args.sample_channel = True
         avg_channels_before = False
@@ -95,6 +95,7 @@ def main(args):
                                     epochs = args.epochs, 
                                     val_loader = pretrain_val_loader, 
                                     device = device, 
+                                    writer = writer,
                                     classifier = None,
                                     class_optimizer = None)
         time2 = datetime.now()    
@@ -185,6 +186,7 @@ def main(args):
                                         class_optimizer = class_optimizer, 
                                         epochs = args.finetune_epochs, 
                                         device = device,
+                                        writer = writer,
                                         lambda_ = 0.2, 
                                         delta = args.delta)
         time2 = datetime.now()     
