@@ -92,7 +92,7 @@ def construct_eeg_datasets(config_path,
         test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=True)
         test_loader = DataLoader(test_dset, batch_size=batchsize)
     else:
-        finetune_loader, finetune_val_loader, test_loader = None
+        finetune_loader, finetune_val_loader, test_loader = None, None, None
 
     return pretrain_loader, pretrain_val_loader,finetune_loader, finetune_val_loader, test_loader, (len(config.picks), config.tlen*100, len(config.events.keys()))
 
