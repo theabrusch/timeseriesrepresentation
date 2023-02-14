@@ -233,7 +233,7 @@ class EEG_dataset(TorchDataset):
         signal, label = self.dn3_dset.__getitem__(index)
 
         if self.standardize_epochs:
-            signal = (signal-np.mean(signal))/np.std(signal)
+            signal = (signal-torch.mean(signal))/torch.std(signal)
 
         fft = torch.fft.fft(signal, axis = -1).abs()
         if not self.fine_tune_mode:
