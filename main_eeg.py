@@ -2,7 +2,7 @@ import torch
 import argparse
 from torch.utils.data import DataLoader
 from utils.trainer import TFC_trainer, evaluate_latent_space, finetune_model, evaluate_model
-from utils.models import TFC_encoder, ContrastiveLoss, ContrastiveLoss2, ClassifierModule
+from utils.models import TFC_encoder, ContrastiveLoss, ClassifierModule
 from utils.dataset import TFC_Dataset, get_datasets, get_dset_info
 from eegdataset import construct_eeg_datasets
 from torch.optim import Adam
@@ -40,7 +40,7 @@ def main(args):
     else:
         finetune_dset = args.finetune_path.split('/')[-1].strip('.yml')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    output_path = f'{args.output_path}/TFC_{args.train_TFC}_multchannel_{args.avg_channels}_{dset}'
+    output_path = f'{args.output_path}/TFC_{args.train_TFC}_encoder_{args.encoder_type}_multchannel_{args.avg_channels}_{dset}'
 
     # write to tensorboard
     #writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_{str(datetime.now())}')
@@ -77,8 +77,7 @@ def main(args):
 
     if args.pretrain:
         print('Initializing model')
-        model = TFC_encoder(in_channels = channels, input_size = time_length, avg_channels_before = avg_channels_before, avg_channels_after=avg_channels_after,
-                            num_classes = num_classes, stride = args.stride, classify = False)
+        model = TFC_encoder(in_channels = channels, input_size = time_length, avg_channels_before = avg_channels_before, avg_channels_after=avg_channels_after, stride = args.stride, encoder_type=args.encoder_type)
         model.to(device)
         optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
@@ -117,9 +116,9 @@ def main(args):
         else:
             pretrained_path = f'{output_path}/pretrained_model.pt'
 
-        model = TFC_encoder(in_channels = channels, input_size = time_length, classify = False, 
+        model = TFC_encoder(in_channels = channels, input_size = time_length, 
                             num_classes = num_classes, stride = args.stride, avg_channels_before = avg_channels_before, 
-                            avg_channels_after = avg_channels_after)
+                            avg_channels_after = avg_channels_after, encoder_type=args.encoder_type)
 
         model.load_state_dict(torch.load(pretrained_path, map_location=device))
         model.to(device=device)
@@ -253,9 +252,9 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained_model_path', type = str, default = None)
 
     # subsampling
-    parser.add_argument('--sample_pretrain_subjs', type = eval, default = 10)
+    parser.add_argument('--sample_pretrain_subjs', type = eval, default = 6)
     parser.add_argument('--sample_finetune_subjs', type = eval, default = 6)
-    parser.add_argument('--sample_test_subjs', type = eval, default = 20)
+    parser.add_argument('--sample_test_subjs', type = eval, default = 2)
 
     # data arguments
     parser.add_argument('--config_path', type = str, default = 'sleepeeg_local.yml')
@@ -266,9 +265,13 @@ if __name__ == '__main__':
     parser.add_argument('--normalize', type = eval, default = False)
     parser.add_argument('--balanced_sampling', type = eval, default = True)
 
-    # augmentation arguments
-    parser.add_argument('--abs_budget', type = eval, default = False)
+    # model arguments
     parser.add_argument('--stride', type = int, default = 4)
+    parser.add_argument('--encoder_type', type = str, default = 'wave2vec')
+
+
+    # augmentation arguments
+    parser.add_argument('--abs_budget', type = eval, default = False)    
     parser.add_argument('--avg_channels', type = str, default = 'None')
     parser.add_argument('--sample_channel', type = eval, default = False)
 
@@ -276,7 +279,7 @@ if __name__ == '__main__':
     parser.add_argument('--delta', type = float, default = 0.5)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 0)
+    parser.add_argument('--epochs', type = int, default = 1)
     parser.add_argument('--finetune_epochs', type = int, default = 1)
     args = parser.parse_args()
     main(args)
