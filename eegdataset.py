@@ -17,6 +17,7 @@ def construct_eeg_datasets(config_path,
                            batchsize, 
                            target_batchsize,
                            normalize = False,
+                           standardize_epochs = False,
                            balanced_sampling = False,
                            sample_pretrain_subjects = False, 
                            sample_finetune_subjects = False,
@@ -53,7 +54,7 @@ def construct_eeg_datasets(config_path,
             'jitter_ratio': 0.8,
             'max_seg': 8
         }
-        pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config), EEG_dataset(pretrain_val_dset, aug_config)
+        pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(pretrain_val_dset, aug_config, standardize_epochs=standardize_epochs)
         pretrain_loader, pretrain_val_loader = DataLoader(pretrain_dset, batch_size=batchsize), DataLoader(pretrain_val_dset, batch_size=batchsize)
     else:
         pretrain_loader, pretrain_val_loader = None, None
@@ -82,14 +83,14 @@ def construct_eeg_datasets(config_path,
             'jitter_ratio': 0.8,
             'max_seg': 8
         }
-        finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config), EEG_dataset(finetune_val_dset, aug_config)
+        finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs)
         finetune_loader, finetune_val_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize), DataLoader(finetune_val_dset, batch_size=target_batchsize)
         # get test set
         print('Loading test data')
         config.balanced_sampling = False
         test_thinkers = load_thinkers(config, sample_subjects = sample_test_subjects, subjects = test_subjects)
         test_dset = Dataset(test_thinkers, dataset_info=info)
-        test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=True)
+        test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=True, standardize_epochs=standardize_epochs)
         test_loader = DataLoader(test_dset, batch_size=batchsize)
     else:
         finetune_loader, finetune_val_loader, test_loader = None, None, None
@@ -200,12 +201,13 @@ def add_frequency(x, pertub_ratio=0,):
     return x+pertub_matrix
 
 class EEG_dataset(TorchDataset):
-    def __init__(self, dn3_dset, augmentation_config, preloaded = False, fine_tune_mode = False):
+    def __init__(self, dn3_dset, augmentation_config, preloaded = False, fine_tune_mode = False, standardize_epochs = False):
         super().__init__()
         self.dn3_dset = dn3_dset
         self.aug_config = augmentation_config
         self.preloaded = preloaded
         self.fine_tune_mode = fine_tune_mode
+        self.standardize_epochs = standardize_epochs
     
     def _time_augmentations(self, signal):
         time_augs = [jitter, scaling, permutation]
@@ -229,6 +231,10 @@ class EEG_dataset(TorchDataset):
     
     def __getitem__(self, index):
         signal, label = self.dn3_dset.__getitem__(index)
+
+        if self.standardize_epochs:
+            signal = (signal-np.mean(signal))/np.std(signal)
+
         fft = torch.fft.fft(signal, axis = -1).abs()
         if not self.fine_tune_mode:
             time_aug, freq_aug = self._perform_augmentations(signal, fft)

@@ -40,10 +40,10 @@ def main(args):
     else:
         finetune_dset = args.finetune_path.split('/')[-1].strip('.yml')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    output_path = f'{args.output_path}/TFC_{args.train_TFC}_encoder_{args.encoder_type}_multchannel_{args.avg_channels}_{dset}'
+    output_path = f'{args.output_path}/TFC_{args.train_TFC}_encoder_{args.encoder_type}_standardize_{args.standardize_epochs}_multchannel_{args.avg_channels}_{dset}'
 
     # write to tensorboard
-    writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_{str(datetime.now())}')
+    writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_encoder_{args.encoder_type}_standardize_{args.standardize_epochs}_{str(datetime.now())}')
     params_to_tb(writer, args)
 
     output_path = check_output_path(output_path)
@@ -68,6 +68,7 @@ def main(args):
                                                                                                                                                            args.finetune_path, 
                                                                                                                                                            batchsize = args.batch_size,
                                                                                                                                                            normalize = args.normalize, 
+                                                                                                                                                           standardize_epochs = args.standardize_epochs,
                                                                                                                                                            balanced_sampling= args.balanced_sampling,
                                                                                                                                                            target_batchsize = args.target_batch_size,
                                                                                                                                                            sample_pretrain_subjects = args.sample_pretrain_subjs,
@@ -265,6 +266,7 @@ if __name__ == '__main__':
     parser.add_argument('--target_batch_size', type = int, default = 128)
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--normalize', type = eval, default = False)
+    parser.add_argument('--standardize_epochs', type = eval, default = True)
     parser.add_argument('--balanced_sampling', type = eval, default = True)
 
     # model arguments
