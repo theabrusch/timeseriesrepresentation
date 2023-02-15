@@ -97,6 +97,7 @@ def main(args):
                                     val_loader = pretrain_val_loader, 
                                     device = device, 
                                     writer = writer,
+                                    backup_path = output_path,
                                     classifier = None,
                                     class_optimizer = None)
         time2 = datetime.now()    

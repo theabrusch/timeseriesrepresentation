@@ -11,6 +11,7 @@ def TFC_trainer(model,
                 epochs, 
                 val_loader, 
                 device, 
+                backup_path = None,
                 writer = None,
                 classifier = None,
                 class_optimizer = None, 
@@ -99,6 +100,11 @@ def TFC_trainer(model,
             writer.add_scalar('train_pretrain/freq_loss', epoch_freq/(i+1), epoch)
             writer.add_scalar('train_pretrain/time_freq', epoch_time_freq/(i+1), epoch)
             writer.add_scalar('train_pretrain/total_loss', epoch_loss/(i+1), epoch)
+        
+        if not backup_path is None:
+            model.eval()
+            path = f'{backup_path}/pretrained_model.pt'
+            torch.save(model.state_dict(), path)
             
         time_loss_total.append(epoch_time/(i+1))
         freq_loss_total.append(epoch_freq/(i+1))
