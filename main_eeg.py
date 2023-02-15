@@ -124,7 +124,7 @@ def main(args):
     else:
         # load pretrained model
         model = TFC_encoder(in_channels = channels, input_size = time_length, 
-                            num_classes = num_classes, stride = args.stride, avg_channels_before = avg_channels_before, 
+                            stride = args.stride, avg_channels_before = avg_channels_before, 
                             avg_channels_after = avg_channels_after, encoder_type=args.encoder_type)
 
         model.load_state_dict(torch.load(pretrained_path, map_location=device))
