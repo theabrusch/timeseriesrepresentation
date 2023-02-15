@@ -88,6 +88,7 @@ def main(args):
         if args.warm_start_pretrain:
             model.load_state_dict(torch.load(pretrained_path, map_location=device))
 
+        model.to(device)
         optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
         loss_fn = ContrastiveLoss(tau = 0.2, device = device)

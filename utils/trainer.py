@@ -156,10 +156,10 @@ def TFC_trainer(model,
         print('Total loss:', val_epoch_loss/(i+1))
 
         if not writer is None:
-            writer.add_scalar('val_pretrain/time_loss', epoch_time/(i+1), epoch)
-            writer.add_scalar('val_pretrain/freq_loss', epoch_freq/(i+1), epoch)
-            writer.add_scalar('val_pretrain/time_freq', epoch_time_freq/(i+1), epoch)
-            writer.add_scalar('val_pretrain/total_loss', epoch_loss/(i+1), epoch)
+            writer.add_scalar('val_pretrain/time_loss', val_epoch_time/(i+1), epoch)
+            writer.add_scalar('val_pretrain/freq_loss', val_epoch_freq/(i+1), epoch)
+            writer.add_scalar('val_pretrain/time_freq', val_epoch_time_freq/(i+1), epoch)
+            writer.add_scalar('val_pretrain/total_loss', val_epoch_loss/(i+1), epoch)
         
         val_time_loss_total.append(val_epoch_time/(i+1))
         val_freq_loss_total.append(val_epoch_freq/(i+1))
