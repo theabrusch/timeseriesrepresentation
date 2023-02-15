@@ -18,7 +18,7 @@ def construct_eeg_datasets(config_path,
                            target_batchsize,
                            normalize = False,
                            standardize_epochs = False,
-                           balanced_sampling = False,
+                           balanced_sampling = 'None',
                            sample_pretrain_subjects = False, 
                            sample_finetune_subjects = False,
                            sample_test_subjects = False,
@@ -28,7 +28,11 @@ def construct_eeg_datasets(config_path,
     dset = config_path.split('/')[-1].strip('.yml').split('_')[0]
     config = experiment.datasets[dset]
     config.normalize = normalize
-    config.balanced_sampling = False
+    if balanced_sampling == 'pretrain' or balanced_sampling == 'both':
+        config.balanced_sampling = True
+    else:
+        config.balanced_sampling = False
+    
     
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects
