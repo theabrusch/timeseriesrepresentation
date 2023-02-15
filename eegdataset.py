@@ -66,7 +66,10 @@ def construct_eeg_datasets(config_path,
     # construct finetuning dataset
     if train_mode == 'finetune' or train_mode == 'both':
         #sample_subjects = int(sample_subjects/2) if sample_subjects else sample_subjects
-        config.balanced_sampling = balanced_sampling
+        if balanced_sampling == 'finetune' or balanced_sampling == 'both':
+            config.balanced_sampling = True
+        else:
+            config.balanced_sampling = False
         if not finetune_path == 'same':
             experiment = ExperimentConfig(finetune_path)
             dset = config_path.split('/')[-1].strip('.yml')

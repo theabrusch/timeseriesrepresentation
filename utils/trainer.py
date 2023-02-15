@@ -102,8 +102,7 @@ def TFC_trainer(model,
             writer.add_scalar('train_pretrain/total_loss', epoch_loss/(i+1), epoch)
         
         if not backup_path is None:
-            model.eval()
-            path = f'{backup_path}/pretrained_model.pt'
+            path = backup_path
             torch.save(model.state_dict(), path)
             
         time_loss_total.append(epoch_time/(i+1))

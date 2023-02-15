@@ -40,7 +40,7 @@ def main(args):
     else:
         finetune_dset = args.finetune_path.split('/')[-1].strip('.yml')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    output_path = f'{args.output_path}/TFC_{args.train_TFC}_encoder_{args.encoder_type}_standardize_{args.standardize_epochs}_multchannel_{args.avg_channels}_{dset}'
+    output_path = f'{args.output_path}/TFC_encoder_{args.encoder_type}_standardize_{args.standardize_epochs}_multchannel_{args.avg_channels}_{dset}'
 
     # write to tensorboard
     writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_encoder_{args.encoder_type}_standardize_{args.standardize_epochs}_{str(datetime.now())}')
@@ -75,16 +75,25 @@ def main(args):
                                                                                                                                                            sample_finetune_subjects = args.sample_finetune_subjs,
                                                                                                                                                            sample_test_subjects = args.sample_test_subjs,
                                                                                                                                                            train_mode = train_mode)
+    if args.pretrained_model_path is not None:
+        pretrained_path = args.pretrained_model_path
+        save_model_path = f'{output_path}/pretrained_model.pt'
+    else:
+        pretrained_path = f'{output_path}/pretrained_model.pt'
+        save_model_path = f'{output_path}/pretrained_model_v2.pt'
 
     if args.pretrain:
         print('Initializing model')
         model = TFC_encoder(in_channels = channels, input_size = time_length, avg_channels_before = avg_channels_before, avg_channels_after=avg_channels_after, stride = args.stride, encoder_type=args.encoder_type)
-        model.to(device)
+        if args.warm_start_pretrain:
+            model.load_state_dict(torch.load(pretrained_path, map_location=device))
+
         optimizer = Adam(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
         loss_fn = ContrastiveLoss(tau = 0.2, device = device)
         print('='*45)
         print('Pre-training model on', len(pretrain_loader.dataset), 'samples')
+        writer.add_text('Pretrain samples', f'Train samples {len(pretrain_loader.dataset)}, validation samples {len(pretrain_val_loader.dataset)}')
 
         time = datetime.now()
         # pretrain model
@@ -97,7 +106,7 @@ def main(args):
                                     val_loader = pretrain_val_loader, 
                                     device = device, 
                                     writer = writer,
-                                    backup_path = output_path,
+                                    backup_path = save_model_path,
                                     classifier = None,
                                     class_optimizer = None)
         time2 = datetime.now()    
@@ -105,8 +114,7 @@ def main(args):
 
         if args.save_model:
             model.eval()
-            path = f'{output_path}/pretrained_model.pt'
-            torch.save(model.state_dict(), path)
+            torch.save(model.state_dict(), save_model_path)
         plot_contrastive_losses(losses['train'], f'{output_path}/pretrain_train_losses.png')
         plot_contrastive_losses(losses['val'], f'{output_path}/pretrain_val_losses.png')
 
@@ -114,11 +122,6 @@ def main(args):
                 pickle.dump(losses, file)
     else:
         # load pretrained model
-        if args.pretrained_model_path is not None:
-            pretrained_path = args.pretrained_model_path
-        else:
-            pretrained_path = f'{output_path}/pretrained_model.pt'
-
         model = TFC_encoder(in_channels = channels, input_size = time_length, 
                             num_classes = num_classes, stride = args.stride, avg_channels_before = avg_channels_before, 
                             avg_channels_after = avg_channels_after, encoder_type=args.encoder_type)
@@ -135,7 +138,7 @@ def main(args):
                                                 abs_budget=args.abs_budget, 
                                                 batch_size=args.batch_size)
 
-            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = args.train_classifier, save_h = False)
+            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = False, save_h = False)
 
             time2 = datetime.now()   
             print('Evaluating the latent space took', time2-time, 's.')
@@ -153,9 +156,9 @@ def main(args):
             ft_test_lat_dset.dataset.fine_tune_mode = False
             ft_test_lat_loader = DataLoader(ft_test_lat_dset, batch_size = args.target_batch_size)
             # evaluate latent space for test, val and train set
-            outputs_val = evaluate_latent_space(model = model, data_loader = finetune_val_loader, device = device, classifier = args.train_classifier, save_h = False)
-            outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = args.train_classifier, save_h = False)
-            outputs_train = evaluate_latent_space(model = model, data_loader = finetune_loader, device = device, classifier = args.train_classifier, save_h = False)
+            outputs_val = evaluate_latent_space(model = model, data_loader = finetune_val_loader, device = device, classifier = False, save_h = False)
+            outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = False, save_h = False)
+            outputs_train = evaluate_latent_space(model = model, data_loader = finetune_loader, device = device, classifier = False, save_h = False)
             with open(f'{output_path}/prior_finetune_val_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_val, file)
             with open(f'{output_path}/prior_finetune_test_latent_variables_{finetune_dset}.pickle', 'wb') as file:
@@ -176,6 +179,7 @@ def main(args):
         # finetune model
         print('='*45)
         print('Finetuning model on', len(finetune_loader.dataset), 'samples')
+        writer.add_text('Finetune samples', f'Train samples {len(finetune_loader.dataset)}, validation samples {len(finetune_val_loader.dataset)}, test samples {len(test_loader.dataset)}')
         #print('With target distribution ', np.unique(finetune_loader.dataset.dn3_dset.get_targets(), return_counts = True))
 
 
@@ -196,9 +200,9 @@ def main(args):
 
         # evaluate latent space post finetune
         if args.finetune_latentspace:
-            outputs_val = evaluate_latent_space(model = model, data_loader = finetune_val_loader, device = device, classifier = args.train_classifier, save_h = False)
-            outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = args.train_classifier, save_h = False)
-            outputs_train = evaluate_latent_space(model = model, data_loader = finetune_loader, device = device, classifier = args.train_classifier, save_h = False)
+            outputs_val = evaluate_latent_space(model = model, data_loader = finetune_val_loader, device = device, classifier = False, save_h = False)
+            outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = False, save_h = False)
+            outputs_train = evaluate_latent_space(model = model, data_loader = finetune_loader, device = device, classifier = False, save_h = False)
             with open(f'{output_path}/post_finetune_val_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_val, file)
             with open(f'{output_path}/post_finetune_test_latent_variables_{finetune_dset}.pickle', 'wb') as file:
@@ -245,15 +249,19 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # training arguments
-    parser.add_argument('--train_TFC', type = eval, default = True)
-    parser.add_argument('--train_classifier', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--finetune_latentspace', type = eval, default = False)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrain', type = eval, default = True)
+    parser.add_argument('--warm_start_pretrain', type = eval, default=False)
+
+    # paths
     parser.add_argument('--pretrained_model_path', type = str, default = None)
+    parser.add_argument('--config_path', type = str, default = 'sleepeeg_local.yml')
+    parser.add_argument('--finetune_path', type = str, default = 'same')
+    parser.add_argument('--output_path', type = str, default = 'outputs')
 
     # subsampling
     parser.add_argument('--sample_pretrain_subjs', type = eval, default = 6)
@@ -261,11 +269,8 @@ if __name__ == '__main__':
     parser.add_argument('--sample_test_subjs', type = eval, default = 2)
 
     # data arguments
-    parser.add_argument('--config_path', type = str, default = 'sleepeeg_local.yml')
-    parser.add_argument('--finetune_path', type = str, default = 'same')
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 128)
-    parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--normalize', type = eval, default = False)
     parser.add_argument('--standardize_epochs', type = eval, default = True)
     parser.add_argument('--balanced_sampling', type = str, default = 'both')
@@ -274,13 +279,12 @@ if __name__ == '__main__':
     parser.add_argument('--stride', type = int, default = 4)
     parser.add_argument('--encoder_type', type = str, default = 'wave2vec')
 
-
     # augmentation arguments
     parser.add_argument('--abs_budget', type = eval, default = False)    
     parser.add_argument('--avg_channels', type = str, default = 'None')
     parser.add_argument('--sample_channel', type = eval, default = False)
 
-    # optimizer arguments
+    # training arguments
     parser.add_argument('--delta', type = float, default = 0.5)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
