@@ -70,7 +70,6 @@ def main(args):
                                                                                                                                                            normalize = args.normalize, 
                                                                                                                                                            standardize_epochs = args.standardize_epochs,
                                                                                                                                                            balanced_sampling= args.balanced_sampling,
-                                                                                                                                                           pretrain_balanced_sampling= args.pretrain_balanced_sampling,
                                                                                                                                                            target_batchsize = args.target_batch_size,
                                                                                                                                                            sample_pretrain_subjects = args.sample_pretrain_subjs,
                                                                                                                                                            sample_finetune_subjects = args.sample_finetune_subjs,
@@ -269,8 +268,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--normalize', type = eval, default = False)
     parser.add_argument('--standardize_epochs', type = eval, default = True)
-    parser.add_argument('--balanced_sampling', type = eval, default = True)
-    parser.add_argument('--pretrain_balanced_sampling', type = eval, default = True)
+    parser.add_argument('--balanced_sampling', type = eval, default = 'both')
 
     # model arguments
     parser.add_argument('--stride', type = int, default = 4)
