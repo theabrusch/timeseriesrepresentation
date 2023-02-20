@@ -32,6 +32,12 @@ def check_output_path(output_path):
         os.makedirs(output_path, exist_ok=True)
     return output_path
 
+def results_to_tb(results, writer, dset):
+    t = PrettyTable(['Argument', 'Value'])
+    for key, val in results.items():
+        t.add_row([key, val])
+    writer.add_text(f"{dset}_results", t.get_html_string(), global_step=0)
+     
 
 def main(args):
     dset = args.config_path.split('/')[-1].strip('.yml')
@@ -220,18 +226,21 @@ def main(args):
                                  classifier = Classifier, 
                                  test_loader = test_loader,
                                  device = device)
+        results_to_tb(test_results, writer, 'test')
         print('='*45)
         print('Testing model on train set with', len(finetune_loader.dataset), 'samples')
         train_results = evaluate_model(model = model,
                                  classifier = Classifier, 
                                  test_loader = finetune_loader,
                                  device = device)
+        results_to_tb(train_results, writer, 'train')
         print('='*45)
         print('Testing model on val set with', len(finetune_val_loader.dataset), 'samples')
         validation_results = evaluate_model(model = model,
                                  classifier = Classifier, 
                                  test_loader = finetune_val_loader,
                                  device = device)
+        results_to_tb(validation_results, writer, 'val')
         results = {'test':test_results, 'train': train_results, 'val':validation_results}
         time2 = datetime.now()     
         print('Evaluating the finetuned model took', time2-time, 's.')
@@ -289,8 +298,8 @@ if __name__ == '__main__':
     parser.add_argument('--delta', type = float, default = 0.5)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 1)
-    parser.add_argument('--finetune_epochs', type = int, default = 1)
+    parser.add_argument('--epochs', type = int, default = 0)
+    parser.add_argument('--finetune_epochs', type = int, default = 0)
     args = parser.parse_args()
     main(args)
 

@@ -3,7 +3,7 @@ import torch
 
 def one_hot_encoding(X):
     X = [int(x) for x in X]
-    n_values = np.max(X) + 1
+    n_values = 3
     b = np.eye(n_values)[X]
     return b
 
@@ -26,32 +26,38 @@ def DataTransform(sample, config):
 #     # weak_aug =  remove_frequency(sample, 0.1)
 #     strong_aug = add_frequency(sample, 0.1)
 #     return weak_aug, strong_aug
-def time_augmentation(sample, config):
+def time_augmentation(sample, config, keep_all = False):
     """Weak and strong augmentations"""
     aug_1 = jitter(sample, config['jitter_ratio'])
     aug_2 = scaling(sample, config['jitter_scale_ratio'])
     aug_3 = permutation(sample, max_segments=config['max_seg'])
 
-    li = np.random.randint(0, 3, size=[sample.shape[0]]) # there are two augmentations in Frequency domain
-    li_onehot = one_hot_encoding(li) == 1
-    aug_1[~li_onehot[:, 0]] = 0 # the rows are not selected are set as zero.
-    aug_2[~li_onehot[:, 1]] = 0
-    aug_3[~li_onehot[:, 2]] = 0
-    # aug_4[1 - li_onehot[:, 3]] = 0
-    aug_T = aug_1 + aug_2 + aug_3 #+aug_4
+    if not keep_all:
+        li = np.random.randint(0, 3, size=[sample.shape[0]]) # there are two augmentations in Frequency domain
+        li_onehot = one_hot_encoding(li) == 1
+        aug_1[~li_onehot[:, 0]] = 0 # the rows are not selected are set as zero.
+        aug_2[~li_onehot[:, 1]] = 0
+        aug_3[~li_onehot[:, 2]] = 0
+        # aug_4[1 - li_onehot[:, 3]] = 0
+        aug_T = aug_1 + aug_2 + aug_3 #+aug_4
+    else:
+        aug_T = np.concatenate((np.expand_dims(sample, axis = 1), np.expand_dims(aug_1, axis = 1), np.expand_dims(aug_2, axis =1), np.expand_dims(aug_3, axis = 1)), axis = 1)
     return aug_T
 
 
-def frequency_augmentation(sample, config):
+def frequency_augmentation(sample, config, keep_all = False):
     """Weak and strong augmentations in Frequency domain """
     aug_1 =  remove_frequency(sample, 0.1)
     aug_2 = add_frequency(sample, 0.1)
     # generate random sequence
-    li = np.random.randint(0, 2, size=[sample.shape[0]]) # there are two augmentations in Frequency domain
-    li_onehot = one_hot_encoding(li) == 1
-    aug_1[~li_onehot[:, 0]] = 0 # the rows are not selected are set as zero.
-    aug_2[~li_onehot[:, 1]] = 0
-    aug_F = aug_1 + aug_2
+    if not keep_all:
+        li = np.random.randint(0, 2, size=[sample.shape[0]]) # there are two augmentations in Frequency domain
+        li_onehot = one_hot_encoding(li) == 1
+        aug_1[~li_onehot[:, 0]] = 0 # the rows are not selected are set as zero.
+        aug_2[~li_onehot[:, 1]] = 0
+        aug_F = aug_1 + aug_2
+    else:
+        aug_F = np.concatenate((np.expand_dims(sample, axis = 1), np.expand_dims(aug_1, axis = 1), np.expand_dims(aug_2, axis =1)), axis = 1)
     return aug_F
 
 
