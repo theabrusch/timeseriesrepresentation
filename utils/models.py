@@ -42,7 +42,7 @@ class PrintShape(nn.Module):
         return x
 
 class TFC_encoder(nn.Module):
-    def __init__(self, in_channels, input_size, stride = 1,  avg_channels_before = False, avg_channels_after = False, encoder_type = 'TFC'):
+    def __init__(self, in_channels, input_size, stride = 1,  avg_channels_before = False, avg_channels_after = False, nlayers = 6, encoder_type = 'TFC'):
         super().__init__()
         self.avg_channels_before = avg_channels_before
         self.avg_channels_after = avg_channels_after
@@ -70,8 +70,8 @@ class TFC_encoder(nn.Module):
             self.TimeEncoder = nn.Sequential()
             self.FrequencyEncoder = nn.Sequential()
             channels_out = 512
-            width = [3] + [2]*5
-            in_channels = [in_channels] + [512]*5
+            width = [3] + [2]*(nlayers-1)
+            in_channels = [in_channels] + [512]*(nlayers-1)
             for i, (w, in_ch) in enumerate(zip(width, in_channels)):
                 self.TimeEncoder.add_module(f'Time_encoder_{i}', wave2vecblock(in_ch, channels_out, kernel = w, stride = w))
                 self.FrequencyEncoder.add_module(f'Freq_encoder_{i}', wave2vecblock(in_ch, channels_out, kernel = w, stride = w))

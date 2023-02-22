@@ -282,7 +282,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 128)
     parser.add_argument('--normalize', type = eval, default = False)
-    parser.add_argument('--standardize_epochs', type = eval, default = True)
+    parser.add_argument('--standardize_epochs', type = str, default = 'channelwise')
     parser.add_argument('--balanced_sampling', type = str, default = 'both')
 
     # model arguments
@@ -298,7 +298,7 @@ if __name__ == '__main__':
     parser.add_argument('--delta', type = float, default = 0.5)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 0)
+    parser.add_argument('--epochs', type = int, default = 1)
     parser.add_argument('--finetune_epochs', type = int, default = 0)
     args = parser.parse_args()
     main(args)
