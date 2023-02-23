@@ -295,7 +295,7 @@ if __name__ == '__main__':
 
     # model arguments
     parser.add_argument('--stride', type = int, default = 4)
-    parser.add_argument('--encoder_type', type = str, default = 'TFC')
+    parser.add_argument('--encoder_type', type = str, default = 'TFC2')
 
     # augmentation arguments
     parser.add_argument('--avg_channels', type = str, default = 'None')
@@ -306,7 +306,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--select_best_model', type = eval, default = True)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 0)
+    parser.add_argument('--epochs', type = int, default = 1)
     parser.add_argument('--finetune_epochs', type = int, default = 1)
     args = parser.parse_args()
     main(args)

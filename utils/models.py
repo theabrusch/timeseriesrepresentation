@@ -94,8 +94,8 @@ class TFC_encoder(nn.Module):
                 nn.Flatten()
                 )
             out_shape = conv1D_out_shape(input_size, [8,4,8,4,8,4], [1,4,1,4,1,4], [4,0,4,0,4,0])
+            channels_out = 128
 
-            
         elif encoder_type == 'wave2vec':
             self.TimeEncoder = nn.Sequential()
             self.FrequencyEncoder = nn.Sequential()
