@@ -1,7 +1,7 @@
 import torch
 import pandas as pd
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_auc_score, average_precision_score
+from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support, roc_auc_score, average_precision_score
 from utils.models import ContrastiveLoss2
 
 def TFC_trainer(model, 
@@ -167,7 +167,7 @@ def TFC_trainer(model,
         val_loss_total.append(val_epoch_loss/(i+1))
         if classifier is not None:
             val_class_loss_total.append(val_epoch_class/(i+1))
-            acc = accuracy_score(y_true, y_pred)
+            acc = balanced_accuracy_score(y_true, y_pred)
             print('Accuracy:', acc)
             print('Classification loss:', val_epoch_class/(i+1))
 
@@ -246,7 +246,7 @@ def train_classifier(model,
             class_loss.backward()
             optimizer.step()
         
-        epoch_acc += accuracy_score(y_true, y_pred)
+        epoch_acc += balanced_accuracy_score(y_true, y_pred)
         print('\nTraining losses:')
         print('Accuracy', epoch_acc)
         print('Total loss:', epoch_loss/(i+1))
@@ -271,7 +271,7 @@ def train_classifier(model,
                 y_true = torch.cat((y_true, y.detach().cpu()), dim = 0)
             val_epoch_loss += class_loss.detach().cpu()
         
-        val_epoch_acc += accuracy_score(y_true, y_pred)
+        val_epoch_acc += balanced_accuracy_score(y_true, y_pred)
         
         print('\nValidation losses')
         print('Accuracy:', val_epoch_acc)
@@ -298,6 +298,7 @@ def finetune_model(model,
                   class_optimizer, 
                   epochs, 
                   device,
+                  return_best = False,
                   writer = None, 
                   delta = 0.5, 
                   lambda_ = 0.5):
@@ -465,7 +466,7 @@ def evaluate_model(model,
             y_pred = torch.cat([y_pred, torch.argmax(y_out, dim = -1).detach().cpu()], dim = 0)
             y_true = torch.cat([y_true, y], dim = 0)
     
-    acc = accuracy_score(y_true, y_pred)
+    acc = balanced_accuracy_score(y_true, y_pred)
     prec, rec, f, _ = precision_recall_fscore_support(y_true, y_pred)
     #auroc = roc_auc_score(y_true, y_pred)
     #auprc = average_precision_score(y_true, y_pred)

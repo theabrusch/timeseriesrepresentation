@@ -101,6 +101,9 @@ def main(args):
         print('='*45)
         print('Pre-training model on', len(pretrain_loader.dataset), 'samples')
         writer.add_text('Pretrain samples', f'Train samples {len(pretrain_loader.dataset)}, validation samples {len(pretrain_val_loader.dataset)}')
+        _, counts = np.unique(pretrain_loader.dataset.dn3_dset.get_targets(), return_counts=True)
+        _, val_counts = np.unique(pretrain_val_loader.dataset.dn3_dset.get_targets(), return_counts=True)
+        writer.add_text('Pretrain targets', f'Train balance {counts/np.sum(counts)}, validation balance {val_counts/np.sum(val_counts)}')
 
         time = datetime.now()
         # pretrain model
@@ -188,6 +191,10 @@ def main(args):
         print('Finetuning model on', len(finetune_loader.dataset), 'samples')
         writer.add_text('Finetune samples', f'Train samples {len(finetune_loader.dataset)}, validation samples {len(finetune_val_loader.dataset)}, test samples {len(test_loader.dataset)}')
         #print('With target distribution ', np.unique(finetune_loader.dataset.dn3_dset.get_targets(), return_counts = True))
+        _, counts = np.unique(finetune_loader.dataset.dn3_dset.get_targets(), return_counts=True)
+        _, val_counts = np.unique(finetune_val_loader.dataset.dn3_dset.get_targets(), return_counts=True)
+        _, test_counts = np.unique(finetune_val_loader.dataset.dn3_dset.get_targets(), return_counts=True)
+        writer.add_text('Finetune targets', f'Train balance {counts/np.sum(counts)}, validation balance {val_counts/np.sum(val_counts)}, test balance {test_counts/np.sum(test_counts)}')
 
 
         model, losses = finetune_model(model = model, 
@@ -221,6 +228,7 @@ def main(args):
         test_loader.fine_tune_mode = True
         print('='*45)
         print('Testing model on test set with', len(test_loader.dataset), 'samples')
+    
         #print('With target distribution ', np.unique(test_loader.dataset.dn3_dset.get_targets(), return_counts = True))
         test_results = evaluate_model(model = model,
                                  classifier = Classifier, 
