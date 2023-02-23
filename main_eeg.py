@@ -295,7 +295,7 @@ if __name__ == '__main__':
 
     # model arguments
     parser.add_argument('--stride', type = int, default = 4)
-    parser.add_argument('--encoder_type', type = str, default = 'wave2vec')
+    parser.add_argument('--encoder_type', type = str, default = 'TFC')
 
     # augmentation arguments
     parser.add_argument('--abs_budget', type = eval, default = False)    

@@ -10,7 +10,7 @@ class conv_block(nn.Module):
             nn.Conv1d(channels_in, channels_out, kernel_size=kernel, stride = stride, padding = kernel//2, bias = False),
             nn.BatchNorm1d(channels_out),
             nn.ReLU(),
-            nn.MaxPool1d(2,2, padding = 1),
+            nn.MaxPool1d(2,2),
             nn.Dropout(dropout)
         )
     def forward(self, x):
@@ -51,16 +51,16 @@ class TFC_encoder(nn.Module):
             in_channels = 1
         if encoder_type == 'TFC':
             self.TimeEncoder = nn.Sequential(
-                conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = 0.35),
-                conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.35),
+                conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = 0.),
+                conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.),
                 conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.),
                 nn.Flatten()
                 )
             
             self.FrequencyEncoder = nn.Sequential(
-                conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = 0.35),
-                conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.35),
-                conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.35),
+                conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = 0.),
+                conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.),
+                conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.),
                 nn.Flatten()
                 )
             out_shape = conv1D_out_shape(input_size, [8,2,8,2,8,2], [stride,2,1,2,1,2], [4,1,4,1,4,1])
@@ -128,14 +128,7 @@ class ClassifierModule(nn.Module):
     def __init__(self, num_classes, avg_channels = False):
         super().__init__()
         self.avg_channels = avg_channels
-        self.classifier = nn.Sequential(
-                nn.Sigmoid(),
-                nn.Linear(in_features=256, out_features=64),
-                nn.BatchNorm1d(64),
-                nn.ReLU(),
-                nn.Dropout(0.35),
-                nn.Linear(in_features=64, out_features=num_classes),
-            )
+        self.classifier = nn.Linear(in_features=128, out_features=num_classes)
     def forward(self, x):
         if self.avg_channels:
             x = x.mean(dim = 1)
