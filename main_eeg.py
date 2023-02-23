@@ -73,7 +73,7 @@ def main(args):
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(args.config_path, 
                                                                                                                                                            args.finetune_path, 
                                                                                                                                                            batchsize = args.batch_size,
-                                                                                                                                                           normalize = args.normalize, 
+                                                                                                                                                           normalize = False, 
                                                                                                                                                            standardize_epochs = args.standardize_epochs,
                                                                                                                                                            balanced_sampling= args.balanced_sampling,
                                                                                                                                                            target_batchsize = args.target_batch_size,
@@ -145,7 +145,7 @@ def main(args):
             # evaluate and save latent space for pretraining dataset
             time = datetime.now() 
             _, val_loader, _, _ = get_datasets(data_path = args.data_path, 
-                                                abs_budget=args.abs_budget, 
+                                                abs_budget=False, 
                                                 batch_size=args.batch_size)
 
             outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = False, save_h = False)
@@ -207,6 +207,7 @@ def main(args):
                                         epochs = args.finetune_epochs, 
                                         device = device,
                                         writer = writer,
+                                        return_best=args.select_best_model,
                                         lambda_ = 0.2, 
                                         delta = args.delta)
         time2 = datetime.now()     
@@ -283,13 +284,12 @@ if __name__ == '__main__':
 
     # subsampling
     parser.add_argument('--sample_pretrain_subjs', type = eval, default = 6)
-    parser.add_argument('--sample_finetune_subjs', type = eval, default = 6)
+    parser.add_argument('--sample_finetune_subjs', type = eval, default = 3)
     parser.add_argument('--sample_test_subjs', type = eval, default = 2)
 
     # data arguments
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 128)
-    parser.add_argument('--normalize', type = eval, default = False)
     parser.add_argument('--standardize_epochs', type = str, default = 'channelwise')
     parser.add_argument('--balanced_sampling', type = str, default = 'both')
 
@@ -298,16 +298,16 @@ if __name__ == '__main__':
     parser.add_argument('--encoder_type', type = str, default = 'TFC')
 
     # augmentation arguments
-    parser.add_argument('--abs_budget', type = eval, default = False)    
     parser.add_argument('--avg_channels', type = str, default = 'None')
     parser.add_argument('--sample_channel', type = eval, default = False)
 
     # training arguments
     parser.add_argument('--delta', type = float, default = 0.5)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
+    parser.add_argument('--select_best_model', type = eval, default = True)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 1)
-    parser.add_argument('--finetune_epochs', type = int, default = 0)
+    parser.add_argument('--epochs', type = int, default = 0)
+    parser.add_argument('--finetune_epochs', type = int, default = 1)
     args = parser.parse_args()
     main(args)
 

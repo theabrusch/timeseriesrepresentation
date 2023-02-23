@@ -16,6 +16,19 @@ class conv_block(nn.Module):
     def forward(self, x):
         return self.layer(x)
 
+class conv_block2(nn.Module):
+    def __init__(self, channels_in, channels_out, kernel, stride, dropout):
+        super().__init__()
+        self.layer = nn.Sequential(
+            nn.Conv1d(channels_in, channels_out, kernel_size=kernel, stride = stride, padding = kernel//2, bias = False),
+            nn.BatchNorm1d(channels_out),
+            nn.ReLU(),
+            nn.MaxPool1d(4,4),
+            nn.Dropout(dropout)
+        )
+    def forward(self, x):
+        return self.layer(x)
+
 class wave2vecblock(nn.Module):
     def __init__(self, channels_in, channels_out, kernel, stride):
         super().__init__()
@@ -63,8 +76,25 @@ class TFC_encoder(nn.Module):
                 conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.),
                 nn.Flatten()
                 )
-            out_shape = conv1D_out_shape(input_size, [8,2,8,2,8,2], [stride,2,1,2,1,2], [4,1,4,1,4,1])
+            out_shape = conv1D_out_shape(input_size, [8,2,8,2,8,2], [stride,2,1,2,1,2], [4,0,4,0,4,0])
             channels_out = 128
+
+        elif encoder_type == 'TFC2':
+            self.TimeEncoder = nn.Sequential(
+                conv_block2(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 1, dropout = 0.),
+                conv_block2(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.),
+                conv_block2(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.),
+                nn.Flatten()
+                )
+            
+            self.FrequencyEncoder = nn.Sequential(
+                conv_block2(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 1, dropout = 0.),
+                conv_block2(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = 0.),
+                conv_block2(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = 0.),
+                nn.Flatten()
+                )
+            out_shape = conv1D_out_shape(input_size, [8,4,8,4,8,4], [1,4,1,4,1,4], [4,0,4,0,4,0])
+
             
         elif encoder_type == 'wave2vec':
             self.TimeEncoder = nn.Sequential()
@@ -128,7 +158,7 @@ class ClassifierModule(nn.Module):
     def __init__(self, num_classes, avg_channels = False):
         super().__init__()
         self.avg_channels = avg_channels
-        self.classifier = nn.Linear(in_features=128, out_features=num_classes)
+        self.classifier = nn.Linear(in_features=256, out_features=num_classes)
     def forward(self, x):
         if self.avg_channels:
             x = x.mean(dim = 1)

@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support, roc_auc_score, average_precision_score
 from utils.models import ContrastiveLoss2
+from copy import deepcopy
 
 def TFC_trainer(model, 
                 train_loader, 
@@ -318,6 +319,8 @@ def finetune_model(model,
     collect_val_time_loss = torch.zeros(epochs)
     collect_val_freq_loss = torch.zeros(epochs)
     collect_val_time_freq_loss = torch.zeros(epochs)
+    accuracy = 0
+    best_state_dict = deepcopy(model.state_dict())
 
     for epoch in range(epochs):
         print('\n', epoch + 1 , 'of', epochs)
@@ -421,18 +424,23 @@ def finetune_model(model,
             writer.add_scalar('val_finetune/time_freq_loss', epoch_time_freq_loss/(i+1), epoch)
             writer.add_scalar('val_finetune/freq_loss', epoch_freq_loss/(i+1), epoch)
 
-        if epochs%2 == 0:
-            results = evaluate_model(model, classifier, val_loader, device)
-            print('Validation accuracy:', results['Accuracy'])
-            print('Validation precision:', np.mean(results['Precision']))
-            print('Validation recall:', np.mean(results['Recall']))
-            print('Validation F1:', np.mean(results['F1 score']))
+        
+        results = evaluate_model(model, classifier, val_loader, device)
+        print('Validation accuracy:', results['Accuracy'])
+        print('Validation precision:', np.mean(results['Precision']))
+        print('Validation recall:', np.mean(results['Recall']))
+        print('Validation F1:', np.mean(results['F1 score']))
 
-            if not writer is None:
-                writer.add_scalar('val_finetune/accuracy', results['Accuracy'], epoch)
-                writer.add_scalar('val_finetune/precision', np.mean(results['Precision']), epoch)
-                writer.add_scalar('val_finetune/recall', np.mean(results['Recall']), epoch)
-                writer.add_scalar('val_finetune/f1', np.mean(results['F1 score']), epoch)
+        if not writer is None:
+            writer.add_scalar('val_finetune/accuracy', results['Accuracy'], epoch)
+            writer.add_scalar('val_finetune/precision', np.mean(results['Precision']), epoch)
+            writer.add_scalar('val_finetune/recall', np.mean(results['Recall']), epoch)
+            writer.add_scalar('val_finetune/f1', np.mean(results['F1 score']), epoch)
+
+        if return_best:
+            if results['Accuracy'] > accuracy:
+                best_state_dict = deepcopy(model.state_dict())
+                accuracy = results['Accuracy']
     
     losses = {'train': {
         'Loss': collect_loss,
@@ -443,6 +451,10 @@ def finetune_model(model,
         'Class loss': collect_val_class_loss,
         }
     }
+
+    if return_best:
+        model.load_state_dict(best_state_dict)
+
     return model, losses
 
     
