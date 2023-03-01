@@ -40,3 +40,8 @@ save_path = 'datasets/HAR'
 torch.save(train, f'{save_path}/train.pt')
 torch.save(val, f'{save_path}/val.pt')
 torch.save(test, f'{save_path}/test.pt')
+
+temp = '[0.50502513 0.66666667 0.67358948 0.60944596 0.76909414]'
+temp = temp.replace(' ', ',')
+temp = eval(temp)
+print(np.mean(temp))

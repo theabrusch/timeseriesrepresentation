@@ -20,7 +20,8 @@ def construct_eeg_datasets(config_path,
                            standardize_epochs = False,
                            balanced_sampling = 'None',
                            sample_pretrain_subjects = False, 
-                           sample_finetune_subjects = False,
+                           sample_finetune_train_subjects = False,
+                           sample_finetune_val_subjects = False,
                            sample_test_subjects = False,
                            exclude_subjects = None,
                            train_mode = 'both'):
@@ -81,8 +82,9 @@ def construct_eeg_datasets(config_path,
             finetunesubjects = splits['finetune']
             test_subjects = splits['test']
         print('Loading finetuning data')
-        finetune_thinkers = load_thinkers(config, sample_subjects=sample_finetune_subjects, subjects = finetunesubjects)
-        finetune_train_thinkers, finetune_val_thinkers = divide_thinkers(finetune_thinkers)
+        train_subjs, val_subjs = divide_subjects(config, sample_finetune_train_subjects, sample_finetune_val_subjects, subjects = finetunesubjects)
+        finetune_train_thinkers = load_thinkers(config, sample_subjects=False, subjects = train_subjs)
+        finetune_val_thinkers = load_thinkers(config, sample_subjects=False, subjects = val_subjs)
         finetune_train_dset, finetune_val_dset = Dataset(finetune_train_thinkers, dataset_info=info), Dataset(finetune_val_thinkers, dataset_info=info)
 
         aug_config = { 
@@ -114,6 +116,20 @@ def divide_thinkers(thinkers):
         val_thinkers[subj] = thinkers[subj]
 
     return train_thinkers, val_thinkers
+
+def divide_subjects(config, sample_train, sample_val, subjects = None):
+    if subjects is None:
+        subjects = os.listdir(config.toplevel)
+    train, val = train_test_split(subjects, test_size = 0.2, random_state=0)
+    if sample_train:
+        if sample_train < len(train):
+            np.random.seed(0)
+            train = np.random.choice(train, sample_train, replace=False)
+    if sample_val:
+        if sample_val < len(val):
+            np.random.seed(0)
+            val = np.random.choice(val, sample_val, replace=False)
+    return train, val
 
 
 def load_thinkers(config, sample_subjects = False, subjects = None):

@@ -78,7 +78,8 @@ def main(args):
                                                                                                                                                            balanced_sampling= args.balanced_sampling,
                                                                                                                                                            target_batchsize = args.target_batch_size,
                                                                                                                                                            sample_pretrain_subjects = args.sample_pretrain_subjs,
-                                                                                                                                                           sample_finetune_subjects = args.sample_finetune_subjs,
+                                                                                                                                                           sample_finetune_train_subjects = args.sample_finetune_train_subjs,
+                                                                                                                                                           sample_finetune_val_subjects = args.sample_finetune_val_subjs,
                                                                                                                                                            sample_test_subjects = args.sample_test_subjs,
                                                                                                                                                            train_mode = train_mode)
     if args.pretrained_model_path is not None:
@@ -284,7 +285,8 @@ if __name__ == '__main__':
 
     # subsampling
     parser.add_argument('--sample_pretrain_subjs', type = eval, default = 6)
-    parser.add_argument('--sample_finetune_subjs', type = eval, default = 3)
+    parser.add_argument('--sample_finetune_train_subjs', type = eval, default = 3)
+    parser.add_argument('--sample_finetune_val_subjs', type = eval, default = 3)
     parser.add_argument('--sample_test_subjs', type = eval, default = 2)
 
     # data arguments
