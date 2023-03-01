@@ -90,7 +90,7 @@ def main(args):
 
     if args.pretrain:
         print('Initializing model')
-        model = TFC_encoder(in_channels = channels, input_size = time_length, avg_channels_before = avg_channels_before, avg_channels_after=avg_channels_after, stride = args.stride, encoder_type=args.encoder_type)
+        model = TFC_encoder(in_channels = channels, input_size = time_length, dropout = args.dropout, avg_channels_before = avg_channels_before, avg_channels_after=avg_channels_after, stride = args.stride, encoder_type=args.encoder_type)
         if args.warm_start_pretrain:
             model.load_state_dict(torch.load(pretrained_path, map_location=device))
 
@@ -193,7 +193,7 @@ def main(args):
         #print('With target distribution ', np.unique(finetune_loader.dataset.dn3_dset.get_targets(), return_counts = True))
         _, counts = np.unique(finetune_loader.dataset.dn3_dset.get_targets(), return_counts=True)
         _, val_counts = np.unique(finetune_val_loader.dataset.dn3_dset.get_targets(), return_counts=True)
-        _, test_counts = np.unique(finetune_val_loader.dataset.dn3_dset.get_targets(), return_counts=True)
+        _, test_counts = np.unique(test_loader.dataset.dn3_dset.get_targets(), return_counts=True)
         writer.add_text('Finetune targets', f'Train balance {counts/np.sum(counts)}, validation balance {val_counts/np.sum(val_counts)}, test balance {test_counts/np.sum(test_counts)}')
 
 
@@ -296,6 +296,7 @@ if __name__ == '__main__':
     # model arguments
     parser.add_argument('--stride', type = int, default = 4)
     parser.add_argument('--encoder_type', type = str, default = 'TFC2')
+    parser.add_argument('--dropout', type = float, default = 0.35)
 
     # augmentation arguments
     parser.add_argument('--avg_channels', type = str, default = 'None')
