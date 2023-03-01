@@ -91,7 +91,14 @@ def main(args):
 
     if args.pretrain:
         print('Initializing model')
-        model = TFC_encoder(in_channels = channels, input_size = time_length, dropout = args.dropout, avg_channels_before = avg_channels_before, avg_channels_after=avg_channels_after, stride = args.stride, encoder_type=args.encoder_type)
+        model = TFC_encoder(in_channels = channels, 
+                            input_size = time_length, 
+                            conv_dropout = args.conv_dropout, 
+                            linear_dropout = args.linear_dropout,
+                            avg_channels_before = avg_channels_before, 
+                            avg_channels_after=avg_channels_after, 
+                            stride = args.stride, 
+                            encoder_type=args.encoder_type)
         if args.warm_start_pretrain:
             model.load_state_dict(torch.load(pretrained_path, map_location=device))
 
@@ -298,7 +305,8 @@ if __name__ == '__main__':
     # model arguments
     parser.add_argument('--stride', type = int, default = 4)
     parser.add_argument('--encoder_type', type = str, default = 'TFC2')
-    parser.add_argument('--dropout', type = float, default = 0.35)
+    parser.add_argument('--conv_dropout', type = float, default = 0.35)
+    parser.add_argument('--linear_dropout', type = float, default = 0.35)
 
     # augmentation arguments
     parser.add_argument('--avg_channels', type = str, default = 'None')

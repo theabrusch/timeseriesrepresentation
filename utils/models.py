@@ -55,7 +55,7 @@ class PrintShape(nn.Module):
         return x
 
 class TFC_encoder(nn.Module):
-    def __init__(self, in_channels, input_size, stride = 1, dropout = 0., avg_channels_before = False, avg_channels_after = False, nlayers = 6, encoder_type = 'TFC'):
+    def __init__(self, in_channels, input_size, stride = 1, conv_dropout = 0., linear_dropout = 0.5, avg_channels_before = False, avg_channels_after = False, nlayers = 6, encoder_type = 'TFC'):
         super().__init__()
         self.avg_channels_before = avg_channels_before
         self.avg_channels_after = avg_channels_after
@@ -64,16 +64,16 @@ class TFC_encoder(nn.Module):
             in_channels = 1
         if encoder_type == 'TFC':
             self.TimeEncoder = nn.Sequential(
-                conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = dropout),
-                conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = dropout),
-                conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = dropout),
+                conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = conv_dropout),
+                conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = conv_dropout),
+                conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = conv_dropout),
                 nn.Flatten()
                 )
             
             self.FrequencyEncoder = nn.Sequential(
-                conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = dropout),
-                conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = dropout),
-                conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = dropout),
+                conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = conv_dropout),
+                conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = conv_dropout),
+                conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = conv_dropout),
                 nn.Flatten()
                 )
             out_shape = conv1D_out_shape(input_size, [8,2,8,2,8,2], [stride,2,1,2,1,2], [4,0,4,0,4,0])
@@ -81,16 +81,16 @@ class TFC_encoder(nn.Module):
 
         elif encoder_type == 'TFC2':
             self.TimeEncoder = nn.Sequential(
-                conv_block2(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 1, dropout = dropout),
-                conv_block2(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = dropout),
-                conv_block2(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = dropout),
+                conv_block2(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 1, dropout = conv_dropout),
+                conv_block2(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = conv_dropout),
+                conv_block2(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = conv_dropout),
                 nn.Flatten()
                 )
             
             self.FrequencyEncoder = nn.Sequential(
-                conv_block2(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 1, dropout = dropout),
-                conv_block2(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = dropout),
-                conv_block2(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = dropout),
+                conv_block2(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 1, dropout = conv_dropout),
+                conv_block2(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = conv_dropout),
+                conv_block2(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = conv_dropout),
                 nn.Flatten()
                 )
             out_shape = conv1D_out_shape(input_size, [8,4,8,4,8,4], [1,4,1,4,1,4], [4,0,4,0,4,0])
@@ -113,14 +113,14 @@ class TFC_encoder(nn.Module):
             nn.Linear(in_features=out_shape*channels_out, out_features=256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Dropout(0.35),
+            nn.Dropout(linear_dropout),
             nn.Linear(in_features=256, out_features=128),            
         )
         self.FreqCrossSpace = nn.Sequential(
             nn.Linear(in_features=out_shape*channels_out, out_features=256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Dropout(0.35),
+            nn.Dropout(linear_dropout),
             nn.Linear(in_features=256, out_features=128),            
         )
 
