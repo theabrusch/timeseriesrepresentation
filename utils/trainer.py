@@ -425,7 +425,7 @@ def finetune_model(model,
             writer.add_scalar('val_finetune/freq_loss', epoch_freq_loss/(i+1), epoch)
 
         
-        results = evaluate_model(model, classifier, val_loader, device)
+te        results = evaluate_model(model, classifier, val_loader, device)
         print('Validation accuracy:', results['Accuracy'])
         print('Validation precision:', np.mean(results['Precision']))
         print('Validation recall:', np.mean(results['Recall']))
@@ -440,6 +440,7 @@ def finetune_model(model,
         if return_best:
             if results['Accuracy'] > accuracy:
                 best_state_dict = deepcopy(model.state_dict())
+                best_class_sta
                 accuracy = results['Accuracy']
     
     losses = {'train': {

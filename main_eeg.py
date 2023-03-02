@@ -85,9 +85,13 @@ def main(args):
     if args.pretrained_model_path is not None:
         pretrained_path = args.pretrained_model_path
         save_model_path = f'{output_path}/pretrained_model.pt'
+        save_finetuned_model_path = f'{output_path}/finetuned_model.pt'
+        save_finetuned_classifier_path = f'{output_path}/finetuned_classifier.pt'
     else:
         pretrained_path = f'{output_path}/pretrained_model.pt'
         save_model_path = f'{output_path}/pretrained_model_v2.pt'
+        save_finetuned_model_path = f'{output_path}/finetuned_model_v2.pt'
+        save_finetuned_classifier_path = f'{output_path}/finetuned_classifier_v2.pt'
 
     if args.pretrain:
         print('Initializing model')
@@ -205,21 +209,26 @@ def main(args):
         writer.add_text('Finetune targets', f'Train balance {counts/np.sum(counts)}, validation balance {val_counts/np.sum(val_counts)}, test balance {test_counts/np.sum(test_counts)}')
 
 
-        model, losses = finetune_model(model = model, 
-                                        classifier = Classifier, 
-                                        data_loader = finetune_loader, 
-                                        val_loader = finetune_val_loader,
-                                        loss_fn = loss_fn, 
-                                        optimizer = optimizer, 
-                                        class_optimizer = class_optimizer, 
-                                        epochs = args.finetune_epochs, 
-                                        device = device,
-                                        writer = writer,
-                                        return_best=args.select_best_model,
-                                        lambda_ = 0.2, 
-                                        delta = args.delta)
+        model, Classifier, losses = finetune_model(model = model, 
+                                                    classifier = Classifier, 
+                                                    data_loader = finetune_loader, 
+                                                    val_loader = finetune_val_loader,
+                                                    loss_fn = loss_fn, 
+                                                    optimizer = optimizer, 
+                                                    class_optimizer = class_optimizer, 
+                                                    epochs = args.finetune_epochs, 
+                                                    device = device,
+                                                    writer = writer,
+                                                    return_best = args.select_best_model,
+                                                    lambda_ = 0.2, 
+                                                    delta = args.delta)
         time2 = datetime.now()     
         print('Finetuning the model for', args.finetune_epochs,'epochs took', time2-time, 's.')
+        if args.save_model:
+            model.eval()
+            Classifier.eval()
+            torch.save(model.state_dict(), save_finetuned_model_path)
+            torch.save(Classifier.state_dict(), save_finetuned_classifier_path)
 
         # evaluate latent space post finetune
         if args.finetune_latentspace:
@@ -291,8 +300,8 @@ if __name__ == '__main__':
     parser.add_argument('--output_path', type = str, default = 'outputs')
 
     # subsampling
-    parser.add_argument('--sample_pretrain_subjs', type = eval, default = 6)
-    parser.add_argument('--sample_finetune_train_subjs', type = eval, default = 3)
+    parser.add_argument('--sample_pretrain_subjs', type = eval, default = 3)
+    parser.add_argument('--sample_finetune_train_subjs', type = eval, default = 1)
     parser.add_argument('--sample_finetune_val_subjs', type = eval, default = 3)
     parser.add_argument('--sample_test_subjs', type = eval, default = 2)
 
@@ -317,8 +326,8 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--select_best_model', type = eval, default = True)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 1)
-    parser.add_argument('--finetune_epochs', type = int, default = 1)
+    parser.add_argument('--epochs', type = int, default = 0)
+    parser.add_argument('--finetune_epochs', type = int, default = 3)
     args = parser.parse_args()
     main(args)
 
