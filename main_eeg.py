@@ -325,7 +325,7 @@ if __name__ == '__main__':
     parser.add_argument('--delta', type = float, default = 0.5)
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--select_best_model', type = eval, default = True)
-    parser.add_argument('--weight_decay', type = float, default = 5e-4)
+    parser.add_argument('--weight_decay', type = float, default = 1e-3)
     parser.add_argument('--epochs', type = int, default = 0)
     parser.add_argument('--finetune_epochs', type = int, default = 3)
     args = parser.parse_args()
