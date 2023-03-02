@@ -321,6 +321,7 @@ def finetune_model(model,
     collect_val_time_freq_loss = torch.zeros(epochs)
     accuracy = 0
     best_state_dict = deepcopy(model.state_dict())
+    best_class_state_dict = deepcopy(classifier.state_dict())
 
     for epoch in range(epochs):
         print('\n', epoch + 1 , 'of', epochs)
@@ -425,7 +426,7 @@ def finetune_model(model,
             writer.add_scalar('val_finetune/freq_loss', epoch_freq_loss/(i+1), epoch)
 
         
-te        results = evaluate_model(model, classifier, val_loader, device)
+        results = evaluate_model(model, classifier, val_loader, device)
         print('Validation accuracy:', results['Accuracy'])
         print('Validation precision:', np.mean(results['Precision']))
         print('Validation recall:', np.mean(results['Recall']))
@@ -440,7 +441,7 @@ te        results = evaluate_model(model, classifier, val_loader, device)
         if return_best:
             if results['Accuracy'] > accuracy:
                 best_state_dict = deepcopy(model.state_dict())
-                best_class_sta
+                best_class_state_dict = deepcopy(classifier.state_dict())
                 accuracy = results['Accuracy']
     
     losses = {'train': {
@@ -455,8 +456,9 @@ te        results = evaluate_model(model, classifier, val_loader, device)
 
     if return_best:
         model.load_state_dict(best_state_dict)
+        classifier.load_state_dict(best_class_state_dict)
 
-    return model, losses
+    return model, classifier, losses
 
     
 def evaluate_model(model,
