@@ -2,7 +2,7 @@ import torch
 import argparse
 from torch.utils.data import DataLoader
 from utils.trainer import TFC_trainer, evaluate_latent_space, finetune_model, evaluate_model
-from utils.models import TFC_encoder, ContrastiveLoss, ClassifierModule
+from utils.models import TFC_encoder, TFC_single_encoder, ContrastiveLoss, ClassifierModule
 from utils.dataset import TFC_Dataset, get_datasets, get_dset_info
 from eegdataset import construct_eeg_datasets
 from torch.optim import Adam
@@ -46,10 +46,10 @@ def main(args):
     else:
         finetune_dset = args.finetune_path.split('/')[-1].strip('.yml')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    output_path = f'{args.output_path}/TFC_encoder_{args.encoder_type}_standardize_{args.standardize_epochs}_multchannel_{args.avg_channels}_{dset}'
+    output_path = f'{args.output_path}/TFC_pretrain_{args.contrastive_encoding}_encoder_{args.encoder_type}_standardize_{args.standardize_epochs}_multchannel_{args.avg_channels}_{dset}'
 
     # write to tensorboard
-    writer = SummaryWriter(f'../runs/TFC_pretrain_{dset}_finetune_{finetune_dset}_encoder_{args.encoder_type}_standardize_{args.standardize_epochs}_{str(datetime.now())}')
+    writer = SummaryWriter(f'../runs/TFC_pretrain_{args.contrastive_encoding}_finetune_{finetune_dset}_encoder_{args.encoder_type}_standardize_{args.standardize_epochs}_{str(datetime.now())}')
     params_to_tb(writer, args)
 
     output_path = check_output_path(output_path)
@@ -95,14 +95,27 @@ def main(args):
 
     if args.pretrain:
         print('Initializing model')
-        model = TFC_encoder(in_channels = channels, 
-                            input_size = time_length, 
-                            conv_dropout = args.conv_dropout, 
-                            linear_dropout = args.linear_dropout,
-                            avg_channels_before = avg_channels_before, 
-                            avg_channels_after=avg_channels_after, 
-                            stride = args.stride, 
-                            encoder_type=args.encoder_type)
+
+        if args.contrastive_encoding == 'time' or args.contrastive_encoding == 'freq':
+            model = TFC_single_encoder(in_channels = channels, 
+                                        input_size = time_length, 
+                                        conv_dropout = args.conv_dropout, 
+                                        linear_dropout = args.linear_dropout,
+                                        avg_channels_before = avg_channels_before, 
+                                        avg_channels_after=avg_channels_after, 
+                                        time_or_freq=args.contrastive_encoding,
+                                        stride = args.stride, 
+                                        encoder_type=args.encoder_type)
+        else:
+            model = TFC_encoder(in_channels = channels, 
+                                input_size = time_length, 
+                                conv_dropout = args.conv_dropout, 
+                                linear_dropout = args.linear_dropout,
+                                avg_channels_before = avg_channels_before, 
+                                avg_channels_after=avg_channels_after, 
+                                stride = args.stride, 
+                                encoder_type=args.encoder_type)
+            
         if args.warm_start_pretrain:
             model.load_state_dict(torch.load(pretrained_path, map_location=device))
 
@@ -144,9 +157,25 @@ def main(args):
                 pickle.dump(losses, file)
     else:
         # load pretrained model
-        model = TFC_encoder(in_channels = channels, input_size = time_length, 
-                            stride = args.stride, avg_channels_before = avg_channels_before, 
-                            avg_channels_after = avg_channels_after, encoder_type=args.encoder_type)
+        if args.contrastive_encoding == 'time' or args.contrastive_encoding == 'freq':
+            model = TFC_single_encoder(in_channels = channels, 
+                                        input_size = time_length, 
+                                        conv_dropout = args.conv_dropout, 
+                                        linear_dropout = args.linear_dropout,
+                                        avg_channels_before = avg_channels_before, 
+                                        avg_channels_after=avg_channels_after, 
+                                        time_or_freq=args.contrastive_encoding,
+                                        stride = args.stride, 
+                                        encoder_type=args.encoder_type)
+        else:
+            model = TFC_encoder(in_channels = channels, 
+                                input_size = time_length, 
+                                conv_dropout = args.conv_dropout, 
+                                linear_dropout = args.linear_dropout,
+                                avg_channels_before = avg_channels_before, 
+                                avg_channels_after=avg_channels_after, 
+                                stride = args.stride, 
+                                encoder_type=args.encoder_type)
 
         model.load_state_dict(torch.load(pretrained_path, map_location=device))
         model.to(device=device)
@@ -219,6 +248,7 @@ def main(args):
                                                     epochs = args.finetune_epochs, 
                                                     device = device,
                                                     writer = writer,
+                                                    contrastive_encoding=args.contrastive_encoding,
                                                     return_best = args.select_best_model,
                                                     lambda_ = 0.2, 
                                                     delta = args.delta)
@@ -312,6 +342,7 @@ if __name__ == '__main__':
     parser.add_argument('--balanced_sampling', type = str, default = 'both')
 
     # model arguments
+    parser.add_argument('--contrastive_encoding', type = str, default = 'all')
     parser.add_argument('--stride', type = int, default = 4)
     parser.add_argument('--encoder_type', type = str, default = 'TFC2')
     parser.add_argument('--conv_dropout', type = float, default = 0.35)
@@ -326,7 +357,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--select_best_model', type = eval, default = True)
     parser.add_argument('--weight_decay', type = float, default = 1e-3)
-    parser.add_argument('--epochs', type = int, default = 0)
+    parser.add_argument('--epochs', type = int, default = 1)
     parser.add_argument('--finetune_epochs', type = int, default = 3)
     args = parser.parse_args()
     main(args)

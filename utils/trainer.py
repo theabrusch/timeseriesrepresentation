@@ -61,10 +61,11 @@ def TFC_trainer(model,
         for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(train_loader):
             optimizer.zero_grad()
             x_t, x_f, x_t_aug, x_f_aug, y = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device), y.long().to(device)
+
             h_t, z_t, h_f, z_f = model(x_t, x_f)
             h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(x_t_aug, x_f_aug)
 
-            time_loss = loss_fn(h_t, h_t_aug)
+            time_loss = loss_fn(h_t, h_t_aug)            
             freq_loss = loss_fn(h_f, h_f_aug)
 
             time_freq_pos = loss_fn(z_t, z_f)
@@ -299,6 +300,7 @@ def finetune_model(model,
                   class_optimizer, 
                   epochs, 
                   device,
+                  contrastive_encoding,
                   return_best = False,
                   writer = None, 
                   delta = 0.5, 
@@ -349,8 +351,13 @@ def finetune_model(model,
             time_freq_pos = loss_fn(z_t, z_f)
             time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
             loss_TFC = (time_freq_pos - time_freq_neg[0] + 1) + (time_freq_pos - time_freq_neg[1] + 1) + (time_freq_pos - time_freq_neg[2] + 1)
+            if contrastive_encoding == 'all' or contrastive_encoding == 'TFC':
+                y_out = classifier(torch.cat([z_t, z_f], dim = -1))
+            elif contrastive_encoding == 'time':
+                y_out = classifier(h_t)
+            elif contrastive_encoding == 'freq':
+                y_out = classifier(h_f)
 
-            y_out = classifier(torch.cat([z_t, z_f], dim = -1))
             class_loss = class_loss_fn(y_out, y)
             loss = delta*class_loss + (1-delta)*(lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC)
             loss.backward()
@@ -425,7 +432,6 @@ def finetune_model(model,
             writer.add_scalar('val_finetune/time_freq_loss', epoch_time_freq_loss/(i+1), epoch)
             writer.add_scalar('val_finetune/freq_loss', epoch_freq_loss/(i+1), epoch)
 
-        
         results = evaluate_model(model, classifier, val_loader, device)
         print('Validation accuracy:', results['Accuracy'])
         print('Validation precision:', np.mean(results['Precision']))

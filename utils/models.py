@@ -54,6 +54,95 @@ class PrintShape(nn.Module):
         print(x.shape)
         return x
 
+class TFC_single_encoder(nn.Module):
+    def __init__(self, 
+                 in_channels, 
+                 input_size, 
+                 stride = 1, 
+                 conv_dropout = 0., 
+                 linear_dropout = 0.5, 
+                 avg_channels_before = False, 
+                 avg_channels_after = False, 
+                 time_or_freq = 'time',
+                 nlayers = 6, 
+                 encoder_type = 'TFC'):
+        super().__init__()
+        self.avg_channels_before = avg_channels_before
+        self.avg_channels_after = avg_channels_after
+        self.time_or_freq = time_or_freq
+
+        if self.avg_channels_before or self.avg_channels_after:
+            in_channels = 1
+        if encoder_type == 'TFC':
+            out_shape = conv1D_out_shape(input_size, [8,2,8,2,8,2], [stride,2,1,2,1,2], [4,0,4,0,4,0])
+            self.TimeEncoder = nn.Sequential(
+                conv_block(channels_in = in_channels, channels_out = 32, kernel = 8, stride = stride, dropout = conv_dropout),
+                conv_block(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = conv_dropout),
+                conv_block(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = conv_dropout),
+                nn.Flatten(),
+                nn.ReLU(),
+                nn.Linear(out_shape*128, 256)
+                )
+            
+            channels_out = 128
+
+        elif encoder_type == 'TFC2':
+            out_shape = conv1D_out_shape(input_size, [8,4,8,4,8,4], [1,4,1,4,1,4], [4,0,4,0,4,0])
+            self.TimeEncoder = nn.Sequential(
+                conv_block2(channels_in = in_channels, channels_out = 32, kernel = 8, stride = 1, dropout = conv_dropout),
+                conv_block2(channels_in = 32, channels_out = 64, kernel = 8, stride = 1, dropout = conv_dropout),
+                conv_block2(channels_in = 64, channels_out = 128, kernel = 8, stride = 1, dropout = conv_dropout),
+                nn.Flatten(),
+                nn.ReLU(),
+                nn.Linear(out_shape*128, 256)
+                )
+            
+            channels_out = 128
+
+        elif encoder_type == 'wave2vec':
+            self.TimeEncoder = nn.Sequential()
+            channels_out = 512
+            out_shape = conv1D_out_shape(input_size, width, width, np.array(width)//2)
+            width = [3] + [2]*(nlayers-1)
+            in_channels = [in_channels] + [512]*(nlayers-1)
+            for i, (w, in_ch) in enumerate(zip(width, in_channels)):
+                self.TimeEncoder.add_module(f'Time_encoder_{i}', wave2vecblock(in_ch, channels_out, kernel = w, stride = w))
+            self.TimeEncoder.add_module('flatten', nn.Flatten())
+            self.TimeEncoder.add_module('gelu', nn.GELU())
+            self.TimeEncoder.add_module('linear', nn.Linear(out_shape*channels_out, 256))
+            
+
+    def forward(self, x_t, x_f, finetune = False):
+        if self.time_or_freq == 'freq':
+            x = x_f
+        else:
+            x = x_t
+            
+        if self.avg_channels_before or self.avg_channels_after:
+            batch_size = x.shape[0]
+            n_channels = x.shape[1]
+            time_len = x.shape[2]
+            x = torch.reshape(x, (batch_size*n_channels, 1, time_len))
+        
+        h = self.TimeEncoder(x)
+        if self.avg_channels_before:
+            n_h_features = h.shape[-1]
+            h = torch.reshape(h, (batch_size, n_channels, n_h_features)).mean(dim = 1)
+
+        if finetune and self.avg_channels_after:
+            n_h_features = h.shape[-1]
+            h = torch.reshape(h, (batch_size, n_channels, n_h_features))
+
+        if self.time_or_freq == 'freq':
+            h_f = h
+            h_t = None
+        else:
+            h_t = h
+            h_f = None
+
+        return h_t, None, h_f, None
+
+
 class TFC_encoder(nn.Module):
     def __init__(self, in_channels, input_size, stride = 1, conv_dropout = 0., linear_dropout = 0.5, avg_channels_before = False, avg_channels_after = False, nlayers = 6, encoder_type = 'TFC'):
         super().__init__()
@@ -206,6 +295,9 @@ class ContrastiveLoss(nn.Module):
         return v
 
     def forward(self, zis, zjs, reduce = True):
+        if zis is None or zjs is None:
+            return torch.tensor(0.).to(self.device)
+        
         batch_size = zis.shape[0]
         representations = torch.cat([zjs, zis], dim=0)
 
@@ -256,6 +348,9 @@ class ContrastiveLoss2(nn.Module):
 
 
     def forward(self, z_orig, z_augment, reduce = True):
+        if z_orig is None or z_augment is None:
+            return torch.tensor(0.).to(self.device)
+        
         batchsize = z_orig.shape[0]
         collect_z = torch.cat([z_augment, z_orig], dim = 0)
         # calculate cosine similarity between all augmented and
