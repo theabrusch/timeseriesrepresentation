@@ -96,25 +96,14 @@ def main(args):
     if args.pretrain:
         print('Initializing model')
 
-        if args.contrastive_encoding == 'time' or args.contrastive_encoding == 'freq':
-            model = TFC_single_encoder(in_channels = channels, 
-                                        input_size = time_length, 
-                                        conv_dropout = args.conv_dropout, 
-                                        linear_dropout = args.linear_dropout,
-                                        avg_channels_before = avg_channels_before, 
-                                        avg_channels_after=avg_channels_after, 
-                                        time_or_freq=args.contrastive_encoding,
-                                        stride = args.stride, 
-                                        encoder_type=args.encoder_type)
-        else:
-            model = TFC_encoder(in_channels = channels, 
-                                input_size = time_length, 
-                                conv_dropout = args.conv_dropout, 
-                                linear_dropout = args.linear_dropout,
-                                avg_channels_before = avg_channels_before, 
-                                avg_channels_after=avg_channels_after, 
-                                stride = args.stride, 
-                                encoder_type=args.encoder_type)
+        model = TFC_encoder(in_channels = channels, 
+                            input_size = time_length, 
+                            conv_dropout = args.conv_dropout, 
+                            linear_dropout = args.linear_dropout,
+                            avg_channels_before = avg_channels_before, 
+                            avg_channels_after=avg_channels_after, 
+                            stride = args.stride, 
+                            encoder_type=args.encoder_type)
             
         if args.warm_start_pretrain:
             model.load_state_dict(torch.load(pretrained_path, map_location=device))
@@ -139,6 +128,7 @@ def main(args):
                                     loss_fn = loss_fn, 
                                     epochs = args.epochs, 
                                     val_loader = pretrain_val_loader, 
+                                    contrastive_encoding = args.contrastive_encoding,
                                     device = device, 
                                     writer = writer,
                                     backup_path = save_model_path,

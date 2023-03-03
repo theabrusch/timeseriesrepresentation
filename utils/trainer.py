@@ -12,6 +12,7 @@ def TFC_trainer(model,
                 epochs, 
                 val_loader, 
                 device, 
+                contrastive_encoding = 'all',
                 backup_path = None,
                 writer = None,
                 classifier = None,
@@ -79,7 +80,16 @@ def TFC_trainer(model,
                 loss = eta_*class_loss + (1-eta_)*(lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC)
                 epoch_class += class_loss.detach().cpu()
             else:
-                loss = lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
+                if contrastive_encoding == 'time':
+                    loss = time_loss
+                elif contrastive_encoding == 'freq':
+                    loss = freq_loss
+                elif contrastive_encoding == 'time_freq':
+                    loss = time_loss + freq_loss
+                elif contrastive_encoding == 'TFC':
+                    loss = loss_TFC
+                elif contrastive_encoding == 'all':
+                    loss = lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC
 
             epoch_time += time_loss.detach().cpu()
             epoch_freq += freq_loss.detach().cpu()
@@ -300,7 +310,6 @@ def finetune_model(model,
                   class_optimizer, 
                   epochs, 
                   device,
-                  contrastive_encoding,
                   return_best = False,
                   writer = None, 
                   delta = 0.5, 
@@ -351,13 +360,8 @@ def finetune_model(model,
             time_freq_pos = loss_fn(z_t, z_f)
             time_freq_neg  = loss_fn(z_t, z_f_aug), loss_fn(z_t_aug, z_f), loss_fn(z_t_aug, z_f_aug)
             loss_TFC = (time_freq_pos - time_freq_neg[0] + 1) + (time_freq_pos - time_freq_neg[1] + 1) + (time_freq_pos - time_freq_neg[2] + 1)
-            if contrastive_encoding == 'all' or contrastive_encoding == 'TFC':
-                y_out = classifier(torch.cat([z_t, z_f], dim = -1))
-            elif contrastive_encoding == 'time':
-                y_out = classifier(h_t)
-            elif contrastive_encoding == 'freq':
-                y_out = classifier(h_f)
-
+            y_out = classifier(torch.cat([z_t, z_f], dim = -1))
+            
             class_loss = class_loss_fn(y_out, y)
             loss = delta*class_loss + (1-delta)*(lambda_*(time_loss + freq_loss) + (1-lambda_)*loss_TFC)
             loss.backward()
