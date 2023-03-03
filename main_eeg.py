@@ -238,7 +238,6 @@ def main(args):
                                                     epochs = args.finetune_epochs, 
                                                     device = device,
                                                     writer = writer,
-                                                    contrastive_encoding=args.contrastive_encoding,
                                                     return_best = args.select_best_model,
                                                     lambda_ = 0.2, 
                                                     delta = args.delta)
