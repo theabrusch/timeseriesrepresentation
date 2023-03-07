@@ -41,7 +41,7 @@ torch.save(train, f'{save_path}/train.pt')
 torch.save(val, f'{save_path}/val.pt')
 torch.save(test, f'{save_path}/test.pt')
 
-temp = '[0.38676798 0.86898271 0.45360726 0.50319989 0.64200509]'
+temp = '[0.34725028 0.54595448 0.91117289 0.73657353 0.81847535]'
 temp = temp.replace(' ', ',')
 temp = eval(temp)
 print(np.mean(temp))

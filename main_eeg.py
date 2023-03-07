@@ -175,11 +175,8 @@ def main(args):
     if args.evaluate_latent_space:
             # evaluate and save latent space for pretraining dataset
             time = datetime.now() 
-            _, val_loader, _, _ = get_datasets(data_path = args.data_path, 
-                                                abs_budget=False, 
-                                                batch_size=args.batch_size)
 
-            outputs = evaluate_latent_space(model = model, data_loader = val_loader, device = device, classifier = False, save_h = False)
+            outputs = evaluate_latent_space(model = model, data_loader = pretrain_val_loader, device = device, classifier = False, save_h = False)
 
             time2 = datetime.now()   
             print('Evaluating the latent space took', time2-time, 's.')
@@ -192,13 +189,9 @@ def main(args):
         finetune_dset = dset
         # evaluate latent space prior to finetune
         if args.finetune_latentspace:
-            # get a test dataset with augmented samples
-            ft_test_lat_dset = test_loader
-            ft_test_lat_dset.dataset.fine_tune_mode = False
-            ft_test_lat_loader = DataLoader(ft_test_lat_dset, batch_size = args.target_batch_size)
             # evaluate latent space for test, val and train set
             outputs_val = evaluate_latent_space(model = model, data_loader = finetune_val_loader, device = device, classifier = False, save_h = False)
-            outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = False, save_h = False)
+            outputs_test = evaluate_latent_space(model = model, data_loader = test_loader, device = device, classifier = False, save_h = False)
             outputs_train = evaluate_latent_space(model = model, data_loader = finetune_loader, device = device, classifier = False, save_h = False)
             with open(f'{output_path}/prior_finetune_val_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_val, file)
@@ -252,7 +245,7 @@ def main(args):
         # evaluate latent space post finetune
         if args.finetune_latentspace:
             outputs_val = evaluate_latent_space(model = model, data_loader = finetune_val_loader, device = device, classifier = False, save_h = False)
-            outputs_test = evaluate_latent_space(model = model, data_loader = ft_test_lat_loader, device = device, classifier = False, save_h = False)
+            outputs_test = evaluate_latent_space(model = model, data_loader = test_loader, device = device, classifier = False, save_h = False)
             outputs_train = evaluate_latent_space(model = model, data_loader = finetune_loader, device = device, classifier = False, save_h = False)
             with open(f'{output_path}/post_finetune_val_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_val, file)
@@ -304,10 +297,10 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # training arguments
-    parser.add_argument('--evaluate_latent_space', type = eval, default = False)
+    parser.add_argument('--evaluate_latent_space', type = eval, default = True)
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
-    parser.add_argument('--finetune_latentspace', type = eval, default = False)
+    parser.add_argument('--finetune_latentspace', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--warm_start_pretrain', type = eval, default=False)
@@ -346,7 +339,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type = float, default = 3e-6)
     parser.add_argument('--select_best_model', type = eval, default = True)
     parser.add_argument('--weight_decay', type = float, default = 1e-3)
-    parser.add_argument('--epochs', type = int, default = 1)
+    parser.add_argument('--epochs', type = int, default = 0)
     parser.add_argument('--finetune_epochs', type = int, default = 3)
     args = parser.parse_args()
     main(args)

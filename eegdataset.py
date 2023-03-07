@@ -99,7 +99,7 @@ def construct_eeg_datasets(config_path,
         config.balanced_sampling = False
         test_thinkers = load_thinkers(config, sample_subjects = sample_test_subjects, subjects = test_subjects)
         test_dset = Dataset(test_thinkers, dataset_info=info)
-        test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=True, standardize_epochs=standardize_epochs)
+        test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs)
         test_loader = DataLoader(test_dset, batch_size=batchsize)
     else:
         finetune_loader, finetune_val_loader, test_loader = None, None, None
