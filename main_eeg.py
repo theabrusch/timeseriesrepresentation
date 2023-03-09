@@ -191,12 +191,12 @@ def main(args):
         if args.finetune_latentspace:
             # evaluate latent space for test, val and train set
             outputs_val = evaluate_latent_space(model = model, data_loader = finetune_val_loader, device = device, classifier = False, save_h = False)
-            outputs_test = evaluate_latent_space(model = model, data_loader = test_loader, device = device, classifier = False, save_h = False)
-            outputs_train = evaluate_latent_space(model = model, data_loader = finetune_loader, device = device, classifier = False, save_h = False)
             with open(f'{output_path}/prior_finetune_val_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_val, file)
+            outputs_test = evaluate_latent_space(model = model, data_loader = test_loader, device = device, classifier = False, save_h = False)
             with open(f'{output_path}/prior_finetune_test_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_test, file)
+            outputs_train = evaluate_latent_space(model = model, data_loader = finetune_loader, device = device, classifier = False, save_h = False)
             with open(f'{output_path}/prior_finetune_train_latent_variables_{finetune_dset}.pickle', 'wb') as file:
                     pickle.dump(outputs_train, file)
 
