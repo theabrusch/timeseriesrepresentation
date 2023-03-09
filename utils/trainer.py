@@ -518,17 +518,21 @@ def evaluate_model(model,
 def evaluate_latent_space(model, data_loader, device, classifier = False, save_h = True):
     model.eval()
     loss_fn = ContrastiveLoss2(tau = 0.2, device = device, reduce = False)
+    collect_z_latent_space = []
+    collect_y = []
+    collect_h_losses = []
+    collect_z_losses = []
     for i, (x_t, x_f, x_t_aug, x_f_aug, y) in enumerate(data_loader):
         x_t, x_f, x_t_aug, x_f_aug = x_t.float().to(device), x_f.float().to(device), x_t_aug.float().to(device), x_f_aug.float().to(device)
         normal_outputs = model(x_t, x_f)
         augmented_outputs = model(x_t_aug, x_f_aug)
-        time_loss = loss_fn(normal_outputs[0], augmented_outputs[0]).unsqueeze(1)
-        freq_loss = loss_fn(normal_outputs[2], augmented_outputs[2]).unsqueeze(1)
+        time_loss = loss_fn(normal_outputs[0], augmented_outputs[0]).unsqueeze(0)
+        freq_loss = loss_fn(normal_outputs[2], augmented_outputs[2]).unsqueeze(0)
 
-        time_freq_pos = loss_fn(normal_outputs[1], normal_outputs[3]).unsqueeze(1)
+        time_freq_pos = loss_fn(normal_outputs[1], normal_outputs[3]).unsqueeze(0)
         time_freq_neg = []
         for pair in [[normal_outputs[1], augmented_outputs[3]], [augmented_outputs[1], normal_outputs[3]], [augmented_outputs[1], augmented_outputs[3]]]:
-            time_freq_neg.append(loss_fn(*pair).unsqueeze(1))
+            time_freq_neg.append(loss_fn(*pair).unsqueeze(0))
 
         normal_outputs = [out.detach().cpu().numpy() for out in normal_outputs]
         augmented_outputs = [out.detach().cpu().numpy() for out in augmented_outputs]
@@ -536,27 +540,15 @@ def evaluate_latent_space(model, data_loader, device, classifier = False, save_h
             h_latent_space = np.concatenate((normal_outputs[0][np.newaxis,:, :], normal_outputs[2][np.newaxis, :, :], augmented_outputs[0][np.newaxis, :, :], augmented_outputs[2][np.newaxis, :, :]), axis = 0)
         z_latent_space = np.concatenate((normal_outputs[1][np.newaxis, :, :], normal_outputs[3][np.newaxis, :, :], augmented_outputs[1][np.newaxis, :, :], augmented_outputs[3][np.newaxis, :, :]), axis = 0)
 
-        if i == 0:
-            if save_h:
-                collect_h_latent_space = h_latent_space
-            collect_z_latent_space = z_latent_space
-            collect_y = y 
-            collect_x_t = x_t.detach().cpu().numpy()
-            collect_h_losses = torch.cat((time_loss, freq_loss), dim = 1).detach().cpu().numpy()
-            collect_z_losses = torch.cat((time_freq_pos,*time_freq_neg), dim = 1).detach().cpu().numpy()
-            if classifier:
-                collect_y_out = normal_outputs[-1]
-                
-        else:
-            if save_h:
-                collect_h_latent_space = np.concatenate((collect_h_latent_space, h_latent_space), axis = 1)
-            collect_z_latent_space = np.concatenate((collect_z_latent_space, z_latent_space), axis = 1)
-            collect_y = np.concatenate((collect_y, y), axis = 0)
-            collect_x_t = np.concatenate((collect_x_t, x_t.detach().cpu().numpy()), axis = 0)
-            collect_h_losses = np.concatenate((collect_h_losses, torch.cat((time_loss, freq_loss), dim = 1).detach().cpu().numpy()), axis = 0)
-            collect_z_losses = np.concatenate((collect_z_losses, torch.cat((time_freq_pos,*time_freq_neg), dim = 1).detach().cpu().numpy()), axis = 0)
-            if classifier:
-                collect_y_out = np.concatenate((collect_y_out, normal_outputs[-1]), axis = 0)
+        if save_h:
+            collect_h_latent_space = np.concatenate((collect_h_latent_space, h_latent_space), axis = 1)
+        collect_z_latent_space.append(z_latent_space)
+        collect_y.append(y.numpy())
+        #collect_x_t = np.concatenate((collect_x_t, x_t.detach().cpu().numpy()), axis = 0)
+        collect_h_losses.append(torch.cat((time_loss, freq_loss), dim = 0).detach().cpu().numpy())
+        collect_z_losses.append(torch.cat((time_freq_pos,*time_freq_neg), dim = 0).detach().cpu().numpy())
+        if classifier:
+            collect_y_out = np.concatenate((collect_y_out, normal_outputs[-1]), axis = 0)
     
     columns_h = ['h_t', 'h_f', 'h_t_aug', 'h_f_aug'] 
     columns_z = ['z_t', 'z_f', 'z_t_aug', 'z_f_aug'] 
@@ -565,16 +557,16 @@ def evaluate_latent_space(model, data_loader, device, classifier = False, save_h
     if save_h:
         output_columns = [zip(columns_h, collect_h_latent_space), zip(columns_z, collect_z_latent_space)]
     else:
-        output_columns = [zip(columns_z, collect_z_latent_space)]
+        output_columns = [zip(columns_z, np.hstack(collect_z_latent_space))]
 
     for latent in output_columns:
         for i, (name, var) in enumerate(latent):
             outputs[name] = var
             
-    outputs['y'] = collect_y
-    outputs['x'] = collect_x_t
-    outputs['z_losses'] = collect_z_losses
-    outputs['h_losses'] = collect_h_losses
+    outputs['y'] = np.hstack(collect_y)
+    #outputs['x'] = collect_x_t
+    outputs['z_losses'] = np.hstack(collect_z_losses)
+    outputs['h_losses'] = np.hstack(collect_h_losses)
     
     if classifier:
         outputs['y_pred'] = collect_y_out

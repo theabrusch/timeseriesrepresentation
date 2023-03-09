@@ -297,7 +297,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # training arguments
-    parser.add_argument('--evaluate_latent_space', type = eval, default = True)
+    parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--finetune_latentspace', type = eval, default = True)
@@ -314,7 +314,7 @@ if __name__ == '__main__':
     # subsampling
     parser.add_argument('--sample_pretrain_subjs', type = eval, default = 3)
     parser.add_argument('--sample_finetune_train_subjs', type = eval, default = 1)
-    parser.add_argument('--sample_finetune_val_subjs', type = eval, default = 3)
+    parser.add_argument('--sample_finetune_val_subjs', type = eval, default = 1)
     parser.add_argument('--sample_test_subjs', type = eval, default = 2)
 
     # data arguments
