@@ -2,22 +2,28 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 from utils.augmentations import frequency_augmentation, time_augmentation
 from torch.nn import functional as F
+import numpy as np
 
-def get_datasets(data_path, abs_budget, batch_size, finetune_mode = False, sample_channel = False):
+def get_datasets(data_path, batch_size, ssl_mode = 'TS2Vec', abs_budget = False, finetune_mode = False, sample_channel = False):
     train = torch.load(data_path + 'train.pt')
     val = torch.load(data_path + 'val.pt')
     test = torch.load(data_path + 'test.pt')
 
     dset = data_path.split('/')[-2]
-    TFC_dset = TFC_Dataset(train['samples'], train['labels'], dset, abs_budget=abs_budget, fine_tune_mode=finetune_mode, sample_channel=sample_channel)
-    train_loader = DataLoader(TFC_dset, batch_size = batch_size, shuffle = True, drop_last=False)
+    if ssl_mode == 'TFC':
+        pretrain_dset = TFC_Dataset(train['samples'], train['labels'], dset, abs_budget=abs_budget, fine_tune_mode=finetune_mode, sample_channel=sample_channel)
+        val_dset = TFC_Dataset(val['samples'], val['labels'], dset = dset, abs_budget = abs_budget, fine_tune_mode=finetune_mode, sample_channel=sample_channel)
+        test_dset = TFC_Dataset(test['samples'], test['labels'], dset = dset, test_mode = True, fine_tune_mode=False, sample_channel=sample_channel)
+    elif ssl_mode == 'TS2Vec':
+        pretrain_dset = TS2Vec_Dataset(train['samples'], train['labels'], sample_channel=sample_channel)
+        val_dset = TS2Vec_Dataset(val['samples'], val['labels'], sample_channel=sample_channel)
+        test_dset = TS2Vec_Dataset(test['samples'], test['labels'], sample_channel=sample_channel)
 
-    val_dset = TFC_Dataset(val['samples'], val['labels'], dset = dset, abs_budget = abs_budget, fine_tune_mode=finetune_mode, sample_channel=sample_channel)
-    test_dset = TFC_Dataset(test['samples'], test['labels'], dset = dset, test_mode = True, fine_tune_mode=False, sample_channel=sample_channel)
+    train_loader = DataLoader(pretrain_dset, batch_size = batch_size, shuffle = True, drop_last=False)
     val_loader = DataLoader(val_dset, batch_size = batch_size, drop_last=False)
     test_loader = DataLoader(test_dset, batch_size = batch_size, drop_last=False)
 
-    return train_loader, val_loader, test_loader, (TFC_dset.channels, TFC_dset.time_length, TFC_dset.num_classes)
+    return train_loader, val_loader, test_loader, (pretrain_dset.channels, pretrain_dset.time_length, pretrain_dset.num_classes)
 
 def get_dset_info(data_path = None, X = None, dset = None, sample_channel=False):
     if X is None:
@@ -86,3 +92,30 @@ class TFC_Dataset(Dataset):
     
     def __len__(self):
         return len(self.X_t)
+    
+
+class TS2Vec_Dataset(Dataset):
+    def __init__(self, X, Y, sample_channel = False):
+        super().__init__()
+
+        self.X = X
+        self.Y = Y
+        self.time_length = X.shape[2]
+        self.num_classes = len(torch.unique(Y))
+        channels, time_length = self.X.shape[1], self.X.shape[-1]
+        self.time_length = time_length
+        if not sample_channel:
+            self.channels = channels
+        else:
+            self.num_channels = channels
+            # num of channels for the NN to take as input
+            self.channels = 1
+        self.sample_channel = sample_channel
+        if int(torch.max(self.Y)) == self.num_classes:
+            self.Y = self.Y-1
+    
+    def __getitem__(self, idx):
+        return self.X[idx], self.Y[idx]
+    
+    def __len__(self):
+        return len(self.X)
