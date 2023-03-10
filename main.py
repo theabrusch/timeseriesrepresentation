@@ -113,7 +113,7 @@ if __name__ == '__main__':
     # augmentation arguments
     parser.add_argument('--sample_channel', type = eval, default = False)
     # optimizer arguments
-    parser.add_argument('--learning_rate', type = float, default = 3e-6)
+    parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--alpha', type = float, default=0.5)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
     parser.add_argument('--epochs', type = int, default = 0 )
