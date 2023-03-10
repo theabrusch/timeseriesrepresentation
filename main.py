@@ -9,22 +9,35 @@ from utils.plot_functions import plot_contrastive_losses
 import pickle
 import os
 import datetime
+from prettytable import PrettyTable
+import wandb
+
+def params_to_tb(writer, args):
+    t = PrettyTable(['Argument', 'Value'])
+    param_dict = vars(args)
+    for key, val in param_dict.items():
+        t.add_row([key, val])
+    writer.add_text("args", t.get_html_string(), global_step=0)
 
 def check_output_path(output_path):
     if not os.path.exists(output_path):
-                os.makedirs(output_path)
-    elif len(os.listdir(output_path)) == 0:
-        output_path = output_path
+        os.makedirs(output_path)
     else:
         i = 1
-        while os.path.exists(output_path + f'_v_{i}') and not len(os.listdir(output_path + f'_v_{i}')) == 0:
+        while os.path.exists(output_path + f'_v_{i}'):
             i+=1
         output_path = output_path + f'_v_{i}'
         os.makedirs(output_path, exist_ok=True)
     return output_path
 
+def results_to_tb(results, writer, dset):
+    t = PrettyTable(['Argument', 'Value'])
+    for key, val in results.items():
+        t.add_row([key, val])
+    writer.add_text(f"{dset}_results", t.get_html_string(), global_step=0)
 
 def main(args):
+    wandb.init(project = 'ts2vec', config = args)
     dset = args.data_path.split('/')[-2]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = f'{args.output_path}/classifier_{args.train_classifier}_TFC_{args.train_TFC}_abs_budget_{args.abs_budget}_stride_{args.stride}_loss_{args.loss}_{dset}'

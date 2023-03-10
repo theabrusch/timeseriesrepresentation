@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support, roc_auc_score, average_precision_score
 from utils.models import ContrastiveLoss2
 from copy import deepcopy
+import wandb
 
 def TFC_trainer(model, 
                 train_loader, 
@@ -14,7 +15,7 @@ def TFC_trainer(model,
                 device, 
                 contrastive_encoding = 'all',
                 backup_path = None,
-                writer = None,
+                log = True,
                 classifier = None,
                 class_optimizer = None, 
                 delta_ = 1, 
@@ -107,12 +108,9 @@ def TFC_trainer(model,
         print('Time-freq consistency loss:', epoch_time_freq/(i+1))
         print('Total loss:', epoch_loss/(i+1))
 
-        if not writer is None:
-            writer.add_scalar('train_pretrain/time_loss', epoch_time/(i+1), epoch)
-            writer.add_scalar('train_pretrain/freq_loss', epoch_freq/(i+1), epoch)
-            writer.add_scalar('train_pretrain/time_freq', epoch_time_freq/(i+1), epoch)
-            writer.add_scalar('train_pretrain/total_loss', epoch_loss/(i+1), epoch)
-        
+        if log:
+            wandb.log({'pretrain time loss': epoch_time/(i+1), 'pretrain freq loss': epoch_freq/(i+1), 'pretrain TFC': epoch_time_freq/(i+1), 'pretrain total loss': epoch_loss/(i+1)})
+
         if not backup_path is None:
             path = backup_path
             torch.save(model.state_dict(), path)
@@ -167,11 +165,8 @@ def TFC_trainer(model,
         print('Time-freq consistency loss:', val_epoch_time_freq/(i+1))
         print('Total loss:', val_epoch_loss/(i+1))
 
-        if not writer is None:
-            writer.add_scalar('val_pretrain/time_loss', val_epoch_time/(i+1), epoch)
-            writer.add_scalar('val_pretrain/freq_loss', val_epoch_freq/(i+1), epoch)
-            writer.add_scalar('val_pretrain/time_freq', val_epoch_time_freq/(i+1), epoch)
-            writer.add_scalar('val_pretrain/total_loss', val_epoch_loss/(i+1), epoch)
+        if log:
+            wandb.log({'pretrain val time': val_epoch_time/(i+1), 'pretrain val freq': val_epoch_freq/(i+1), 'pretrain val TFC': val_epoch_time_freq/(i+1), 'pretrain val total': val_epoch_loss/(i+1)})
         
         val_time_loss_total.append(val_epoch_time/(i+1))
         val_freq_loss_total.append(val_epoch_freq/(i+1))
