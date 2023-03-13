@@ -4,10 +4,16 @@ from utils.augmentations import frequency_augmentation, time_augmentation
 from torch.nn import functional as F
 import numpy as np
 
-def get_datasets(data_path, batch_size, ssl_mode = 'TS2Vec', abs_budget = False, finetune_mode = False, sample_channel = False):
+def get_datasets(data_path, batch_size, ssl_mode = 'TS2Vec', downsample = False, abs_budget = False, finetune_mode = False, sample_channel = False):
     train = torch.load(data_path + 'train.pt')
     val = torch.load(data_path + 'val.pt')
     test = torch.load(data_path + 'test.pt')
+    if downsample:
+        train_idx = np.random.choice(np.arange(len(train['samples'])), size = 128, replace=False)
+        train['samples'] = train['samples'][train_idx]
+        train['labels'] = train['labels'][train_idx]
+
+
 
     dset = data_path.split('/')[-2]
     if ssl_mode == 'TFC':

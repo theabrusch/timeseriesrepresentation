@@ -51,6 +51,7 @@ def main(args):
         # get datasets
         train_loader, val_loader, test_loader, (channels, time_length, num_classes) = get_datasets(data_path = args.data_path, 
                                                                                                     ssl_mode='TS2Vec',
+                                                                                                    downsample=False,
                                                                                                     sample_channel = args.sample_channel, 
                                                                                                     batch_size=args.batch_size)
         
@@ -116,7 +117,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--alpha', type = float, default=0.5)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 0 )
+    parser.add_argument('--epochs', type = int, default = 1 )
     args = parser.parse_args()
     main(args)
 

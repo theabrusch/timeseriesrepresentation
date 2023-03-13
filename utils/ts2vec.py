@@ -132,10 +132,10 @@ class TS2VecEncoder(nn.Module):
                 crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
                 
                 out1 = self.forward(self.take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft), train = True)
-                out1 = out1[:, -crop_l:]
+                out1 = out1[:, :, -crop_l:]
                 
                 out2 = self.forward(self.take_per_row(x, crop_offset + crop_left, crop_eright - crop_left), train = True)
-                out2 = out2[:, :crop_l]
+                out2 = out2[:, :, :crop_l]
 
                 loss, inst_loss, temp_loss = loss_fn(out1, out2)
 
