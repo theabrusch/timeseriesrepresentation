@@ -76,6 +76,8 @@ def main(args):
         print('Initializing model')
         model = TS2VecEncoder(input_size=channels, hidden_channels=64, out_dim=320)
         model.to(device)
+        if args.load_model:
+             model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
         optimizer = AdamW(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
         print('Training model')
@@ -120,6 +122,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # training arguments
     parser.add_argument('--save_model', type = eval, default = True)
+    parser.add_argument('--load_model', type = eval, default = True)
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--temporal_unit', type = int, default = 2)
