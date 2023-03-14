@@ -103,8 +103,12 @@ def main(args):
                 pickle.dump(losses, file)
 
         print('Evaluating latent space')
-        train_outputs = model.evaluate_latent_space(pretrain_loader, device=device, maxpool=True)
-        val_outputs = model.evaluate_latent_space(pretrain_val_loader, device=device, maxpool=True)
+        if 'eeg' in args.data_path:
+            train_outputs = model.evaluate_latent_space(finetune_loader, device=device, maxpool=True)
+            val_outputs = model.evaluate_latent_space(finetune_val_loader, device=device, maxpool=True)
+        else:
+            train_outputs = model.evaluate_latent_space(pretrain_loader, device=device, maxpool=True)
+            val_outputs = model.evaluate_latent_space(pretrain_val_loader, device=device, maxpool=True)
         test_outputs = model.evaluate_latent_space(test_loader, device=device, maxpool=True)
 
         with open(f'{output_path}/pretrain_latents.pickle', 'wb') as file:
