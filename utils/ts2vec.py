@@ -148,7 +148,12 @@ class TS2VecEncoder(nn.Module):
             val_temp_loss_collect.append(epoch_temp_loss/(i+1))
             val_inst_loss_collect.append(epoch_inst_loss/(i+1))
             if log:
-                wandb.log({'pretrain val time loss': epoch_temp_loss/(i+1), 'pretrain val inst loss': epoch_inst_loss/(i+1), 'pretrain val total loss': epoch_loss/(i+1)})
+                wandb.log({'pretrain val time loss': epoch_temp_loss/(i+1), 
+                           'pretrain val inst loss': epoch_inst_loss/(i+1), 
+                           'pretrain val total loss': epoch_loss/(i+1),
+                           'pretrain time loss': temp_loss_collect[-1], 
+                           'pretrain inst loss': inst_loss_collect[-1], 
+                           'pretrain total loss': loss_collect[-1]})
 
         losses = {
             'train': 
