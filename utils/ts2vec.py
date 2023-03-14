@@ -64,10 +64,11 @@ class TS2VecEncoder(nn.Module):
             epochs,
             optimizer,
             alpha,
+            temporal_unit,
             device,
             log = True):
         
-        loss_fn = TS2VecLoss(alpha = alpha)
+        loss_fn = TS2VecLoss(alpha = alpha, temporal_unit=temporal_unit)
         loss_collect = []
         temp_loss_collect = []
         inst_loss_collect = []

@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from utils.trainer import TFC_trainer, evaluate_latent_space, finetune_model, evaluate_model
 from utils.ts2vec import TS2VecEncoder
 from utils.dataset import TFC_Dataset, get_datasets, get_dset_info
+from eegdataset import construct_eeg_datasets
 from torch.optim import AdamW
 from utils.plot_functions import plot_contrastive_losses
 import pickle
@@ -38,7 +39,10 @@ def results_to_tb(results, writer, dset):
 
 def main(args):
     wandb.init(project = 'ts2vec', config = args)
-    dset = args.data_path.split('/')[-2]
+    if 'eeg' in args.data_path:
+         dset = args.data_path.split('/')[-1].strip('.yml')
+    else:
+        dset = args.data_path.split('/')[-2]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = f'{args.output_path}/ts2vec_{dset}'
 
@@ -47,14 +51,28 @@ def main(args):
         
     print('Saving outputs in', output_path)
 
-    if args.pretrain:
-        # get datasets
-        train_loader, val_loader, test_loader, (channels, time_length, num_classes) = get_datasets(data_path = args.data_path, 
+    if 'eeg' in args.data_path:
+        train_mode = 'both'
+        pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(args.data_path, 
+                                                                                                                                                            args.finetune_path, 
+                                                                                                                                                            batchsize = args.batch_size,
+                                                                                                                                                            normalize = False, 
+                                                                                                                                                            standardize_epochs = True,
+                                                                                                                                                            balanced_sampling= 'finetune',
+                                                                                                                                                            target_batchsize = args.target_batch_size,
+                                                                                                                                                            sample_pretrain_subjects = args.sample_pretrain_subjs,
+                                                                                                                                                            sample_finetune_train_subjects = args.sample_finetune_train_subjs,
+                                                                                                                                                            sample_finetune_val_subjects = args.sample_finetune_val_subjs,
+                                                                                                                                                            sample_test_subjects = args.sample_test_subjs,
+                                                                                                                                                            train_mode = train_mode)
+    else:
+         pretrain_loader, pretrain_val_loader, test_loader, (channels, time_length, num_classes) = get_datasets(data_path = args.data_path, 
                                                                                                     ssl_mode='TS2Vec',
                                                                                                     downsample=False,
                                                                                                     sample_channel = args.sample_channel, 
                                                                                                     batch_size=args.batch_size)
-        
+    if args.pretrain:
+        # get datasets
         print('Initializing model')
         model = TS2VecEncoder(input_size=channels, hidden_channels=64, out_dim=320)
         model.to(device)
@@ -63,11 +81,12 @@ def main(args):
         print('Training model')
         time = datetime.datetime.now()
         # pretrain model
-        losses = model.fit(dataloader = train_loader,
-                            val_dataloader = val_loader,
+        losses = model.fit(dataloader = pretrain_loader,
+                            val_dataloader = pretrain_val_loader,
                             epochs = args.epochs,
                             optimizer = optimizer,
                             alpha = args.alpha,
+                            temporal_unit = args.temporal_unit,
                             device = device)
         time2 = datetime.datetime.now()    
         print('Pre-training for', args.epochs,'epochs took', time2-time, 's.')
@@ -82,8 +101,8 @@ def main(args):
                 pickle.dump(losses, file)
 
         print('Evaluating latent space')
-        train_outputs = model.evaluate_latent_space(train_loader, device=device, maxpool=True)
-        val_outputs = model.evaluate_latent_space(val_loader, device=device, maxpool=True)
+        train_outputs = model.evaluate_latent_space(pretrain_loader, device=device, maxpool=True)
+        val_outputs = model.evaluate_latent_space(pretrain_val_loader, device=device, maxpool=True)
         test_outputs = model.evaluate_latent_space(test_loader, device=device, maxpool=True)
 
         with open(f'{output_path}/pretrain_latents.pickle', 'wb') as file:
@@ -103,13 +122,20 @@ if __name__ == '__main__':
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
+    parser.add_argument('--temporal_unit', type = int, default = 2)
     # data arguments
-    parser.add_argument('--data_path', type = str, default = 'datasets/HAR/')
-    parser.add_argument('--finetune_path', type = str, default = 'datasets/Gesture/')
+    parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
+    parser.add_argument('--finetune_path', type = str, default = 'same')
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 22)
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--overwrite', type = eval, default = False)
+
+    # eeg arguments
+    parser.add_argument('--sample_pretrain_subjs', type = eval, default = 3)
+    parser.add_argument('--sample_finetune_train_subjs', type = eval, default = 1)
+    parser.add_argument('--sample_finetune_val_subjs', type = eval, default = 1)
+    parser.add_argument('--sample_test_subjs', type = eval, default = 2)
 
     # augmentation arguments
     parser.add_argument('--sample_channel', type = eval, default = False)

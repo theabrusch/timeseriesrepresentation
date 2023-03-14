@@ -2,34 +2,38 @@ import torch
 import torch.nn.functional as F
 
 class TS2VecLoss(torch.nn.Module):
-    def __init__(self, alpha) -> None:
+    def __init__(self, alpha, temporal_unit) -> None:
         super().__init__()
         self.alpha = alpha
+        self.temporal_unit = temporal_unit
     
-    def dual_loss(self, z1, z2):
+    def dual_loss(self, z1, z2, d):
         # z1, z2 : B x C x T
         dual_loss = torch.tensor(0.).to(z1.device)
         inst_loss = torch.tensor(0.)
 
         inst_loss = self.contrastive_loss(z1, z2)
-        temp_loss = self.contrastive_loss(z1.transpose(0,2), z2.transpose(0,2))
+        
 
         if self.alpha > 0:
             # compute instance loss
             dual_loss += self.alpha*inst_loss
-        if self.alpha < 1:
+        if self.alpha < 1 and d >= self.temporal_unit:
             # compute temporal loss
+            temp_loss = self.contrastive_loss(z1.transpose(0,2), z2.transpose(0,2))
             dual_loss += (1-self.alpha)*temp_loss
+        else:
+            temp_loss = torch.tensor(0.).to(z1.device)
 
         return dual_loss, inst_loss.detach().cpu(), temp_loss.detach().cpu()
 
     def forward(self, z1, z2):
         # z1, z2 : B x C x T
-        loss, inst_loss, temp_loss = self.dual_loss(z1, z2)
-        d = 0
+        loss, inst_loss, temp_loss = self.dual_loss(z1, z2, d=0)
+        d = 1
         while z1.shape[-1] > 1:
             z1, z2 = F.max_pool1d(z1, 2), F.max_pool1d(z2, 2)
-            out = self.dual_loss(z1, z2)
+            out = self.dual_loss(z1, z2, d)
             loss += out[0]
             inst_loss += out[1]
             temp_loss += out[2]
