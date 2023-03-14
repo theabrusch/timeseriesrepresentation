@@ -169,14 +169,14 @@ class TS2VecEncoder(nn.Module):
     def evaluate_latent_space(self, data_loader, device, maxpool = True):
         latent_space = []
         collect_y = []
-        for i, (x, y) in enumerate(data_loader):
-            x = x.float().to(device)
+        for i, data in enumerate(data_loader):
+            x = data[0].float().to(device)
             output = self.forward(x)
             if maxpool:
                 ts_length = x.shape[2]
                 output = F.max_pool1d(output, ts_length)
             latent_space.append(output.detach().cpu().numpy())
-            collect_y.append(y.unsqueeze(1).numpy())
+            collect_y.append(data[-1].unsqueeze(1).numpy())
         
         outputs = {
             'latents': np.vstack(latent_space),
