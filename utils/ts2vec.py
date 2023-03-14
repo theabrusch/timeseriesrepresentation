@@ -32,7 +32,7 @@ class TS2VecEncoder(nn.Module):
 
         in_channels = [hidden_channels]*(nlayers + 1)
         out_channels = [hidden_channels]*nlayers + [out_dim]
-        dilation = [2**i for i in range(nlayers)]
+        dilation = [2**i for i in range(nlayers+1)]
         convblocks = [DilatedCNNBlock(in_ch, out_ch, dil, kernel_size) for in_ch, out_ch, dil in zip(in_channels, out_channels, dilation)]
         self.convblocks = nn.Sequential(*convblocks)
         self.repr_dropout = nn.Dropout(p = 0.1)
