@@ -8,7 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, balanced_accuracy_score
 
 temp = None
-path = 'outputs/ts2vec_sleepeeg_v_5/'
+path = 'outputs/ts2vec_sleepeeg_v_6/'
 finetune = 'prior'
 finetune_dset = 'sleepeeg'
 with open(f'{path}pretrain_latents.pickle', 'rb') as file:
@@ -102,17 +102,17 @@ classifier = 'linear'
 
 if classifier == 'knn':
     # train KNeighborsClassifier
-    for neighbors in range(15,20):
+    for neighbors in range(1,10):
         classifier = KNeighborsClassifier(n_neighbors=neighbors)
         classifier.fit(train_input, train_y)
         val_out = classifier.predict(val_input)
-        val_res['acc'].append(accuracy_score(val_y, val_out))
+        val_res['acc'].append(balanced_accuracy_score(val_y, val_out))
         prec, rec, f1, _ = precision_recall_fscore_support(val_y, val_out)
         val_res['prec'].append(np.mean(prec))
         val_res['rec'].append(np.mean(rec))
         val_res['f1'].append(np.mean(f1))
         test_out = classifier.predict(test_input)
-        test_res['acc'].append(accuracy_score(test_y, test_out))
+        test_res['acc'].append(balanced_accuracy_score(test_y, test_out))
         prec, rec, f1, _ = precision_recall_fscore_support(test_y, test_out)
         test_res['prec'].append(np.mean(prec))
         test_res['rec'].append(np.mean(rec))
@@ -121,9 +121,9 @@ else:
     classifier = LogisticRegression(max_iter = 10000)
     classifier.fit(train_input, train_y)
     val_out = classifier.predict(val_input)
-    val_accuracy = accuracy_score(val_y, val_out)
+    val_accuracy = balanced_accuracy_score(val_y, val_out)
     test_out = classifier.predict(test_input)
-    test_accuracy = accuracy_score(test_y, test_out)
+    test_accuracy = balanced_accuracy_score(test_y, test_out)
 print('Validation accuracy', val_res)
 print('Test accuracy', test_res)
 
