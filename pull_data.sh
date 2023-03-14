@@ -1,1 +1,1 @@
-rsync -Pav -e ssh theb@login.gbar.dtu.dk:/zhome/89/a/117273/Desktop/timeseriesrepresentation/outputs/TFC_pretrain_all_encoder_TFC_standardize_channelwise_multchannel_None_sleepeeg_v_9 ~/Documents/PhD/code/timeseriesrepresentation/outputs/
+rsync -Pav -e ssh theb@login.gbar.dtu.dk:/zhome/89/a/117273/Desktop/timeseriesrepresentation/outputs/ts2vec_HAR_v_1 ~/Documents/PhD/code/timeseriesrepresentation/outputs/
