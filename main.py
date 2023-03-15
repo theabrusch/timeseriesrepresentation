@@ -89,6 +89,7 @@ def main(args):
                             optimizer = optimizer,
                             alpha = args.alpha,
                             temporal_unit = args.temporal_unit,
+                            backup_path = output_path,
                             device = device)
         time2 = datetime.datetime.now()    
         print('Pre-training for', args.epochs,'epochs took', time2-time, 's.')

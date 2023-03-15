@@ -8,7 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, balanced_accuracy_score
 
 temp = None
-path = 'outputs/ts2vec_sleepeeg_v_6/'
+path = 'outputs/ts2vec_sleepeeg_v_10/'
 finetune = 'prior'
 finetune_dset = 'sleepeeg'
 with open(f'{path}pretrain_latents.pickle', 'rb') as file:
@@ -20,7 +20,7 @@ with open(f'{path}pretrain_val_latents.pickle', 'rb') as file:
 with open(f'{path}pretrain_test_latents.pickle', 'rb') as file:
     outputs_test = pickle.load(file) 
 
-UM = umap.UMAP(n_neighbors=20, min_dist = 0.2, metric = 'cosine')
+UM = umap.UMAP(n_neighbors=40, min_dist = 0.5, metric = 'cosine')
 temp = np.random.randn(40,5)
 transform = UM.fit_transform(temp)
 
@@ -28,8 +28,8 @@ transform = UM.fit_transform(outputs_train['latents'][:,:,0])
 transform_t = transform
 #transform_f = transform[int(len(transform)/2):,:]
 
-transform_test = UM.transform(outputs_test['latents'][:,:,0])
-transform_t_test = transform_test
+#transform_test = UM.transform(outputs_test['latents'][:,:,0])
+#transform_t_test = transform_test
 #transform_f_test = transform_test[int(len(transform_test)/2):,:]
 
 transform_val = UM.transform(outputs_val['latents'][:,:,0])
@@ -59,9 +59,6 @@ ax[1].scatter(transform_t_val[:,0], transform_t_val[:,1], marker = 'v', c = np.a
 #ax[1].scatter(transform_f_val[:,0], transform_f_val[:,1], marker = 's', c = np.array(color_val), label = 'frequency embeddings')
 ax[1].set_title('Val. set embeddings', fontsize = 14)
 plt.tight_layout()
-plt.show()
-
-plt.plot(outputs_test['x'][6,0,:])
 plt.show()
 
 val_res = {
@@ -102,7 +99,7 @@ classifier = 'linear'
 
 if classifier == 'knn':
     # train KNeighborsClassifier
-    for neighbors in range(1,10):
+    for neighbors in range(1,15):
         classifier = KNeighborsClassifier(n_neighbors=neighbors)
         classifier.fit(train_input, train_y)
         val_out = classifier.predict(val_input)

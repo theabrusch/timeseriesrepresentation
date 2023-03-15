@@ -66,6 +66,7 @@ class TS2VecEncoder(nn.Module):
             alpha,
             temporal_unit,
             device,
+            backup_path = None,
             log = True):
         
         loss_fn = TS2VecLoss(alpha = alpha, temporal_unit=temporal_unit)
@@ -151,6 +152,10 @@ class TS2VecEncoder(nn.Module):
                            'pretrain time loss': temp_loss_collect[-1], 
                            'pretrain inst loss': inst_loss_collect[-1], 
                            'pretrain total loss': loss_collect[-1]})
+            
+            if backup_path is not None and epoch % 2 == 0:
+                path = f'{backup_path}/pretrained_model.pt'
+                torch.save(self.state_dict(), path)
 
         losses = {
             'train': 
