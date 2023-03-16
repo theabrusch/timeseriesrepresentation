@@ -277,8 +277,8 @@ class TS2VecEncoder(nn.Module):
             collect_y.append(y.numpy())
             collect_pred.append(pred.detach().cpu().numpy())
 
-        collect_y = np.vstack(collect_y)
-        collect_pred = np.vstack(collect_pred)
+        collect_y = np.hstack(collect_y)
+        collect_pred = np.hstack(collect_pred)
         accuracy = balanced_accuracy_score(collect_y, collect_pred)
         prec, rec, f, _ = precision_recall_fscore_support(collect_y, collect_pred)
 
