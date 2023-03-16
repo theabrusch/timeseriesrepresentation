@@ -238,8 +238,8 @@ class TS2VecEncoder(nn.Module):
                 collect_y.append(y.detach().cpu().numpy())
                 collect_pred.append(torch.argmax(pred, dim = -1).detach().cpu().numpy())
 
-            collect_y = np.vstack(collect_y)
-            collect_pred = np.vstack(collect_pred)
+            collect_y = np.hstack(collect_y)
+            collect_pred = np.hstack(collect_pred)
             val_accuracy = balanced_accuracy_score(collect_y, collect_pred)
             prec, rec, f, _ = precision_recall_fscore_support(collect_y, collect_pred)
             val_loss_collect.append(val_epoch_loss/(i+1))
