@@ -3,6 +3,8 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 from utils.losses import TS2VecLoss
+from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support
+from copy import deepcopy
 import wandb
 
 class DilatedCNNBlock(nn.Module):
@@ -25,6 +27,15 @@ class DilatedCNNBlock(nn.Module):
 def generate_binomial_mask(B, T, p = 0.5):
     return torch.from_numpy(np.random.binomial(1, p, size=(B, T))).to(torch.bool)
 
+class TS2VecClassifer(nn.Module):
+    def __init__(self, n_classes, in_features):
+        super().__init__()
+        self.classifier = nn.Linear(in_features=in_features, out_features=n_classes)
+    def forward(self, latents):
+        ts_length = latents.shape[2]
+        latents = F.max_pool1d(latents, ts_length).squeeze(-1)
+        return self.classifier(latents)
+
 class TS2VecEncoder(nn.Module):
     def __init__(self, input_size, hidden_channels, out_dim, nlayers = 10, kernel_size = 3):
         super().__init__()
@@ -40,7 +51,7 @@ class TS2VecEncoder(nn.Module):
     def forward(self, x, train = False):
         x = x.transpose(1,2)
         proj = self.linear_projection(x)
-        if train:
+        if self.training:
             mask = generate_binomial_mask(x.size(0), x.size(1)).to(x.device)
             proj[~mask] = 0
         proj = torch.permute(proj, (0, 2, 1))
@@ -172,6 +183,108 @@ class TS2VecEncoder(nn.Module):
         }
         }
         return losses
+    
+    def finetune(self, 
+                 train_loader,
+                 val_loader, 
+                 classifier,
+                 optimizer,
+                 epochs,
+                 device,
+                 log = True,
+                 choose_best = True
+                 ):
+        self.training = True
+        classifier.training = True
+        class_loss_fn = torch.nn.CrossEntropyLoss()
+
+        loss_collect = []
+        val_loss_collect = []
+        if choose_best:
+            accuracy = 0
+            best_state_dict = deepcopy(self.state_dict())
+            best_class_state_dict = deepcopy(classifier.state_dict())
+
+        for epoch in range(epochs):
+            epoch_loss = 0
+            val_epoch_loss = 0
+            self.training = True
+            classifier.training = True
+            for i, batch in enumerate(train_loader):
+                optimizer.zero_grad()
+                x, y = batch[0].float().to(device), batch[-1].long().to(device)
+
+                out = self.forward(x)
+                pred = classifier(out)
+                class_loss = class_loss_fn(pred, y)
+                class_loss.backward()
+                optimizer.step()
+                epoch_loss += class_loss.detach().cpu().numpy()
+
+            loss_collect.append(epoch_loss/(i+1))
+            self.training = False
+            collect_y = []
+            collect_pred = []
+            classifier.eval()
+
+            for i, batch in enumerate(val_loader):
+                x, y = batch[0].float().to(device), batch[-1].long().to(device)
+
+                out = self.forward(x)
+                pred = classifier(out)
+
+                class_loss = class_loss_fn(pred, y)
+                val_epoch_loss += class_loss.detach().cpu().numpy()
+                collect_y.append(y.detach().cpu().numpy())
+                collect_pred.append(torch.argmax(pred, dim = -1).detach().cpu().numpy())
+
+            collect_y = np.vstack(collect_y)
+            collect_pred = np.vstack(collect_pred)
+            val_accuracy = balanced_accuracy_score(collect_y, collect_pred)
+            prec, rec, f, _ = precision_recall_fscore_support(collect_y, collect_pred)
+            val_loss_collect.append(val_epoch_loss/(i+1))
+            
+            if log:
+                wandb.log({
+                    'train class. loss': loss_collect[-1],
+                    'val class. loss': val_loss_collect[-1],
+                    'val accuracy': val_accuracy,
+                    'val precision': prec,
+                    'val recall': rec,
+                    'val f1 score': f
+                })
+
+            if choose_best:
+                if val_accuracy > accuracy:
+                    accuracy = val_accuracy
+                    best_state_dict = deepcopy(self.state_dict())
+                    best_class_state_dict = deepcopy(classifier.state_dict())
+
+        if choose_best:
+            self.load_state_dict(best_state_dict)
+            classifier.load_state_dict(best_class_state_dict)
+
+        return classifier
+    
+    def evaluate_classifier(self, data_loader, classifier, device):
+        collect_y, collect_pred = [], []
+        self.training = False
+        for batch in data_loader:
+            x, y = batch[0].float().to(device), batch[-1].long()
+            out = self.forward(x)
+            pred = classifier(out)
+
+            collect_y.append(y.numpy())
+            collect_pred.append(pred.detach().cpu().numpy())
+
+        collect_y = np.vstack(collect_y)
+        collect_pred = np.vstack(collect_pred)
+        accuracy = balanced_accuracy_score(collect_y, collect_pred)
+        prec, rec, f, _ = precision_recall_fscore_support(collect_y, collect_pred)
+
+        return accuracy, prec, rec, f
+
+
 
     def evaluate_latent_space(self, data_loader, device, maxpool = True):
         latent_space = []

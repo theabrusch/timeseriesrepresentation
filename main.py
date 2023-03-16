@@ -2,7 +2,7 @@ import torch
 import argparse
 from torch.utils.data import DataLoader, TensorDataset
 from utils.trainer import TFC_trainer, evaluate_latent_space, finetune_model, evaluate_model
-from utils.ts2vec import TS2VecEncoder
+from utils.ts2vec import TS2VecEncoder, TS2VecClassifer
 from utils.dataset import TFC_Dataset, get_datasets, get_dset_info
 from eegdataset import construct_eeg_datasets
 from torch.optim import AdamW
@@ -38,16 +38,17 @@ def results_to_tb(results, writer, dset):
     writer.add_text(f"{dset}_results", t.get_html_string(), global_step=0)
 
 def main(args):
-    wandb.init(project = 'ts2vec', config = args)
     if 'eeg' in args.data_path:
          dset = args.data_path.split('/')[-1].strip('.yml')
     else:
         dset = args.data_path.split('/')[-2]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = f'{args.output_path}/ts2vec_{dset}'
-
+    
     if not args.overwrite:
         output_path = check_output_path(output_path)
+    args.outputh_path = output_path
+    wandb.init(project = 'ts2vec', config = args)
         
     print('Saving outputs in', output_path)
 
@@ -71,13 +72,15 @@ def main(args):
                                                                                                     downsample=False,
                                                                                                     sample_channel = args.sample_channel, 
                                                                                                     batch_size=args.batch_size)
+    model = TS2VecEncoder(input_size=channels, hidden_channels=64, out_dim=320)
+    model.to(device)
+    if args.load_model:
+            model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
+
     if args.pretrain:
         # get datasets
         print('Initializing model')
-        model = TS2VecEncoder(input_size=channels, hidden_channels=64, out_dim=320)
-        model.to(device)
-        if args.load_model:
-             model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
+        
         optimizer = AdamW(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
         print('Training model')
@@ -102,7 +105,7 @@ def main(args):
         plot_contrastive_losses(losses['val'], f'{output_path}/pretrain_val_losses.png')
         with open(f'{output_path}/pretrain_losses.pickle', 'wb') as file:
                 pickle.dump(losses, file)
-
+    if args.evaluate_latent_space:
         print('Evaluating latent space')
         if 'eeg' in args.data_path:
             train_outputs = model.evaluate_latent_space(finetune_loader, device=device, maxpool=True)
@@ -118,7 +121,29 @@ def main(args):
                 pickle.dump(val_outputs, file)
         with open(f'{output_path}/pretrain_test_latents.pickle', 'wb') as file:
                 pickle.dump(test_outputs, file)
+    if args.finetune:
+        classifier = TS2VecClassifer(in_features=320, n_classes=num_classes)
+        if args.optimize_encoder:
+            optimizer = AdamW(list(model.parameters())+list(classifier.parameters()), lr = args.learning_rate, weight_decay=args.weight_decay)
+        else:
+            optimizer = AdamW(list(classifier.parameters()), lr = args.learning_rate, weight_decay=args.weight_decay)
+        
+        classifier = model.finetune(
+            finetune_loader,
+            finetune_val_loader, 
+            classifier,
+            optimizer,
+            args.finetune_epochs,
+            device,
+            log = True,
+            choose_best = True
+        )
 
+        accuracy, prec, rec, f = model.evaluate_classifier(test_loader, classifier, device)
+        print('test accuracy', accuracy)
+        print('test precision', prec)
+        print('test recall', rec)
+        print('test f1', f)
 
         
     
@@ -127,8 +152,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # training arguments
     parser.add_argument('--save_model', type = eval, default = True)
-    parser.add_argument('--load_model', type = eval, default = True)
+    parser.add_argument('--load_model', type = eval, default = False)
     parser.add_argument('--pretrain', type = eval, default = True)
+    parser.add_argument('--evaluate_latent_space', type = eval, default = False)
+    parser.add_argument('--finetune', type = eval, default = True)
+    parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--temporal_unit', type = int, default = 2)
     # data arguments
@@ -151,7 +179,8 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--alpha', type = float, default=0.5)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
-    parser.add_argument('--epochs', type = int, default = 1 )
+    parser.add_argument('--finetune_epochs', type = int, default = 1)
+    parser.add_argument('--epochs', type = int, default = 0)
     args = parser.parse_args()
     main(args)
 

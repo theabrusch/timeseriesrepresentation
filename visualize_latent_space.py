@@ -5,10 +5,11 @@ import umap
 import torch
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, balanced_accuracy_score
 
 temp = None
-path = 'outputs/ts2vec_sleepeeg_v_10/'
+path = 'outputs/ts2vec_sleepeeg_v_16/'
 finetune = 'prior'
 finetune_dset = 'sleepeeg'
 with open(f'{path}pretrain_latents.pickle', 'rb') as file:
@@ -99,7 +100,7 @@ classifier = 'linear'
 
 if classifier == 'knn':
     # train KNeighborsClassifier
-    for neighbors in range(1,15):
+    for neighbors in range(25,35):
         classifier = KNeighborsClassifier(n_neighbors=neighbors)
         classifier.fit(train_input, train_y)
         val_out = classifier.predict(val_input)
@@ -124,6 +125,11 @@ else:
 print('Validation accuracy', val_res)
 print('Test accuracy', test_res)
 
+
+classifier = SVC()
+classifier.fit(train_input, train_y)
+val_out = classifier.predict(val_input)
+test_out = classifier.predict(test_input)
 
 umapper = umap.UMAP(n_neighbors=20, min_dist = 0.2, metric = 'cosine')
 transform_train = umapper.fit_transform(np.concatenate((outputs_train['z_t'], outputs_train['z_f']), axis = 1))
