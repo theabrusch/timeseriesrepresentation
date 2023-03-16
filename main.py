@@ -123,6 +123,7 @@ def main(args):
                 pickle.dump(test_outputs, file)
     if args.finetune:
         classifier = TS2VecClassifer(in_features=320, n_classes=num_classes)
+        classifier.to(device)
         if args.optimize_encoder:
             optimizer = AdamW(list(model.parameters())+list(classifier.parameters()), lr = args.learning_rate, weight_decay=args.weight_decay)
         else:
