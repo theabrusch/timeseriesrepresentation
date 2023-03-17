@@ -137,7 +137,7 @@ def main(args):
             args.finetune_epochs,
             device,
             log = True,
-            choose_best = True
+            choose_best = args.choose_best
         )
 
         accuracy, prec, rec, f = model.evaluate_classifier(test_loader, classifier, device)
@@ -170,6 +170,7 @@ if __name__ == '__main__':
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'max')
+    parser.add_argument('--choose_best', type = eval, default = True)
 
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjs', type = eval, default = 3)
