@@ -122,7 +122,7 @@ def main(args):
         with open(f'{output_path}/pretrain_test_latents.pickle', 'wb') as file:
                 pickle.dump(test_outputs, file)
     if args.finetune:
-        classifier = TS2VecClassifer(in_features=320, n_classes=num_classes)
+        classifier = TS2VecClassifer(in_features=320, n_classes=num_classes, pool = args.pool)
         classifier.to(device)
         if args.optimize_encoder:
             optimizer = AdamW(list(model.parameters())+list(classifier.parameters()), lr = args.learning_rate, weight_decay=args.weight_decay)
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
-    parser.add_argument('--temporal_unit', type = int, default = 2)
+
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'same')
@@ -167,6 +167,9 @@ if __name__ == '__main__':
     parser.add_argument('--target_batch_size', type = int, default = 22)
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--overwrite', type = eval, default = False)
+
+    # model arguments
+    parser.add_argument('--pool', type = str, default = 'max')
 
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjs', type = eval, default = 3)
@@ -176,7 +179,9 @@ if __name__ == '__main__':
 
     # augmentation arguments
     parser.add_argument('--sample_channel', type = eval, default = False)
+
     # optimizer arguments
+    parser.add_argument('--temporal_unit', type = int, default = 2)
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--alpha', type = float, default=0.5)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
