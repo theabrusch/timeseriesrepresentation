@@ -275,7 +275,7 @@ class TS2VecEncoder(nn.Module):
             pred = classifier(out)
 
             collect_y.append(y.numpy())
-            collect_pred.append(pred.detach().cpu().numpy())
+            collect_pred.append(torch.argmax(pred, dim = -1).detach().cpu().numpy())
 
         collect_y = np.hstack(collect_y)
         collect_pred = np.hstack(collect_pred)
