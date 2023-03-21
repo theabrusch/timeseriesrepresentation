@@ -9,7 +9,7 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, balanced_accuracy_score
 
 temp = None
-path = 'outputs/ts2vec_sleepeeg_v_16/'
+path = 'outputs/ts2vec_HAR_v_5/'
 finetune = 'prior'
 finetune_dset = 'sleepeeg'
 with open(f'{path}pretrain_latents.pickle', 'rb') as file:
@@ -96,11 +96,11 @@ else:
     test_input = outputs_test['latents'][:,:,0]
     test_y = outputs_test['y'][:,0]
 
-classifier = 'linear'
+classifier = 'knn'
 
 if classifier == 'knn':
     # train KNeighborsClassifier
-    for neighbors in range(25,35):
+    for neighbors in range(1,10):
         classifier = KNeighborsClassifier(n_neighbors=neighbors)
         classifier.fit(train_input, train_y)
         val_out = classifier.predict(val_input)

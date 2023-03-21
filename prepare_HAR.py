@@ -25,7 +25,7 @@ for set in train_test:
         x_collect = np.concatenate((x_collect, x_train), axis = 0)
     j+=1
 
-X_train, X_val_test, y_train, y_val_test = train_test_split(x_collect, y_collect, test_size=0.3)
+X_train, X_val_test, y_train, y_val_test = train_test_split(x_collect, y_collect, test_size=0.4)
 X_test, X_val, y_test, y_val = train_test_split(X_val_test, y_val_test, test_size=0.5)
 
 X_train, y_train = torch.from_numpy(np.append(X_train, X_val, axis = 0)), torch.from_numpy(np.append(y_train, y_val, axis = 0))
