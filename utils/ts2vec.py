@@ -127,7 +127,7 @@ class TS2VecEncoder(nn.Module):
                 elif augmentation_type == 'channels':
                     ch_size = x.size(1)
                     idx = np.random.rand(x.size(0), ch_size).argpartition(2,axis=1)[:,:2] # randomly select 2 channels per input
-                    random_channels = self.take_channel(x, idx)
+                    random_channels = self.take_channel(x, idx.to(device))
                     out1 = self.forward(random_channels[:,0,:].unsqueeze(1))
                     out2 = self.forward(random_channels[:,1,:].unsqueeze(1))
 
@@ -167,9 +167,9 @@ class TS2VecEncoder(nn.Module):
                 elif augmentation_type == 'channels':
                     ch_size = x.size(1)
                     idx = np.random.rand(x.size(0), ch_size).argpartition(2,axis=1)[:,:2] # randomly select 2 channels per input
-                    random_channels = self.take_channel(x, idx)
-                    out1 = self.forward(random_channels[:,0,:])
-                    out2 = self.forward(random_channels[:,1,:])
+                    random_channels = self.take_channel(x, idx.to(device))
+                    out1 = self.forward(random_channels[:,0,:].unsqueeze(1))
+                    out2 = self.forward(random_channels[:,1,:].unsqueeze(1))
 
                 loss, inst_loss, temp_loss = loss_fn(out1, out2)
 
