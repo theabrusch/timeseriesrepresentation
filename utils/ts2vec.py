@@ -60,6 +60,8 @@ class TS2VecEncoder(nn.Module):
             batch, ch, ts = x.shape
             x = x.reshape(batch*ch, 1, ts)
             reshape = True
+        else:
+            reshape = False
         x = x.transpose(1,2)
         proj = self.linear_projection(x)
         if self.training:
