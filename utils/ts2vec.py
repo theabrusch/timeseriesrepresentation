@@ -28,13 +28,15 @@ def generate_binomial_mask(B, T, p = 0.5):
     return torch.from_numpy(np.random.binomial(1, p, size=(B, T))).to(torch.bool)
 
 class TS2VecClassifer(nn.Module):
-    def __init__(self, n_classes, in_features, pool):
+    def __init__(self, n_classes, in_features, pool, orig_channels = 9):
         super().__init__()
         self.pool = pool
+        self.channelreduction = nn.Linear(in_features=orig_channels, out_features=1)
         self.classifier = nn.Linear(in_features=in_features, out_features=n_classes)
     def forward(self, latents):
         if len(latents.shape) > 3:
-            latents = latents.mean(1).squeeze(1)
+            latents = latents.permute(0,2,3,1)
+            latents = self.channelreduction(latents).squeeze(-1)
         ts_length = latents.shape[2]
         if self.pool == 'max':
             latents = F.max_pool1d(latents, ts_length).squeeze(-1)
