@@ -67,11 +67,11 @@ def main(args):
                                                                                                                                                             sample_test_subjects = args.sample_test_subjs,
                                                                                                                                                             train_mode = train_mode)
     else:
-         pretrain_loader, pretrain_val_loader, test_loader, (channels, time_length, num_classes) = get_datasets(data_path = args.data_path, 
-                                                                                                    ssl_mode='TS2Vec',
-                                                                                                    downsample=False,
-                                                                                                    sample_channel = args.sample_channel, 
-                                                                                                    batch_size=args.batch_size)
+         pretrain_loader, pretrain_val_loader, test_loader, (channels, time_length, num_classes) = get_datasets(data_path = args.data_path,
+                                                                                                                ssl_mode='TS2Vec',
+                                                                                                                downsample=False,
+                                                                                                                sample_channel = args.sample_channel, 
+                                                                                                                batch_size=args.batch_size)
     if args.sample_channel:
          channels = 1
     model = TS2VecEncoder(input_size=channels, hidden_channels=64, out_dim=320)
@@ -125,6 +125,9 @@ def main(args):
         with open(f'{output_path}/pretrain_test_latents.pickle', 'wb') as file:
                 pickle.dump(test_outputs, file)
     if args.finetune:
+        if 'HAR' in args.data_path:
+             finetune_loader = pretrain_loader
+             finetune_val_loader = pretrain_val_loaders
         classifier = TS2VecClassifer(in_features=320, n_classes=num_classes, pool = args.pool)
         classifier.to(device)
         if args.optimize_encoder:
