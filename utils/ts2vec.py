@@ -330,8 +330,7 @@ class TS2VecEncoder(nn.Module):
             x = data[0].float().to(device)
             output = self.forward(x, mask = False)
             if maxpool:
-                ts_length = x.shape[2]
-                output = F.max_pool1d(output, ts_length)
+                output = output.max(-1)
             latent_space.append(output.detach().cpu().numpy())
             collect_y.append(data[-1].unsqueeze(1).numpy())
         
