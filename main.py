@@ -168,7 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--load_model', type = eval, default = False)
     parser.add_argument('--pretrain', type = eval, default = True)
-    parser.add_argument('--evaluate_latent_space', type = eval, default = False)
+    parser.add_argument('--evaluate_latent_space', type = eval, default = True)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
