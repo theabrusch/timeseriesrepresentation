@@ -1,1 +1,1 @@
-rsync -Pav -a /Users/theb/Desktop/data/capture24_30hz_full --rsh=ssh theb@transfer.gbar.dtu.dk:/work3/theb/timeseries/
+rsync -Pav -a /Users/theb/Desktop/sleep_edf/mne_files --rsh=ssh theb@transfer.gbar.dtu.dk:/work3/theb/timeseries/

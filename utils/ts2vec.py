@@ -79,7 +79,7 @@ class TS2VecEncoder(nn.Module):
         return A[torch.arange(all_indx.shape[0])[:,None],all_indx].transpose(1,2)
 
     def take_channel(self, A, indx):
-        indx = torch.tensor(indx).unsqueeze(2).repeat(1,1,A.shape[2])
+        indx = indx.unsqueeze(2).repeat(1,1,A.shape[2])
         return torch.gather(A, 1, indx)
 
     def fit(self, 
@@ -127,7 +127,7 @@ class TS2VecEncoder(nn.Module):
                 elif augmentation_type == 'channels':
                     ch_size = x.size(1)
                     idx = np.random.rand(x.size(0), ch_size).argpartition(2,axis=1)[:,:2] # randomly select 2 channels per input
-                    random_channels = self.take_channel(x, idx.to(device))
+                    random_channels = self.take_channel(x, torch.tensor(idx).to(device))
                     out1 = self.forward(random_channels[:,0,:].unsqueeze(1))
                     out2 = self.forward(random_channels[:,1,:].unsqueeze(1))
 
@@ -167,7 +167,7 @@ class TS2VecEncoder(nn.Module):
                 elif augmentation_type == 'channels':
                     ch_size = x.size(1)
                     idx = np.random.rand(x.size(0), ch_size).argpartition(2,axis=1)[:,:2] # randomly select 2 channels per input
-                    random_channels = self.take_channel(x, idx.to(device))
+                    random_channels = self.take_channel(x, torch.tensor(idx).to(device))
                     out1 = self.forward(random_channels[:,0,:].unsqueeze(1))
                     out2 = self.forward(random_channels[:,1,:].unsqueeze(1))
 
