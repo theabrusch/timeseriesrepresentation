@@ -9,7 +9,7 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, balanced_accuracy_score
 
 temp = None
-path = 'outputs/ts2vec_HAR_v_8/'
+path = 'outputs/ts2vec_HAR_v_12/'
 finetune = 'prior'
 finetune_dset = 'sleepeeg'
 with open(f'{path}pretrain_latents.pickle', 'rb') as file:
@@ -89,11 +89,17 @@ if input_type == 'raw':
     test_input = torch.reshape(test['samples'], (-1,9*128))
     test_y = test['labels']
 else:
-    train_input = outputs_train['latents'][:,:,0]
+    if outputs_train['latents'].shape[-1] == 320:
+        train_input = np.reshape(outputs_train['latents'], (-1,9*320))
+        test_input = np.reshape(outputs_test['latents'], (-1,9*320))
+        val_input = np.reshape(outputs_val['latents'], (-1,9*320))
+    else:
+        train_input = outputs_train['latents'][:,:,0]
+        val_input = outputs_val['latents'][:,:,0]
+        test_input = outputs_test['latents'][:,:,0]
+
     train_y = outputs_train['y'][:,0]
-    val_input = outputs_val['latents'][:,:,0]
     val_y = outputs_val['y'][:,0]
-    test_input = outputs_test['latents'][:,:,0]
     test_y = outputs_test['y'][:,0]
 
 classifier = 'linear'

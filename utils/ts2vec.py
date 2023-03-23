@@ -43,10 +43,12 @@ class TS2VecClassifer(nn.Module):
         return self.classifier(latents)
 
 class TS2VecEncoder(nn.Module):
-    def __init__(self, input_size, hidden_channels, out_dim, nlayers = 10, kernel_size = 3):
+    def __init__(self, input_size, hidden_channels, out_dim, avg_channels = False, nlayers = 10, kernel_size = 3):
         super().__init__()
         self.linear_projection = nn.Linear(in_features=input_size, out_features=hidden_channels)
+        self.hidden_channels = hidden_channels
         self.input_size = input_size
+        self.avg_channels = avg_channels
 
         in_channels = [hidden_channels]*(nlayers + 1)
         out_channels = [hidden_channels]*nlayers + [out_dim]
@@ -64,10 +66,16 @@ class TS2VecEncoder(nn.Module):
             reshape = False
         x = x.transpose(1,2)
         proj = self.linear_projection(x)
+
+        if self.avg_channels:
+            reshape = False
+            proj = proj.reshape(batch, ch, ts, self.hidden_channels).mean(dim = 1)
+
         if self.training:
-            mask = generate_binomial_mask(x.size(0), x.size(1)).to(x.device)
+            mask = generate_binomial_mask(proj.size(0), proj.size(1)).to(x.device)
             proj[~mask] = 0
         proj = torch.permute(proj, (0, 2, 1))
+        
         out = self.repr_dropout(self.convblocks(proj))
 
         if reshape:

@@ -36,7 +36,11 @@ def results_to_tb(results, writer, dset):
     for key, val in results.items():
         t.add_row([key, val])
     writer.add_text(f"{dset}_results", t.get_html_string(), global_step=0)
-
+mul_channel_explanations = {
+     'None': 'Multi channel setup is set to None.',
+     'sample_channel': 'Multi channel setup is set to sample_channel. This means that sampled channels will be used as each others augmented versions.',
+     'avg_ch': 'Multi channel setup is set to ch_avg. This means that the channels are averaged before convolutions.'
+}
 def main(args):
     if 'eeg' in args.data_path:
          dset = args.data_path.split('/')[-1].strip('.yml')
@@ -44,6 +48,9 @@ def main(args):
         dset = args.data_path.split('/')[-2]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = f'{args.output_path}/ts2vec_{dset}'
+
+    assert args.multi_channel_setup in ['None', 'sample_channel', 'avg_ch']
+    print(mul_channel_explanations[args.multi_channel_setup])
     
     if not args.overwrite:
         output_path = check_output_path(output_path)
@@ -72,9 +79,9 @@ def main(args):
                                                                                                                 downsample=False,
                                                                                                                 sample_channel = args.sample_channel, 
                                                                                                                 batch_size=args.batch_size)
-    if args.sample_channel:
+    if args.multi_channel_setup == 'sample_channel' or args.multi_channel_setup == 'avg_ch':
          channels = 1
-    model = TS2VecEncoder(input_size=channels, hidden_channels=64, out_dim=320)
+    model = TS2VecEncoder(input_size=channels, avg_channels = args.multi_channel_setup=='avg_ch', hidden_channels=64, out_dim=320)
     model.to(device)
     if args.load_model:
             model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
@@ -93,7 +100,7 @@ def main(args):
                             epochs = args.epochs,
                             optimizer = optimizer,
                             alpha = args.alpha,
-                            augmentation_type = 'channels' if args.sample_channel else 'crop',
+                            augmentation_type = 'channels' if args.multi_channel_setup == 'sample_channel' else 'crop',
                             temporal_unit = args.temporal_unit,
                             backup_path = output_path,
                             device = device)
@@ -127,7 +134,7 @@ def main(args):
     if args.finetune:
         if 'HAR' in args.data_path:
              finetune_loader = pretrain_loader
-             finetune_val_loader = pretrain_val_loaders
+             finetune_val_loader = pretrain_val_loader
         classifier = TS2VecClassifer(in_features=320, n_classes=num_classes, pool = args.pool)
         classifier.to(device)
         if args.optimize_encoder:
@@ -185,7 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('--sample_test_subjs', type = eval, default = 2)
 
     # augmentation arguments
-    parser.add_argument('--sample_channel', type = eval, default = True)
+    parser.add_argument('--multi_channel_setup', type = str, default = 'avg_ch') # None, sample_channels, ch_avg
 
     # optimizer arguments
     parser.add_argument('--temporal_unit', type = int, default = 2)
@@ -193,7 +200,7 @@ if __name__ == '__main__':
     parser.add_argument('--alpha', type = float, default=0.5)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
     parser.add_argument('--finetune_epochs', type = int, default = 1)
-    parser.add_argument('--epochs', type = int, default = 0)
+    parser.add_argument('--epochs', type = int, default = 1)
     args = parser.parse_args()
     main(args)
 
