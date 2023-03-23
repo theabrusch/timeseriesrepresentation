@@ -174,7 +174,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained_model_path', type = str, default = None)
 
     # data arguments
-    parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
+    parser.add_argument('--data_path', type = str, default = 'datasets/HAR/')
     parser.add_argument('--finetune_path', type = str, default = 'same')
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 22)
@@ -192,7 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('--sample_test_subjs', type = eval, default = 2)
 
     # augmentation arguments
-    parser.add_argument('--multi_channel_setup', type = str, default = 'avg_ch') # None, sample_channels, ch_avg
+    parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg
 
     # optimizer arguments
     parser.add_argument('--temporal_unit', type = int, default = 2)
@@ -200,7 +200,7 @@ if __name__ == '__main__':
     parser.add_argument('--alpha', type = float, default=0.5)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
     parser.add_argument('--finetune_epochs', type = int, default = 1)
-    parser.add_argument('--epochs', type = int, default = 1)
+    parser.add_argument('--epochs', type = int, default = 0)
     args = parser.parse_args()
     main(args)
 

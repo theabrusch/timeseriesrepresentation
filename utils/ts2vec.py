@@ -37,6 +37,7 @@ class TS2VecClassifer(nn.Module):
         if len(latents.shape) > 3:
             latents = latents.permute(0,2,3,1)
             latents = self.channelreduction(latents).squeeze(-1)
+
         ts_length = latents.shape[2]
         if self.pool == 'max':
             latents = F.max_pool1d(latents, ts_length).squeeze(-1)
@@ -59,7 +60,7 @@ class TS2VecEncoder(nn.Module):
         self.convblocks = nn.Sequential(*convblocks)
         self.repr_dropout = nn.Dropout(p = 0.1)
     
-    def forward(self, x, train = False):
+    def forward(self, x, mask = True):
         if x.shape[1] > self.input_size:
             batch, ch, ts = x.shape
             x = x.reshape(batch*ch, 1, ts)
@@ -73,7 +74,7 @@ class TS2VecEncoder(nn.Module):
             reshape = False
             proj = proj.reshape(batch, ch, ts, self.hidden_channels).mean(dim = 1)
 
-        if self.training:
+        if mask:
             mask = generate_binomial_mask(proj.size(0), proj.size(1)).to(x.device)
             proj[~mask] = 0
         proj = torch.permute(proj, (0, 2, 1))
@@ -81,7 +82,7 @@ class TS2VecEncoder(nn.Module):
         out = self.repr_dropout(self.convblocks(proj))
 
         if reshape:
-            return out.reshape(batch, ch, -1)
+            return out.reshape(batch, ch, -1, ts)
         else:
             return out
 
@@ -131,10 +132,10 @@ class TS2VecEncoder(nn.Module):
                     crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
                     crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
                     
-                    out1 = self.forward(self.take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft), train = True)
+                    out1 = self.forward(self.take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft), mask = True)
                     out1 = out1[:, :, -crop_l:]
                     
-                    out2 = self.forward(self.take_per_row(x, crop_offset + crop_left, crop_eright - crop_left), train = True)
+                    out2 = self.forward(self.take_per_row(x, crop_offset + crop_left, crop_eright - crop_left), mask = True)
                     out2 = out2[:, :, :crop_l]
                 elif augmentation_type == 'channels':
                     ch_size = x.size(1)
@@ -171,10 +172,10 @@ class TS2VecEncoder(nn.Module):
                     crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
                     crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
                     
-                    out1 = self.forward(self.take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft), train = True)
+                    out1 = self.forward(self.take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft), mask = True)
                     out1 = out1[:, :, -crop_l:]
                     
-                    out2 = self.forward(self.take_per_row(x, crop_offset + crop_left, crop_eright - crop_left), train = True)
+                    out2 = self.forward(self.take_per_row(x, crop_offset + crop_left, crop_eright - crop_left), mask = True)
                     out2 = out2[:, :, :crop_l]
                 elif augmentation_type == 'channels':
                     ch_size = x.size(1)
@@ -250,7 +251,7 @@ class TS2VecEncoder(nn.Module):
                 optimizer.zero_grad()
                 x, y = batch[0].float().to(device), batch[-1].long().to(device)
 
-                out = self.forward(x)
+                out = self.forward(x, mask = False)
                 pred = classifier(out)
                 class_loss = class_loss_fn(pred, y)
                 class_loss.backward()
@@ -266,7 +267,7 @@ class TS2VecEncoder(nn.Module):
             for i, batch in enumerate(val_loader):
                 x, y = batch[0].float().to(device), batch[-1].long().to(device)
 
-                out = self.forward(x)
+                out = self.forward(x, mask = False)
                 pred = classifier(out)
 
                 class_loss = class_loss_fn(pred, y)
@@ -307,7 +308,7 @@ class TS2VecEncoder(nn.Module):
         self.training = False
         for batch in data_loader:
             x, y = batch[0].float().to(device), batch[-1].long()
-            out = self.forward(x)
+            out = self.forward(x, mask = False)
             pred = classifier(out)
 
             collect_y.append(y.numpy())
@@ -327,7 +328,7 @@ class TS2VecEncoder(nn.Module):
         collect_y = []
         for i, data in enumerate(data_loader):
             x = data[0].float().to(device)
-            output = self.forward(x)
+            output = self.forward(x, mask = False)
             if maxpool:
                 ts_length = x.shape[2]
                 output = F.max_pool1d(output, ts_length)
