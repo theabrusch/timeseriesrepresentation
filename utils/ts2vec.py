@@ -33,6 +33,8 @@ class TS2VecClassifer(nn.Module):
         self.pool = pool
         self.classifier = nn.Linear(in_features=in_features, out_features=n_classes)
     def forward(self, latents):
+        if len(latents.shape) > 3:
+            latents = latents.mean(1).squeeze(1)
         ts_length = latents.shape[2]
         if self.pool == 'max':
             latents = F.max_pool1d(latents, ts_length).squeeze(-1)
@@ -44,6 +46,7 @@ class TS2VecEncoder(nn.Module):
     def __init__(self, input_size, hidden_channels, out_dim, nlayers = 10, kernel_size = 3):
         super().__init__()
         self.linear_projection = nn.Linear(in_features=input_size, out_features=hidden_channels)
+        self.input_size = input_size
 
         in_channels = [hidden_channels]*(nlayers + 1)
         out_channels = [hidden_channels]*nlayers + [out_dim]
@@ -53,6 +56,10 @@ class TS2VecEncoder(nn.Module):
         self.repr_dropout = nn.Dropout(p = 0.1)
     
     def forward(self, x, train = False):
+        if x.shape[1] > self.input_size:
+            batch, ch, ts = x.shape
+            x = x.reshape(batch*ch, 1, ts)
+            reshape = True
         x = x.transpose(1,2)
         proj = self.linear_projection(x)
         if self.training:
@@ -61,17 +68,19 @@ class TS2VecEncoder(nn.Module):
         proj = torch.permute(proj, (0, 2, 1))
         out = self.repr_dropout(self.convblocks(proj))
 
-        return out
+        if reshape:
+            return out.reshape(batch, ch, -1)
+        else:
+            return out
 
     def take_per_row(self, A, indx, num_elem):
         A = A.transpose(1,2)
         all_indx = indx[:,None] + np.arange(num_elem)
         return A[torch.arange(all_indx.shape[0])[:,None],all_indx].transpose(1,2)
 
-    def evaluate_latent_space(self,
-                              dataloader):
-        self.training = False
-
+    def take_channel(self, A, indx):
+        indx = torch.tensor(indx).unsqueeze(2).repeat(1,1,A.shape[2])
+        return torch.gather(A, 1, indx)
 
     def fit(self, 
             dataloader,
@@ -81,6 +90,7 @@ class TS2VecEncoder(nn.Module):
             alpha,
             temporal_unit,
             device,
+            augmentation_type = 'crop',
             backup_path = None,
             log = True):
         
@@ -98,24 +108,28 @@ class TS2VecEncoder(nn.Module):
             self.training = True
             for i, data in enumerate(dataloader):
                 x = data[0].float().to(device)
-
-                # create cropped views
-                ts_l = x.size(2)
-                crop_l = np.random.randint(low=2, high=ts_l+1)
-                crop_left = np.random.randint(ts_l - crop_l + 1)
-                crop_right = crop_left + crop_l
-                crop_eleft = np.random.randint(crop_left + 1)
-                crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
-                crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
-
-
                 optimizer.zero_grad()
-                
-                out1 = self.forward(self.take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft), train = True)
-                out1 = out1[:, :, -crop_l:]
-                
-                out2 = self.forward(self.take_per_row(x, crop_offset + crop_left, crop_eright - crop_left), train = True)
-                out2 = out2[:, :, :crop_l]
+                # create cropped views
+                if augmentation_type == 'crop':
+                    ts_l = x.size(2)
+                    crop_l = np.random.randint(low=2, high=ts_l+1)
+                    crop_left = np.random.randint(ts_l - crop_l + 1)
+                    crop_right = crop_left + crop_l
+                    crop_eleft = np.random.randint(crop_left + 1)
+                    crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
+                    crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
+                    
+                    out1 = self.forward(self.take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft), train = True)
+                    out1 = out1[:, :, -crop_l:]
+                    
+                    out2 = self.forward(self.take_per_row(x, crop_offset + crop_left, crop_eright - crop_left), train = True)
+                    out2 = out2[:, :, :crop_l]
+                elif augmentation_type == 'channels':
+                    ch_size = x.size(1)
+                    idx = np.random.rand(x.size(0), ch_size).argpartition(2,axis=1)[:,:2] # randomly select 2 channels per input
+                    random_channels = self.take_channel(x, idx)
+                    out1 = self.forward(random_channels[:,0,:].unsqueeze(1))
+                    out2 = self.forward(random_channels[:,1,:].unsqueeze(1))
 
                 loss, inst_loss, temp_loss = loss_fn(out1, out2)
                 loss.backward()
@@ -135,21 +149,27 @@ class TS2VecEncoder(nn.Module):
             self.training = False
             for i, data in enumerate(val_dataloader):
                 x = data[0].float().to(device)
-
                 # create cropped views
-                ts_l = x.size(2)
-                crop_l = np.random.randint(low=2, high=ts_l+1)
-                crop_left = np.random.randint(ts_l - crop_l + 1)
-                crop_right = crop_left + crop_l
-                crop_eleft = np.random.randint(crop_left + 1)
-                crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
-                crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
-                
-                out1 = self.forward(self.take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft), train = True)
-                out1 = out1[:, :, -crop_l:]
-                
-                out2 = self.forward(self.take_per_row(x, crop_offset + crop_left, crop_eright - crop_left), train = True)
-                out2 = out2[:, :, :crop_l]
+                if augmentation_type == 'crop':
+                    ts_l = x.size(2)
+                    crop_l = np.random.randint(low=2, high=ts_l+1)
+                    crop_left = np.random.randint(ts_l - crop_l + 1)
+                    crop_right = crop_left + crop_l
+                    crop_eleft = np.random.randint(crop_left + 1)
+                    crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
+                    crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
+                    
+                    out1 = self.forward(self.take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft), train = True)
+                    out1 = out1[:, :, -crop_l:]
+                    
+                    out2 = self.forward(self.take_per_row(x, crop_offset + crop_left, crop_eright - crop_left), train = True)
+                    out2 = out2[:, :, :crop_l]
+                elif augmentation_type == 'channels':
+                    ch_size = x.size(1)
+                    idx = np.random.rand(x.size(0), ch_size).argpartition(2,axis=1)[:,:2] # randomly select 2 channels per input
+                    random_channels = self.take_channel(x, idx)
+                    out1 = self.forward(random_channels[:,0,:])
+                    out2 = self.forward(random_channels[:,1,:])
 
                 loss, inst_loss, temp_loss = loss_fn(out1, out2)
 
@@ -270,7 +290,7 @@ class TS2VecEncoder(nn.Module):
 
         return classifier
     
-    def evaluate_classifier(self, data_loader, classifier, device):
+    def evaluate_classifier(self, data_loader, classifier, device, sample_channel = False):
         collect_y, collect_pred = [], []
         self.training = False
         for batch in data_loader:

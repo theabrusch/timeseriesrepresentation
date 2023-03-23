@@ -72,6 +72,8 @@ def main(args):
                                                                                                     downsample=False,
                                                                                                     sample_channel = args.sample_channel, 
                                                                                                     batch_size=args.batch_size)
+    if args.sample_channel:
+         channels = 1
     model = TS2VecEncoder(input_size=channels, hidden_channels=64, out_dim=320)
     model.to(device)
     if args.load_model:
@@ -91,6 +93,7 @@ def main(args):
                             epochs = args.epochs,
                             optimizer = optimizer,
                             alpha = args.alpha,
+                            augmentation_type = 'channels' if args.sample_channel else 'crop',
                             temporal_unit = args.temporal_unit,
                             backup_path = output_path,
                             device = device)
@@ -179,7 +182,7 @@ if __name__ == '__main__':
     parser.add_argument('--sample_test_subjs', type = eval, default = 2)
 
     # augmentation arguments
-    parser.add_argument('--sample_channel', type = eval, default = False)
+    parser.add_argument('--sample_channel', type = eval, default = True)
 
     # optimizer arguments
     parser.add_argument('--temporal_unit', type = int, default = 2)
