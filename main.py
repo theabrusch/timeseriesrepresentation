@@ -77,7 +77,7 @@ def main(args):
          pretrain_loader, pretrain_val_loader, test_loader, (channels, time_length, num_classes) = get_datasets(data_path = args.data_path,
                                                                                                                 ssl_mode='TS2Vec',
                                                                                                                 downsample=False,
-                                                                                                                sample_channel = args.sample_channel, 
+                                                                                                                sample_channel = False, 
                                                                                                                 batch_size=args.batch_size)
     if args.multi_channel_setup == 'sample_channel' or args.multi_channel_setup == 'avg_ch':
          channels = 1
