@@ -148,10 +148,10 @@ def main(args):
 
         if 'eeg' in args.data_path:
             targets = finetune_loader.dataset.dn3_dset.get_targets()
-            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets))
+            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float()
         else:
             targets = finetune_loader.dataset.Y
-            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets))
+            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float()
 
         classifier = model.finetune(
             finetune_loader,
