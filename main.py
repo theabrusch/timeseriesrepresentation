@@ -140,9 +140,9 @@ def main(args):
         classifier.to(device)
 
         if args.optimize_encoder:
-            optimizer = AdamW(list(model.parameters())+list(classifier.parameters()), lr = args.learning_rate, weight_decay=args.weight_decay)
+            optimizer = AdamW(list(model.parameters())+list(classifier.parameters()), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
         else:
-            optimizer = AdamW(list(classifier.parameters()), lr = args.learning_rate, weight_decay=args.weight_decay)
+            optimizer = AdamW(list(classifier.parameters()), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
 
         if 'eeg' in args.data_path:
             weights = compute_weights(finetune_loader.dataset.dn3_dset.get_targets())
@@ -175,7 +175,7 @@ if __name__ == '__main__':
     # training arguments
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--load_model', type = eval, default = False)
-    parser.add_argument('--pretrain', type = eval, default = True)
+    parser.add_argument('--pretrain', type = eval, default = False)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--batch_size', type = int, default = 128)
-    parser.add_argument('--target_batch_size', type = int, default = 22)
+    parser.add_argument('--target_batch_size', type = int, default = 128)
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--overwrite', type = eval, default = False)
 
@@ -200,11 +200,12 @@ if __name__ == '__main__':
     parser.add_argument('--sample_test_subjs', type = eval, default = 3)
 
     # augmentation arguments
-    parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg
+    parser.add_argument('--multi_channel_setup', type = str, default = 'None') # None, sample_channel, ch_avg
 
     # optimizer arguments
     parser.add_argument('--temporal_unit', type = int, default = 2)
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
+    parser.add_argument('--ft_learning_rate', type = float, default = 1e-3)
     parser.add_argument('--alpha', type = float, default=0.5)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
     parser.add_argument('--finetune_epochs', type = int, default = 1)
