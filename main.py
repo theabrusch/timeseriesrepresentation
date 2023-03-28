@@ -138,7 +138,7 @@ def main(args):
         if 'HAR' in args.data_path:
              finetune_loader = pretrain_loader
              finetune_val_loader = pretrain_val_loader
-        classifier = TS2VecClassifer(in_features=320, n_classes=num_classes, pool = args.pool)
+        classifier = TS2VecClassifer(in_features=320, n_classes=num_classes, pool = args.pool, orig_channels = channels)
         classifier.to(device)
 
         if args.optimize_encoder:
@@ -204,7 +204,7 @@ if __name__ == '__main__':
     parser.add_argument('--sample_test_subjs', type = eval, default = 3)
 
     # augmentation arguments
-    parser.add_argument('--multi_channel_setup', type = str, default = 'None') # None, sample_channel, ch_avg
+    parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg
 
     # optimizer arguments
     parser.add_argument('--temporal_unit', type = int, default = 2)
