@@ -67,7 +67,7 @@ def main(args):
                                                                                                                                                             batchsize = args.batch_size,
                                                                                                                                                             normalize = False, 
                                                                                                                                                             standardize_epochs = True,
-                                                                                                                                                            balanced_sampling= 'None',
+                                                                                                                                                            balanced_sampling= 'finetune',
                                                                                                                                                             target_batchsize = args.target_batch_size,
                                                                                                                                                             sample_pretrain_subjects = args.sample_pretrain_subjs,
                                                                                                                                                             sample_finetune_train_subjects = args.sample_finetune_train_subjs,
