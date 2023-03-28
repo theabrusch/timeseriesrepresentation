@@ -60,7 +60,7 @@ def construct_eeg_datasets(config_path,
             'max_seg': 8
         }
         pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(pretrain_val_dset, aug_config, standardize_epochs=standardize_epochs)
-        pretrain_loader, pretrain_val_loader = DataLoader(pretrain_dset, batch_size=batchsize), DataLoader(pretrain_val_dset, batch_size=batchsize)
+        pretrain_loader, pretrain_val_loader = DataLoader(pretrain_dset, batch_size=batchsize, shuffle = True), DataLoader(pretrain_val_dset, batch_size=batchsize, shuffle = True)
     else:
         pretrain_loader, pretrain_val_loader = None, None
     
@@ -99,14 +99,14 @@ def construct_eeg_datasets(config_path,
             'max_seg': 8
         }
         finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs)
-        finetune_loader, finetune_val_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize), DataLoader(finetune_val_dset, batch_size=target_batchsize)
+        finetune_loader, finetune_val_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, shuffle = True), DataLoader(finetune_val_dset, batch_size=target_batchsize, shuffle = True)
         # get test set
         print('Loading test data')
         config.balanced_sampling = False
         test_thinkers = load_thinkers(config, sample_subjects = sample_test_subjects, subjects = test_subjects)
         test_dset = Dataset(test_thinkers, dataset_info=info)
         test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs)
-        test_loader = DataLoader(test_dset, batch_size=batchsize)
+        test_loader = DataLoader(test_dset, batch_size=batchsize, shuffle = True)
         num_classes = len(np.unique(test_dset.dn3_dset.get_targets()))
     else:
         finetune_loader, finetune_val_loader, test_loader, num_classes = None, None, None, None
