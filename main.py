@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from utils.trainer import TFC_trainer, evaluate_latent_space, finetune_model, evaluate_model
 from utils.ts2vec import TS2VecEncoder, TS2VecClassifer
 from utils.dataset import TFC_Dataset, get_datasets, get_dset_info
+from utils.losses import compute_weights
 from eegdataset import construct_eeg_datasets
 from torch.optim import AdamW
 from utils.plot_functions import plot_contrastive_losses
@@ -66,7 +67,7 @@ def main(args):
                                                                                                                                                             batchsize = args.batch_size,
                                                                                                                                                             normalize = False, 
                                                                                                                                                             standardize_epochs = True,
-                                                                                                                                                            balanced_sampling= 'finetune',
+                                                                                                                                                            balanced_sampling= 'None',
                                                                                                                                                             target_batchsize = args.target_batch_size,
                                                                                                                                                             sample_pretrain_subjects = args.sample_pretrain_subjs,
                                                                                                                                                             sample_finetune_train_subjects = args.sample_finetune_train_subjs,
@@ -137,11 +138,17 @@ def main(args):
              finetune_val_loader = pretrain_val_loader
         classifier = TS2VecClassifer(in_features=320, n_classes=num_classes, pool = args.pool)
         classifier.to(device)
+
         if args.optimize_encoder:
             optimizer = AdamW(list(model.parameters())+list(classifier.parameters()), lr = args.learning_rate, weight_decay=args.weight_decay)
         else:
             optimizer = AdamW(list(classifier.parameters()), lr = args.learning_rate, weight_decay=args.weight_decay)
-        
+
+        if 'eeg' in args.data_path:
+            weights = compute_weights(finetune_loader.dataset.dn3_dset.get_targets())
+        else:
+            weights = compute_weights(finetune_loader.dataset.Y)
+
         classifier = model.finetune(
             finetune_loader,
             finetune_val_loader, 
@@ -149,6 +156,7 @@ def main(args):
             optimizer,
             args.finetune_epochs,
             device,
+            weights = weights,
             log = True,
             choose_best = args.choose_best
         )
@@ -168,14 +176,14 @@ if __name__ == '__main__':
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--load_model', type = eval, default = False)
     parser.add_argument('--pretrain', type = eval, default = True)
-    parser.add_argument('--evaluate_latent_space', type = eval, default = True)
+    parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
 
     # data arguments
-    parser.add_argument('--data_path', type = str, default = 'datasets/HAR/')
-    parser.add_argument('--finetune_path', type = str, default = 'same')
+    parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
+    parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 22)
     parser.add_argument('--output_path', type = str, default = 'outputs')
@@ -187,9 +195,9 @@ if __name__ == '__main__':
 
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjs', type = eval, default = 3)
-    parser.add_argument('--sample_finetune_train_subjs', type = eval, default = 1)
-    parser.add_argument('--sample_finetune_val_subjs', type = eval, default = 1)
-    parser.add_argument('--sample_test_subjs', type = eval, default = 2)
+    parser.add_argument('--sample_finetune_train_subjs', type = eval, default = 3)
+    parser.add_argument('--sample_finetune_val_subjs', type = eval, default = 3)
+    parser.add_argument('--sample_test_subjs', type = eval, default = 3)
 
     # augmentation arguments
     parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg

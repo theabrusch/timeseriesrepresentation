@@ -73,16 +73,22 @@ def construct_eeg_datasets(config_path,
             config.balanced_sampling = False
         if not finetune_path == 'same':
             experiment = ExperimentConfig(finetune_path)
-            dset = config_path.split('/')[-1].strip('.yml')
+            dset = finetune_path.split('/')[-1].strip('.yml').split('_')[0]
             config = experiment.datasets[dset]
-            finetunesubjects = None
-            test_subjects = None
+            config.normalize = normalize
+
+            if balanced_sampling == 'finetune' or balanced_sampling == 'both':
+                config.balanced_sampling = True
+            else:
+                config.balanced_sampling = False
+                
+            finetunesubjects, test_subjects = divide_subjects(config, sample_finetune_train_subjects, sample_test_subjects, subjects = None, test_size=config.test_size)
         else:
             config.chunk_duration = str(config.tlen)
             finetunesubjects = splits['finetune']
             test_subjects = splits['test']
         print('Loading finetuning data')
-        train_subjs, val_subjs = divide_subjects(config, sample_finetune_train_subjects, sample_finetune_val_subjects, subjects = finetunesubjects)
+        train_subjs, val_subjs = divide_subjects(config, sample_finetune_train_subjects, sample_finetune_val_subjects, subjects = finetunesubjects, test_size=config.val_size)
         finetune_train_thinkers = load_thinkers(config, sample_subjects=False, subjects = train_subjs)
         finetune_val_thinkers = load_thinkers(config, sample_subjects=False, subjects = val_subjs)
         finetune_train_dset, finetune_val_dset = Dataset(finetune_train_thinkers, dataset_info=info), Dataset(finetune_val_thinkers, dataset_info=info)
@@ -117,10 +123,10 @@ def divide_thinkers(thinkers):
 
     return train_thinkers, val_thinkers
 
-def divide_subjects(config, sample_train, sample_val, subjects = None):
+def divide_subjects(config, sample_train, sample_val, test_size = 0.2, subjects = None):
     if subjects is None:
         subjects = os.listdir(config.toplevel)
-    train, val = train_test_split(subjects, test_size = 0.2, random_state=0)
+    train, val = train_test_split(subjects, test_size = test_size, random_state=0)
     if sample_train:
         if sample_train < len(train):
             np.random.seed(0)

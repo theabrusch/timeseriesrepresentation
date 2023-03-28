@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 class TS2VecLoss(torch.nn.Module):
     def __init__(self, alpha, temporal_unit) -> None:
@@ -58,3 +59,9 @@ class TS2VecLoss(torch.nn.Module):
         loss = (logits[:, i, B + i - 1].mean() + logits[:, B + i, i].mean()) / 2 
         return loss
 
+
+def compute_weights(targets):
+    _, count = np.unique(targets, return_counts=True)
+    weights = 1 / count
+    weights = weights / weights.sum()
+    return torch.tensor(weights).float()

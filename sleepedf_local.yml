@@ -8,10 +8,12 @@ datasets:
   sleepedf:
     name: "EEG data"
     toplevel: '/Users/theb/Desktop/sleep_edf/mne_files/'
-    events: {'Sleep stage 1': 0, 'Sleep stage 2': 1, 'Sleep stage 3': 2, 'Sleep stage 4': 3, 'Sleep stage R': 4, 'Sleep stage W': 5}
+    events: {'Sleep stage W': 1, 'Sleep stage 1': 2, 'Sleep stage 2': 3, 'Sleep stage 3': 4, 'Sleep stage 4': 4, 'Sleep stage R': 5}
     tmin: 0
     tlen: 30
-    chunk_duration: None
+    test_size: 0.3
+    val_size: 0.5
+    chunk_duration: '30'
     exclude_channels: ['Event marker']
     preload: True
     picks: ['EEG Fpz-Cz', 'EEG Pz-Oz']

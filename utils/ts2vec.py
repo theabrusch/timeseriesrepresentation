@@ -228,12 +228,13 @@ class TS2VecEncoder(nn.Module):
                  optimizer,
                  epochs,
                  device,
+                 weights,
                  log = True,
                  choose_best = True
                  ):
         self.training = True
         classifier.training = True
-        class_loss_fn = torch.nn.CrossEntropyLoss()
+        class_loss_fn = torch.nn.CrossEntropyLoss(weight = weights.to(device))
 
         loss_collect = []
         val_loss_collect = []
