@@ -8,6 +8,8 @@ from utils.losses import compute_weights
 from eegdataset import construct_eeg_datasets
 from torch.optim import AdamW
 from utils.plot_functions import plot_contrastive_losses
+import numpy as np
+from sklearn.utils.class_weight import compute_class_weight
 import pickle
 import os
 import datetime
@@ -66,8 +68,8 @@ def main(args):
                                                                                                                                                             args.finetune_path, 
                                                                                                                                                             batchsize = args.batch_size,
                                                                                                                                                             normalize = False, 
-                                                                                                                                                            standardize_epochs = True,
-                                                                                                                                                            balanced_sampling= 'finetune',
+                                                                                                                                                            standardize_epochs = 'channelwise',
+                                                                                                                                                            balanced_sampling= 'None',
                                                                                                                                                             target_batchsize = args.target_batch_size,
                                                                                                                                                             sample_pretrain_subjects = args.sample_pretrain_subjs,
                                                                                                                                                             sample_finetune_train_subjects = args.sample_finetune_train_subjs,
@@ -145,9 +147,11 @@ def main(args):
             optimizer = AdamW(list(classifier.parameters()), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
 
         if 'eeg' in args.data_path:
-            weights = compute_weights(finetune_loader.dataset.dn3_dset.get_targets())
+            targets = finetune_loader.dataset.dn3_dset.get_targets()
+            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets))
         else:
-            weights = compute_weights(finetune_loader.dataset.Y)
+            targets = finetune_loader.dataset.Y
+            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets))
 
         classifier = model.finetune(
             finetune_loader,
