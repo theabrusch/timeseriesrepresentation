@@ -81,7 +81,7 @@ def construct_eeg_datasets(config_path,
                 config.balanced_sampling = True
             else:
                 config.balanced_sampling = False
-                
+
             finetunesubjects, test_subjects = divide_subjects(config, sample_finetune_train_subjects, sample_test_subjects, subjects = None, test_size=config.test_size)
         else:
             config.chunk_duration = str(config.tlen)
@@ -107,10 +107,11 @@ def construct_eeg_datasets(config_path,
         test_dset = Dataset(test_thinkers, dataset_info=info)
         test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs)
         test_loader = DataLoader(test_dset, batch_size=batchsize)
+        num_classes = len(np.unique(test_dset.dn3_dset.get_targets()))
     else:
-        finetune_loader, finetune_val_loader, test_loader = None, None, None
+        finetune_loader, finetune_val_loader, test_loader, num_classes = None, None, None, None
 
-    return pretrain_loader, pretrain_val_loader,finetune_loader, finetune_val_loader, test_loader, (len(config.picks), config.tlen*100, len(config.events.keys()))
+    return pretrain_loader, pretrain_val_loader,finetune_loader, finetune_val_loader, test_loader, (len(config.picks), config.tlen*100, num_classes)
 
 def divide_thinkers(thinkers):
     train, val = train_test_split(list(thinkers.keys()), test_size = 0.2, random_state=0)
