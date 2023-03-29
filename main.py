@@ -192,6 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('--target_batch_size', type = int, default = 128)
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--overwrite', type = eval, default = False)
+    parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'max')
