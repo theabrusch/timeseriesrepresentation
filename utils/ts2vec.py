@@ -42,6 +42,8 @@ class TS2VecClassifer(nn.Module):
         ts_length = latents.shape[2]
         if self.pool == 'max':
             latents = F.max_pool1d(latents, ts_length).squeeze(-1)
+        elif self.pool == 'last':
+            latents = latents[:,:,-1]
         else:
             latents = F.avg_pool1d(latents, ts_length).squeeze(-1)
         return self.classifier(latents)
