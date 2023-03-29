@@ -69,7 +69,7 @@ def main(args):
                                                                                                                                                             batchsize = args.batch_size,
                                                                                                                                                             normalize = False, 
                                                                                                                                                             standardize_epochs = 'channelwise',
-                                                                                                                                                            balanced_sampling= 'None',
+                                                                                                                                                            balanced_sampling= args.balanced_sampling,
                                                                                                                                                             target_batchsize = args.target_batch_size,
                                                                                                                                                             sample_pretrain_subjects = args.sample_pretrain_subjs,
                                                                                                                                                             sample_finetune_train_subjects = args.sample_finetune_train_subjs,
@@ -92,6 +92,7 @@ def main(args):
     if args.pretrain:
         # get datasets
         print('Initializing model')
+        wandb.config.update({'Pretrain samples': len(pretrain_loader.dataset), 'Pretrain validation samples': len(pretrain_val_loader.dataset)})
         
         optimizer = AdamW(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
@@ -141,6 +142,8 @@ def main(args):
         classifier = TS2VecClassifer(in_features=320, n_classes=num_classes, pool = args.pool, orig_channels = channels)
         classifier.to(device)
 
+        wandb.config.update({'Finetune samples': len(finetune_loader.dataset), 'Finetune validation samples': len(finetune_val_loader.dataset), 'Test samples': len(test_loader.dataset)})
+
         if args.optimize_encoder:
             optimizer = AdamW(list(model.parameters())+list(classifier.parameters()), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
         else:
@@ -152,6 +155,8 @@ def main(args):
         else:
             targets = finetune_loader.dataset.Y
             weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float()
+        
+        wandb.config.update({'Target distribution': np.unique(targets, return_counts=True)[-1]})
 
         classifier = model.finetune(
             finetune_loader,
@@ -166,6 +171,7 @@ def main(args):
         )
 
         accuracy, prec, rec, f = model.evaluate_classifier(test_loader, classifier, device)
+        wandb.config.update({'Test accuracy': accuracy, 'Test precision': prec, 'Test recall': rec, 'Test f1': f})
         print('test accuracy', accuracy)
         print('test precision', prec)
         print('test recall', rec)
