@@ -62,8 +62,8 @@ class TS2VecEncoder(nn.Module):
         elif encoder == 'wave2vec':
             nlayers = 6
             width = [3] + [2]*(nlayers-1)
-            in_channels = [hidden_channels] + [512]*(nlayers-1)
-            out_channels = [512]*(nlayers - 1) + [out_dim]
+            in_channels = [hidden_channels] + [256]*(nlayers-1)
+            out_channels = [256]*(nlayers - 1) + [out_dim]
             convblocks = [wave2vecblock(in_ch, out_ch, kernel = w, stride = w) for in_ch, out_ch, w in zip(in_channels, out_channels, width)]
         
         self.convblocks = nn.Sequential(*convblocks)
