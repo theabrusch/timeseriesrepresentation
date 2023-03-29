@@ -54,6 +54,9 @@ def main(args):
 
     assert args.multi_channel_setup in ['None', 'sample_channel', 'avg_ch']
     print(mul_channel_explanations[args.multi_channel_setup])
+
+    if not args.multi_channel_setup == 'sample_channel' and args.encoder == 'wave2vec':
+        raise ValueError('Wave2Vec encoder is only available for multi-channel setup.')
     
     if not args.overwrite:
         output_path = check_output_path(output_path)
@@ -84,7 +87,7 @@ def main(args):
                                                                                                                 batch_size=args.batch_size)
     if args.multi_channel_setup == 'sample_channel' or args.multi_channel_setup == 'avg_ch':
          channels = 1
-    model = TS2VecEncoder(input_size=channels, avg_channels = args.multi_channel_setup=='avg_ch', hidden_channels=64, out_dim=320)
+    model = TS2VecEncoder(input_size=channels, avg_channels = args.multi_channel_setup=='avg_ch', encoder = args.encoder, hidden_channels=64, out_dim=320)
     model.to(device)
     if args.load_model:
             model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
@@ -202,6 +205,7 @@ if __name__ == '__main__':
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'max')
+    parser.add_argument('--encoder', type = str, default = 'wave2vec')
     parser.add_argument('--choose_best', type = eval, default = True)
 
     # eeg arguments

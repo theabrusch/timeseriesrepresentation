@@ -5,6 +5,7 @@ import numpy as np
 from utils.losses import TS2VecLoss
 from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support
 from copy import deepcopy
+from utils.models import wave2vecblock
 import wandb
 
 class DilatedCNNBlock(nn.Module):
@@ -46,17 +47,25 @@ class TS2VecClassifer(nn.Module):
         return self.classifier(latents)
 
 class TS2VecEncoder(nn.Module):
-    def __init__(self, input_size, hidden_channels, out_dim, avg_channels = False, nlayers = 10, kernel_size = 3):
+    def __init__(self, input_size, hidden_channels, out_dim, encoder = 'ts2vec', avg_channels = False, nlayers = 10, kernel_size = 3):
         super().__init__()
         self.linear_projection = nn.Linear(in_features=input_size, out_features=hidden_channels)
         self.hidden_channels = hidden_channels
         self.input_size = input_size
         self.avg_channels = avg_channels
 
-        in_channels = [hidden_channels]*(nlayers + 1)
-        out_channels = [hidden_channels]*nlayers + [out_dim]
-        dilation = [2**i for i in range(nlayers+1)]
-        convblocks = [DilatedCNNBlock(in_ch, out_ch, dil, kernel_size) for in_ch, out_ch, dil in zip(in_channels, out_channels, dilation)]
+        if encoder == 'ts2vec':
+            in_channels = [hidden_channels]*(nlayers + 1)
+            out_channels = [hidden_channels]*nlayers + [out_dim]
+            dilation = [2**i for i in range(nlayers+1)]
+            convblocks = [DilatedCNNBlock(in_ch, out_ch, dil, kernel_size) for in_ch, out_ch, dil in zip(in_channels, out_channels, dilation)]
+        elif encoder == 'wave2vec':
+            nlayers = 6
+            width = [3] + [2]*(nlayers-1)
+            in_channels = [hidden_channels] + [512]*(nlayers-1)
+            out_channels = [512]*(nlayers - 1) + [out_dim]
+            convblocks = [wave2vecblock(in_ch, out_ch, kernel = w, stride = w) for in_ch, out_ch, w in zip(in_channels, out_channels, width)]
+        
         self.convblocks = nn.Sequential(*convblocks)
         self.repr_dropout = nn.Dropout(p = 0.1)
     
