@@ -106,7 +106,7 @@ def construct_eeg_datasets(config_path,
         test_thinkers = load_thinkers(config, sample_subjects = sample_test_subjects, subjects = test_subjects)
         test_dset = Dataset(test_thinkers, dataset_info=info)
         test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs)
-        test_loader = DataLoader(test_dset, batch_size=batchsize, shuffle = True)
+        test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True)
         num_classes = len(np.unique(test_dset.dn3_dset.get_targets()))
     else:
         finetune_loader, finetune_val_loader, test_loader, num_classes = None, None, None, None
