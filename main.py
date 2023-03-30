@@ -208,7 +208,7 @@ if __name__ == '__main__':
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
 
     # model arguments
-    parser.add_argument('--pool', type = str, default = 'max')
+    parser.add_argument('--pool', type = str, default = 'adapt_avg')
     parser.add_argument('--encoder', type = str, default = 'wave2vec')
     parser.add_argument('--choose_best', type = eval, default = True)
 
@@ -219,7 +219,7 @@ if __name__ == '__main__':
     parser.add_argument('--sample_test_subjs', type = eval, default = 3)
 
     # augmentation arguments
-    parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg
+    parser.add_argument('--multi_channel_setup', type = str, default = 'None') # None, sample_channel, ch_avg
 
     # optimizer arguments
     parser.add_argument('--temporal_unit', type = int, default = 2)

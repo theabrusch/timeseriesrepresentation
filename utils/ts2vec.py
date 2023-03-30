@@ -29,10 +29,18 @@ def generate_binomial_mask(B, T, p = 0.5):
     return torch.from_numpy(np.random.binomial(1, p, size=(B, T))).to(torch.bool)
 
 class TS2VecClassifer(nn.Module):
-    def __init__(self, n_classes, in_features, pool, orig_channels = 9):
+    def __init__(self, n_classes, in_features, pool, orig_channels = 9, time_length = 33):
         super().__init__()
         self.pool = pool
+        self.flatten = nn.Flatten()
+        self.adpat_avg = nn.AdaptiveAvgPool1d(4)
+        
         self.channelreduction = nn.Linear(in_features=orig_channels, out_features=1)
+        if self.pool == 'adapt_avg':
+            in_features = 4*in_features
+        elif self.pool == 'flatten':
+            in_features = in_features*time_length
+            
         self.classifier = nn.Linear(in_features=in_features, out_features=n_classes)
     def forward(self, latents):
         if len(latents.shape) > 3:
@@ -44,8 +52,13 @@ class TS2VecClassifer(nn.Module):
             latents = F.max_pool1d(latents, ts_length).squeeze(-1)
         elif self.pool == 'last':
             latents = latents[:,:,-1]
-        else:
+        elif self.pool == 'avg':
             latents = F.avg_pool1d(latents, ts_length).squeeze(-1)
+        elif self.pool == 'adapt_avg':
+            latents = self.flatten(self.adpat_avg(latents))
+        else:
+            latents = self.flatten(latents)
+
         return self.classifier(latents)
 
 class TS2VecEncoder(nn.Module):
