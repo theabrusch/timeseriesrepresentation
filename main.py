@@ -86,7 +86,11 @@ def main(args):
                                                                                                                 sample_channel = False, 
                                                                                                                 batch_size=args.batch_size)
     if args.multi_channel_setup == 'sample_channel' or args.multi_channel_setup == 'avg_ch':
-         channels = 1
+        orig_channels = channels
+        channels = 1
+    else:
+        orig_channels = channels
+          
     model = TS2VecEncoder(input_size=channels, avg_channels = args.multi_channel_setup=='avg_ch', encoder = args.encoder, hidden_channels=64, out_dim=320)
     model.to(device)
     if args.load_model:
@@ -142,7 +146,7 @@ def main(args):
         if 'HAR' in args.data_path:
              finetune_loader = pretrain_loader
              finetune_val_loader = pretrain_val_loader
-        classifier = TS2VecClassifer(in_features=320, n_classes=num_classes, pool = args.pool, orig_channels = channels)
+        classifier = TS2VecClassifer(in_features=320, n_classes=num_classes, pool = args.pool, orig_channels = orig_channels)
         classifier.to(device)
 
         wandb.config.update({'Finetune samples': len(finetune_loader.dataset), 'Finetune validation samples': len(finetune_val_loader.dataset), 'Test samples': len(test_loader.dataset)})
