@@ -4,7 +4,7 @@ from utils.augmentations import frequency_augmentation, time_augmentation
 from torch.nn import functional as F
 import numpy as np
 
-def get_datasets(data_path, batch_size, ssl_mode = 'TS2Vec', downsample = False, abs_budget = False, finetune_mode = False, sample_channel = False):
+def get_datasets(data_path, batchsize, ssl_mode = 'TS2Vec', downsample = False, abs_budget = False, finetune_mode = False, sample_channel = False, **kwargs):
     train = torch.load(data_path + 'train.pt')
     val = torch.load(data_path + 'val.pt')
     test = torch.load(data_path + 'test.pt')
@@ -25,9 +25,9 @@ def get_datasets(data_path, batch_size, ssl_mode = 'TS2Vec', downsample = False,
         val_dset = TS2Vec_Dataset(val['samples'], val['labels'], sample_channel=sample_channel)
         test_dset = TS2Vec_Dataset(test['samples'], test['labels'], sample_channel=sample_channel)
 
-    train_loader = DataLoader(pretrain_dset, batch_size = batch_size, shuffle = True, drop_last=False)
-    val_loader = DataLoader(val_dset, batch_size = batch_size, drop_last=False)
-    test_loader = DataLoader(test_dset, batch_size = batch_size, drop_last=False)
+    train_loader = DataLoader(pretrain_dset, batch_size = batchsize, shuffle = True, drop_last=False)
+    val_loader = DataLoader(val_dset, batch_size = batchsize, drop_last=False)
+    test_loader = DataLoader(test_dset, batch_size = batchsize, drop_last=False)
 
     return train_loader, val_loader, test_loader, (pretrain_dset.channels, pretrain_dset.time_length, pretrain_dset.num_classes)
 
