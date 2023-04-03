@@ -1,10 +1,7 @@
 import torch
 import argparse
-from torch.utils.data import DataLoader, TensorDataset
-from utils.trainer import TFC_trainer, evaluate_latent_space, finetune_model, evaluate_model
 from utils.ts2vec import TS2VecEncoder, TS2VecClassifer
-from utils.dataset import TFC_Dataset, get_datasets, get_dset_info
-from utils.losses import compute_weights
+from utils.dataset import get_datasets
 from eegdataset import construct_eeg_datasets
 from torch.optim import AdamW
 from utils.plot_functions import plot_contrastive_losses
@@ -13,15 +10,7 @@ from sklearn.utils.class_weight import compute_class_weight
 import pickle
 import os
 import datetime
-from prettytable import PrettyTable
 import wandb
-
-def params_to_tb(writer, args):
-    t = PrettyTable(['Argument', 'Value'])
-    param_dict = vars(args)
-    for key, val in param_dict.items():
-        t.add_row([key, val])
-    writer.add_text("args", t.get_html_string(), global_step=0)
 
 def check_output_path(output_path):
     if not os.path.exists(output_path):
@@ -34,11 +23,6 @@ def check_output_path(output_path):
         os.makedirs(output_path, exist_ok=True)
     return output_path
 
-def results_to_tb(results, writer, dset):
-    t = PrettyTable(['Argument', 'Value'])
-    for key, val in results.items():
-        t.add_row([key, val])
-    writer.add_text(f"{dset}_results", t.get_html_string(), global_step=0)
 mul_channel_explanations = {
      'None': 'Multi channel setup is set to None.',
      'sample_channel': 'Multi channel setup is set to sample_channel. This means that sampled channels will be used as each others augmented versions.',
@@ -58,8 +42,7 @@ def main(args):
     if not args.multi_channel_setup == 'sample_channel' and args.encoder == 'wave2vec' and args.pretrain:
         raise ValueError('Wave2Vec encoder is only available for multi-channel setup.')
     
-    if not args.overwrite:
-        output_path = check_output_path(output_path)
+    output_path = check_output_path(output_path)
     args.outputh_path = output_path
     wandb.init(project = 'ts2vec', config = args)
         
@@ -204,7 +187,6 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type = int, default = 128)
     parser.add_argument('--target_batch_size', type = int, default = 128)
     parser.add_argument('--output_path', type = str, default = 'outputs')
-    parser.add_argument('--overwrite', type = eval, default = False)
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
 
     # model arguments
