@@ -57,13 +57,13 @@ def conv1D_out_shape(input_shape, kernel, stride, padding):
     return shape
 
 class Wave2Vec(nn.Module):
-    def __init__(self, channels, input_shape, out_dim = 64, hidden_channels = 512, nlayers = 6):
+    def __init__(self, channels, input_shape, out_dim = 64, hidden_channels = 512, nlayers = 6, norm = 'group'):
         super().__init__()
         self.channels = channels
         width = [3] + [2]*(nlayers-1)
         in_channels = [channels] + [hidden_channels]*(nlayers-1)
         out_channels = [hidden_channels]*(nlayers - 1) + [out_dim]
-        self.convblocks = nn.Sequential(*[wave2vecblock(channels_in= in_channels[i], channels_out = out_channels[i], kernel = width[i], stride = width[i]) for i in range(nlayers)])
+        self.convblocks = nn.Sequential(*[wave2vecblock(channels_in= in_channels[i], channels_out = out_channels[i], kernel = width[i], stride = width[i], norm = norm) for i in range(nlayers)])
         self.out_shape = conv1D_out_shape(input_shape, width, width, [w//2 for w in width])
     def forward(self, x):
         return self.convblocks(x)
@@ -71,12 +71,12 @@ class Wave2Vec(nn.Module):
 
 
 class GNNMultiview(nn.Module):
-    def __init__(self, channels, time_length, num_classes, num_message_passing_rounds = 3, hidden_channels = 512, nlayers = 6, out_dim = 64):
+    def __init__(self, channels, time_length, num_classes, norm = 'group', num_message_passing_rounds = 3, hidden_channels = 512, nlayers = 6, out_dim = 64):
         super().__init__()
         self.channels = channels
         self.time_length = time_length
         self.num_classes = num_classes
-        self.wave2vec = Wave2Vec(channels, input_shape = time_length, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers)
+        self.wave2vec = Wave2Vec(channels, input_shape = time_length, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers, norm = norm)
 
         out_dim = self.wave2vec.out_shape * out_dim
         self.flat = nn.Flatten()
@@ -102,15 +102,18 @@ class GNNMultiview(nn.Module):
         b, ch, ts = x.shape
         x = x.view(b*ch, 1, ts)
         latents = self.wave2vec(x)
-        view_id =  torch.arange(b).unsqueeze(1).repeat(1, ch).view(-1).int().to(x.device)
-        message_from, message_to = torch.tensor(list(self.get_view_pairs(view_id))).T
+
+        message_from = torch.arange(b*ch).unsqueeze(1).repeat(1, (ch-1)).view(-1).to(x.device)
+        message_to = torch.arange(b*ch).view(b, ch).unsqueeze(1).repeat(1, ch, 1)
+        idx = ~torch.eye(ch).view(1, ch, ch).repeat(b, 1, 1).bool()
+        message_to = message_to[idx].view(-1).to(x.device)
 
         latents = self.flat(latents)
 
         for message_net in self.message_nets:
             message = message_net(torch.cat([latents[message_from], latents[message_to]], dim=-1))
             # Sum messages
-            latents.index_add_(0, message_to, message)
+            latents.index_add_(0, message_to.to(x.device), message)
 
         out = latents.view(b, ch, -1)
         out = out.sum(dim=1)
