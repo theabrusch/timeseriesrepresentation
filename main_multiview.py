@@ -68,6 +68,8 @@ def main(args):
         
     if device.type == 'mps':
         norm = 'batch'
+    else:
+        norm = 'group'
     model = GNNMultiview(channels, time_length, num_classes, norm = norm)
     model.to(device)
     
