@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 import warnings
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning) 
 
-def construct_eeg_datasets(config_path, 
+def construct_eeg_datasets(data_path, 
                            finetune_path,
                            batchsize, 
                            target_batchsize,
@@ -24,9 +24,10 @@ def construct_eeg_datasets(config_path,
                            sample_finetune_val_subjects = False,
                            sample_test_subjects = False,
                            exclude_subjects = None,
-                           train_mode = 'both'):
-    experiment = ExperimentConfig(config_path)
-    dset = config_path.split('/')[-1].strip('.yml').split('_')[0]
+                           train_mode = 'both',
+                           **kwargs):
+    experiment = ExperimentConfig(data_path)
+    dset = data_path.split('/')[-1].strip('.yml').split('_')[0]
     config = experiment.datasets[dset]
     config.normalize = normalize
     if balanced_sampling == 'pretrain' or balanced_sampling == 'both':
@@ -39,7 +40,7 @@ def construct_eeg_datasets(config_path,
         config.exclude_people = exclude_subjects
     
     if finetune_path == 'same':
-        split_path = config_path.removesuffix('.yml') + '_splits.txt'
+        split_path = data_path.removesuffix('.yml') + '_splits.txt'
         with open(split_path, 'r') as split_file:
             splits = json.load(split_file)
         pretrain_subjects = splits['pretrain']
