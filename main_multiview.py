@@ -39,7 +39,7 @@ def main(args):
          dset = args.data_path.split('/')[-1].strip('.yml')
     else:
         dset = args.data_path.split('/')[-2]
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps")
     output_path = f'{args.output_path}/MultiView_{dset}_pretrain_{args.pretrain}_pretrain_subjs_{args.sample_pretrain_subjects}_multi_channel_setup_{args.multi_channel_setup}'
     
     output_path = check_output_path(output_path)
@@ -66,12 +66,13 @@ def main(args):
         orig_channels = channels
         channels = 1
         
-          
-    model = GNNMultiview(channels, time_length, num_classes)
+    if device.type == 'mps':
+        norm = 'batch'
+    model = GNNMultiview(channels, time_length, num_classes, norm = norm)
     model.to(device)
     
     if args.load_model:
-            model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
+        model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
 
     if args.pretrain:
         # get datasets
@@ -156,7 +157,7 @@ if __name__ == '__main__':
     # training arguments
     parser.add_argument('--save_model', type = eval, default = True)
     parser.add_argument('--load_model', type = eval, default = False)
-    parser.add_argument('--pretrain', type = eval, default = False)
+    parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
@@ -189,7 +190,7 @@ if __name__ == '__main__':
     parser.add_argument('--ft_learning_rate', type = float, default = 1e-3)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
     parser.add_argument('--finetune_epochs', type = int, default = 1)
-    parser.add_argument('--epochs', type = int, default = 1)
+    parser.add_argument('--epochs', type = int, default = 10)
     args = parser.parse_args()
     main(args)
 

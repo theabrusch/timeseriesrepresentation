@@ -30,11 +30,11 @@ class conv_block2(nn.Module):
         return self.layer(x)
 
 class wave2vecblock(nn.Module):
-    def __init__(self, channels_in, channels_out, kernel, stride):
+    def __init__(self, channels_in, channels_out, kernel, stride, norm = 'group'):
         super().__init__()
         self.layer = nn.Sequential(
             nn.Conv1d(channels_in, channels_out, kernel_size=kernel, stride=stride, padding = kernel // 2),
-            nn.GroupNorm(channels_out // 2, channels_out),
+            nn.GroupNorm(channels_out // 2, channels_out) if norm == 'group' else nn.BatchNorm1d(channels_out),
             nn.GELU()
         )
     def forward(self, x):
