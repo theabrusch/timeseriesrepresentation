@@ -59,6 +59,24 @@ class TS2VecLoss(torch.nn.Module):
         loss = (logits[:, i, B + i - 1].mean() + logits[:, B + i, i].mean()) / 2 
         return loss
 
+class ContrastiveLoss(torch.nn.Module):
+    def __init__(self, tau) -> None:
+        super().__init__()
+        self.temperature = tau
+    def forward(self, z1, z2):
+        B = z1.shape[0]
+        z = torch.cat([z1,z2], dim = 0) # 2B x C
+        sim = torch.matmul(z, z.transpose(0,1)) # T x 2B x 2B
+        logits = torch.tril(sim, diagonal=-1)[:, :-1]    # T x 2B x (2B-1)
+        logits += torch.triu(sim, diagonal=1)[:, 1:] 
+        logits = -F.log_softmax(logits, dim=-1) 
+        logits /= self.temperature
+        
+        i = torch.arange(B, device=z1.device)
+        loss = (logits[i, B + i - 1].mean() + logits[B + i, i].mean()) / 2 
+        return loss
+
+
 
 def compute_weights(targets):
     _, count = np.unique(targets, return_counts=True)
