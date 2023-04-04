@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from utils.models import wave2vecblock
 import numpy as np
 from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support
-from utils.losses import TS2VecLoss, ContrastiveLoss
+from utils.losses import ContrastiveLoss
 import wandb
 import copy
 
@@ -79,6 +79,7 @@ class GNNMultiview(nn.Module):
         self.wave2vec = Wave2Vec(channels, input_shape = time_length, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers, norm = norm)
 
         out_dim = self.wave2vec.out_shape * out_dim
+        self.state_dim = out_dim
         self.flat = nn.Flatten()
 
         self.classifier = Classifier(in_features=out_dim, num_classes=num_classes)
@@ -103,6 +104,7 @@ class GNNMultiview(nn.Module):
         x = x.view(b*ch, 1, ts)
         latents = self.wave2vec(x)
 
+        view_id = torch.arange(b).unsqueeze(1).repeat(1, ch).view(-1).to(x.device)
         message_from = torch.arange(b*ch).unsqueeze(1).repeat(1, (ch-1)).view(-1).to(x.device)
         message_to = torch.arange(b*ch).view(b, ch).unsqueeze(1).repeat(1, ch, 1)
         idx = ~torch.eye(ch).view(1, ch, ch).repeat(b, 1, 1).bool()
@@ -115,10 +117,9 @@ class GNNMultiview(nn.Module):
             # Sum messages
             latents.index_add_(0, message_to.to(x.device), message)
 
-        out = latents.view(b, ch, -1)
-        out = out.sum(dim=1)
-
-        out = self.readout_net(out)
+        y = torch.zeros(b, self.state_dim).to(x.device)
+        y.index_add_(0, view_id, latents)
+        out = self.readout_net(y)
 
         if classify:
             return self.classifier(out)
@@ -160,7 +161,7 @@ class GNNMultiview(nn.Module):
             backup_path = None,
             log = True):
         
-        loss_fn = ContrastiveLoss(temperature)
+        loss_fn = ContrastiveLoss(device, temperature)
         self.to(device)
         for epoch in range(epochs):
             epoch_loss = 0
@@ -172,7 +173,7 @@ class GNNMultiview(nn.Module):
                 loss.backward()
                 optimizer.step()
                 epoch_loss += loss.item()
-                
+            train_loss = epoch_loss/(i+1)
             val_loss = 0
             self.eval()
             for i, data in enumerate(val_dataloader):
@@ -180,7 +181,7 @@ class GNNMultiview(nn.Module):
                 loss = self.train_step(x, loss_fn, device)
                 val_loss += loss.item()
             if log:
-                wandb.log({'val_loss': val_loss/(i+1), 'train_loss': epoch_loss/(i+1)})
+                wandb.log({'val_loss': val_loss/(i+1), 'train_loss': train_loss})
 
             if backup_path is not None:
                 path = f'{backup_path}/pretrained_model.pt'
