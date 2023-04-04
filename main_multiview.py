@@ -39,7 +39,7 @@ def main(args):
          dset = args.data_path.split('/')[-1].strip('.yml')
     else:
         dset = args.data_path.split('/')[-2]
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps")
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     output_path = f'{args.output_path}/MultiView_{dset}_pretrain_{args.pretrain}_pretrain_subjs_{args.sample_pretrain_subjects}_multi_channel_setup_{args.multi_channel_setup}'
     
     output_path = check_output_path(output_path)
@@ -70,6 +70,9 @@ def main(args):
         norm = 'batch'
     else:
         norm = 'group'
+    
+    print('time', time_length, 'num classes', num_classes)
+
     model = GNNMultiview(channels, time_length, num_classes, norm = norm)
     model.to(device)
     
