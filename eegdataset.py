@@ -110,7 +110,7 @@ def construct_eeg_datasets(data_path,
         test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True)
         num_classes = len(np.unique(test_dset.dn3_dset.get_targets()))
     else:
-        finetune_loader, finetune_val_loader, test_loader, num_classes = None, None, None, None
+        finetune_loader, finetune_val_loader, test_loader, num_classes = None, None, None, 5
 
     return pretrain_loader, pretrain_val_loader,finetune_loader, finetune_val_loader, test_loader, (len(config.picks), config.tlen*100, num_classes)
 
