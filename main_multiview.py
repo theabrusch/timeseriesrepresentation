@@ -73,7 +73,7 @@ def main(args):
     
     print('time', time_length, 'num classes', num_classes)
 
-    model = GNNMultiview(channels, time_length, num_classes, norm = norm)
+    model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, **vars(args))
     model.to(device)
     
     if args.load_model:
@@ -130,10 +130,10 @@ def main(args):
 
         if 'eeg' in args.data_path:
             targets = finetune_loader.dataset.dn3_dset.get_targets()
-            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float()
+            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float().to(device)
         else:
             targets = finetune_loader.dataset.Y
-            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float()
+            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float().to(device)
         
         wandb.config.update({'Target distribution': np.unique(targets, return_counts=True)[-1]})
 
@@ -177,6 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
 
     # model arguments
+    parser.add_argument('--flatten', type = eval, default = True)
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
     parser.add_argument('--encoder', type = str, default = 'wave2vec')
     parser.add_argument('--choose_best', type = eval, default = True)

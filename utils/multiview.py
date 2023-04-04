@@ -9,7 +9,7 @@ import wandb
 import copy
 
 class TimeClassifier(nn.Module):
-    def __init__(self, n_classes, in_features, pool, orig_channels = 9, time_length = 33):
+    def __init__(self, in_features, num_classes, pool, orig_channels = 9, time_length = 33):
         super().__init__()
         self.pool = pool
         self.flatten = nn.Flatten()
@@ -21,7 +21,7 @@ class TimeClassifier(nn.Module):
         elif self.pool == 'flatten':
             in_features = in_features*time_length
             
-        self.classifier = nn.Linear(in_features=in_features, out_features=n_classes)
+        self.classifier = nn.Linear(in_features=in_features, out_features=num_classes)
     def forward(self, latents):
         if len(latents.shape) > 3:
             latents = latents.permute(0,2,3,1)
@@ -71,18 +71,35 @@ class Wave2Vec(nn.Module):
 
 
 class GNNMultiview(nn.Module):
-    def __init__(self, channels, time_length, num_classes, norm = 'group', num_message_passing_rounds = 3, hidden_channels = 512, nlayers = 6, out_dim = 64):
+    def __init__(self, 
+                 channels, 
+                 time_length, 
+                 num_classes, 
+                 flatten = True,
+                 norm = 'group', 
+                 num_message_passing_rounds = 3, 
+                 hidden_channels = 512, 
+                 nlayers = 6, 
+                 out_dim = 64,
+                 **kwargs):
         super().__init__()
         self.channels = channels
         self.time_length = time_length
         self.num_classes = num_classes
+        self.flatten = flatten
         self.wave2vec = Wave2Vec(channels, input_shape = time_length, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers, norm = norm)
 
-        out_dim = self.wave2vec.out_shape * out_dim
+        if self.flatten:
+            out_dim = self.wave2vec.out_shape * out_dim
+            self.classifier = Classifier(in_features=out_dim, num_classes=num_classes)
+        else:
+            out_dim = out_dim
+            self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = channels, time_length = time_length)
+
         self.state_dim = out_dim
         self.flat = nn.Flatten()
         print('out_dim', out_dim)
-        self.classifier = Classifier(in_features=out_dim, num_classes=num_classes)
+        
 
         # Message passing layers (from_state, to_state) -> message
         self.message_nets = nn.ModuleList([
@@ -110,7 +127,10 @@ class GNNMultiview(nn.Module):
         idx = ~torch.eye(ch).view(1, ch, ch).repeat(b, 1, 1).bool()
         message_to = message_to[idx].view(-1).to(x.device)
 
-        latents = self.flat(latents)
+        if self.flatten:
+            latents = self.flat(latents)
+        else:
+            latents = latents.permute(0,2,1)
 
         for message_net in self.message_nets:
             message = message_net(torch.cat([latents[message_from], latents[message_to]], dim=-1))
@@ -120,6 +140,9 @@ class GNNMultiview(nn.Module):
         y = torch.zeros(b, self.state_dim).to(x.device)
         y.index_add_(0, view_id, latents)
         out = self.readout_net(y)
+
+        if self.flatten:
+            out = out.permute(0,2,1)
 
         if classify:
             return self.classifier(out)
