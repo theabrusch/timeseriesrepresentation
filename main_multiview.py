@@ -94,6 +94,7 @@ def main(args):
                 args.epochs,
                 optimizer,
                 device,
+                time_loss = args.flatten,
                 temperature = 0.5,
                 backup_path = None,
                 log = True)

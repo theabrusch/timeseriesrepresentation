@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from utils.models import wave2vecblock
 import numpy as np
 from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support
-from utils.losses import ContrastiveLoss
+from utils.losses import ContrastiveLoss, TS2VecLoss
 import wandb
 import copy
 
@@ -180,11 +180,15 @@ class GNNMultiview(nn.Module):
             epochs,
             optimizer,
             device,
+            time_loss = False,
             temperature = 0.5,
             backup_path = None,
             log = True):
         
-        loss_fn = ContrastiveLoss(device, temperature)
+        if time_loss:
+            loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0)
+        else:
+            loss_fn = ContrastiveLoss(device, temperature)
         self.to(device)
         for epoch in range(epochs):
             epoch_loss = 0
@@ -235,7 +239,7 @@ class GNNMultiview(nn.Module):
                 loss_.backward()
                 optimizer.step()
                 epoch_loss += loss_.item()
-                
+            train_loss = epoch_loss/(i+1)
             val_loss = 0
             collect_y = []
             collect_pred = []
@@ -254,7 +258,7 @@ class GNNMultiview(nn.Module):
             acc = balanced_accuracy_score(collect_y, collect_pred)
             prec, rec, f, _ = precision_recall_fscore_support(collect_y, collect_pred)
 
-            wandb.log({'train_loss': epoch_loss/(i+1), 'val_loss': val_loss/(i+1), 'val_acc': acc, 'val_prec': prec, 'val_rec': rec, 'val_f': f})
+            wandb.log({'train_class_loss': train_loss, 'val_class_loss': val_loss/(i+1), 'val_acc': acc, 'val_prec': prec, 'val_rec': rec, 'val_f': f})
             if choose_best:
                 if acc > best_accuracy:
                     best_accuracy = acc
