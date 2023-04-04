@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset as TorchDataset
 from torch.utils.data import DataLoader
+from torch.utils.data.sampler import WeightedRandomSampler
 import os
 import glob
 import json
@@ -61,6 +62,14 @@ def construct_eeg_datasets(data_path,
             'max_seg': 8
         }
         pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(pretrain_val_dset, aug_config, standardize_epochs=standardize_epochs)
+
+        if config.balanced_sampling:
+            sample_weights, counts = get_label_balance(pretrain_dset)
+            pretrain_sampler = WeightedRandomSampler(sample_weights, len(counts) * int(counts.min()), replacement=False)
+            pretrain_loader = DataLoader(pretrain_dset, batch_size=batchsize, sampler=pretrain_sampler)
+        else:
+            pretrain_loader = DataLoader(pretrain_dset, batch_size=batchsize, shuffle = True)
+
         pretrain_loader, pretrain_val_loader = DataLoader(pretrain_dset, batch_size=batchsize, shuffle = True), DataLoader(pretrain_val_dset, batch_size=batchsize, shuffle = True)
     else:
         pretrain_loader, pretrain_val_loader = None, None
@@ -100,7 +109,14 @@ def construct_eeg_datasets(data_path,
             'max_seg': 8
         }
         finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs)
-        finetune_loader, finetune_val_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, shuffle = True), DataLoader(finetune_val_dset, batch_size=target_batchsize, shuffle = True)
+        if config.balanced_sampling:
+            sample_weights, counts = get_label_balance(finetune_train_dset)
+            finetune_sampler = WeightedRandomSampler(sample_weights, len(counts) * int(counts.min()), replacement=False)
+            finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler)
+        else:
+            finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, shuffle = True)
+
+        finetune_val_loader = DataLoader(finetune_val_dset, batch_size=target_batchsize, shuffle = True)
         # get test set
         print('Loading test data')
         config.balanced_sampling = False
@@ -139,6 +155,22 @@ def divide_subjects(config, sample_train, sample_val, test_size = 0.2, subjects 
             val = np.random.choice(val, sample_val, replace=False)
     return train, val
 
+def get_label_balance(dataset):
+    """
+    Given a dataset, return the proportion of each target class and the counts of each class type
+    Parameters
+    ----------
+    dataset
+    Returns
+    -------
+    sample_weights, counts
+    """
+    labels = dataset.dn3_dset.get_targets()
+    counts = np.bincount(labels)
+    train_weights = 1. / torch.tensor(counts, dtype=torch.float)
+    sample_weights = train_weights[labels]
+    class_freq = counts/counts.sum()
+    return sample_weights, counts
 
 def load_thinkers(config, sample_subjects = False, subjects = None):
     if subjects is None:
@@ -169,15 +201,7 @@ def construct_epoch_dset(file, config):
     sfreq = raw.info['sfreq']
     event_map = {v: v for v in config.events.values()}
     events = mne.events_from_annotations(raw, event_id=config.events, chunk_duration=eval(config.chunk_duration))[0]
-    if config.balanced_sampling:
-        labs, counts = np.unique(events[:,2], return_counts = True)
-        min_count = np.min(counts)
-        new_events = np.zeros((min_count*len(labs), 3), np.int64)
-        for i, lab in enumerate(labs):
-            idx = np.where(events[:,2] == lab)[0]
-            sub_sample = np.random.choice(idx, size = min_count, replace = False)
-            new_events[i*min_count:(i+1)*min_count] = events[sub_sample,:]
-        events = new_events[new_events[:, 0].argsort()]
+    
     epochs = mne.Epochs(raw, events, tmin=config.tmin, tmax=config.tmin + config.tlen - 1 / sfreq, preload=config.preload, decim=config.decimate,
                         baseline=config.baseline, reject_by_annotation=config.drop_bad)
     recording = EpochTorchRecording(epochs, ch_ind_picks=config.picks, event_mapping=event_map,
