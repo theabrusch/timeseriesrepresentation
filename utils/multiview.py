@@ -195,6 +195,8 @@ class GNNMultiview(nn.Module):
         self.to(device)
         for epoch in range(epochs):
             epoch_loss = 0
+            epoch_inst = 0 
+            epoch_temp = 0
             self.train()
             for i, data in enumerate(dataloader):
                 x = data[0].to(device).float()
@@ -203,18 +205,29 @@ class GNNMultiview(nn.Module):
                 loss.backward()
                 optimizer.step()
                 epoch_loss += loss.item()
+                epoch_inst += inst_loss.item()
+                epoch_temp += temp_loss.item()
             train_loss = epoch_loss/(i+1)
+            train_inst = epoch_inst/(i+1)
+            train_temp = epoch_temp/(i+1)
+
             val_loss = 0
+            val_inst = 0 
+            val_temp = 0
             self.eval()
             for i, data in enumerate(val_dataloader):
                 x = data[0].to(device).float()
-                loss = self.train_step(x, loss_fn, device)
+                loss, inst_loss, temp_loss = self.train_step(x, loss_fn, device)
                 val_loss += loss.item()
+                val_inst += inst_loss.item()
+                val_temp += temp_loss.item()
             if log:
                 log_dict = {'val_loss': val_loss/(i+1), 'train_loss': train_loss}
                 if time_loss:
-                    log_dict['inst_loss'] = inst_loss
-                    log_dict['temp_loss'] = temp_loss
+                    log_dict['train_inst_loss'] = train_inst
+                    log_dict['train_temp_loss'] = train_temp
+                    log_dict['val_inst_loss'] = val_inst/(i+1)
+                    log_dict['val_temp_loss'] = val_temp/(i+1)
                 wandb.log(log_dict)
 
             if backup_path is not None:
