@@ -94,7 +94,7 @@ def main(args):
                 args.epochs,
                 optimizer,
                 device,
-                time_loss = args.flatten,
+                time_loss = ~args.flatten,
                 temperature = 0.5,
                 backup_path = None,
                 log = True)
@@ -148,7 +148,7 @@ def main(args):
                  choose_best = args.choose_best,
         )
 
-        accuracy, prec, rec, f = model.evaluate_classifier(test_loader, classifier, device)
+        accuracy, prec, rec, f = model.evaluate_classifier(test_loader, device)
         wandb.config.update({'Test accuracy': accuracy, 'Test precision': prec, 'Test recall': rec, 'Test f1': f})
         print('test accuracy', accuracy)
         print('test precision', prec)
