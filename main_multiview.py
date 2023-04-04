@@ -129,13 +129,15 @@ def main(args):
             optimizer = AdamW(model.parameters(), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
         else:
             optimizer = AdamW(model.classifier.parameters(), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
+
+        
+        if 'eeg' in args.data_path:
+            targets = finetune_loader.dataset.dn3_dset.get_targets()
+        else:
+            targets = finetune_loader.dataset.Y
+
         if not args.balanced_sampling == 'finetune' or args.balanced_sampling == 'both':
-            if 'eeg' in args.data_path:
-                targets = finetune_loader.dataset.dn3_dset.get_targets()
-                weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float().to(device)
-            else:
-                targets = finetune_loader.dataset.Y
-                weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float().to(device)
+            weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float().to(device)
         else:
             weights = None
         
