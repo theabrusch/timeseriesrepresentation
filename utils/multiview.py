@@ -137,11 +137,11 @@ class GNNMultiview(nn.Module):
             # Sum messages
             latents.index_add_(0, message_to.to(x.device), message)
 
-        y = torch.zeros(b, self.state_dim).to(x.device)
+        y = torch.zeros(b, *latents.shape[1:]).to(x.device)
         y.index_add_(0, view_id, latents)
         out = self.readout_net(y)
 
-        if self.flatten:
+        if not self.flatten:
             out = out.permute(0,2,1)
 
         if classify:

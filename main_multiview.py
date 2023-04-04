@@ -73,7 +73,7 @@ def main(args):
     
     print('time', time_length, 'num classes', num_classes)
 
-    model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, **vars(args))
+    model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, norm = norm, **vars(args))
     model.to(device)
     
     if args.load_model:
@@ -162,7 +162,7 @@ if __name__ == '__main__':
     # training arguments
     parser.add_argument('--save_model', type = eval, default = False)
     parser.add_argument('--load_model', type = eval, default = False)
-    parser.add_argument('--pretrain', type = eval, default = True)
+    parser.add_argument('--pretrain', type = eval, default = False)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
@@ -177,7 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
 
     # model arguments
-    parser.add_argument('--flatten', type = eval, default = True)
+    parser.add_argument('--flatten', type = eval, default = False)
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
     parser.add_argument('--encoder', type = str, default = 'wave2vec')
     parser.add_argument('--choose_best', type = eval, default = True)
