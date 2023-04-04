@@ -171,7 +171,10 @@ class GNNMultiview(nn.Module):
         out1 = self.forward(view_1)
         out2 = self.forward(view_2)
         loss = loss_fn(out1, out2)
-        return loss
+        if isinstance(loss, tuple):
+            return loss
+        else:
+            return loss, *[0]*(len(loss)-1)
 
 
     def fit(self, 
@@ -186,9 +189,9 @@ class GNNMultiview(nn.Module):
             log = True):
         
         if time_loss:
-            loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0)
+            loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
         else:
-            loss_fn = ContrastiveLoss(device, temperature)
+            loss_fn = ContrastiveLoss(device, temperature).to(device)
         self.to(device)
         for epoch in range(epochs):
             epoch_loss = 0
@@ -196,7 +199,7 @@ class GNNMultiview(nn.Module):
             for i, data in enumerate(dataloader):
                 x = data[0].to(device).float()
                 optimizer.zero_grad()
-                loss = self.train_step(x, loss_fn, device)
+                loss, inst_loss, temp_loss = self.train_step(x, loss_fn, device)
                 loss.backward()
                 optimizer.step()
                 epoch_loss += loss.item()
@@ -208,7 +211,11 @@ class GNNMultiview(nn.Module):
                 loss = self.train_step(x, loss_fn, device)
                 val_loss += loss.item()
             if log:
-                wandb.log({'val_loss': val_loss/(i+1), 'train_loss': train_loss})
+                log_dict = {'val_loss': val_loss/(i+1), 'train_loss': train_loss}
+                if time_loss:
+                    log_dict['inst_loss'] = inst_loss
+                    log_dict['temp_loss'] = temp_loss
+                wandb.log(log_dict)
 
             if backup_path is not None:
                 path = f'{backup_path}/pretrained_model.pt'

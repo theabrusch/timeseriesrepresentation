@@ -39,7 +39,8 @@ def main(args):
          dset = args.data_path.split('/')[-1].strip('.yml')
     else:
         dset = args.data_path.split('/')[-2]
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    #device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     output_path = f'{args.output_path}/MultiView_{dset}_pretrain_{args.pretrain}_pretrain_subjs_{args.sample_pretrain_subjects}_multi_channel_setup_{args.multi_channel_setup}'
     
     output_path = check_output_path(output_path)
@@ -173,7 +174,7 @@ if __name__ == '__main__':
 
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
-    parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
+    parser.add_argument('--finetune_path', type = str, default = 'same')
     parser.add_argument('--batchsize', type = int, default = 128)
     parser.add_argument('--target_batchsize', type = int, default = 128)
     parser.add_argument('--output_path', type = str, default = 'outputs')
@@ -187,9 +188,9 @@ if __name__ == '__main__':
 
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjects', type = eval, default = 3)
-    parser.add_argument('--sample_finetune_train_subjects', type = eval, default = 3)
-    parser.add_argument('--sample_finetune_val_subjects', type = eval, default = 3)
-    parser.add_argument('--sample_test_subjects', type = eval, default = 3)
+    parser.add_argument('--sample_finetune_train_subjects', type = eval, default = 1)
+    parser.add_argument('--sample_finetune_val_subjects', type = eval, default = 1)
+    parser.add_argument('--sample_test_subjects', type = eval, default = 1)
 
     # augmentation arguments
     parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg

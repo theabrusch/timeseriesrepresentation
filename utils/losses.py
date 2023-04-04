@@ -7,6 +7,7 @@ class TS2VecLoss(torch.nn.Module):
         super().__init__()
         self.alpha = alpha
         self.temporal_unit = temporal_unit
+        self.maxpool = torch.nn.MaxPool1d(2)
     
     def dual_loss(self, z1, z2, d):
         # z1, z2 : B x C x T
@@ -33,7 +34,7 @@ class TS2VecLoss(torch.nn.Module):
         loss, inst_loss, temp_loss = self.dual_loss(z1, z2, d=0)
         d = 1
         while z1.shape[-1] > 1:
-            z1, z2 = F.max_pool1d(z1, 2), F.max_pool1d(z2, 2)
+            z1, z2 = self.maxpool(z1), self.maxpool(z2)
             out = self.dual_loss(z1, z2, d)
             loss += out[0]
             inst_loss += out[1]
@@ -102,8 +103,13 @@ class ContrastiveLoss(torch.nn.Module):
     def forward(self, zis, zjs, reduce = True):
         if zis is None or zjs is None:
             return torch.tensor(0.).to(self.device)
-        
         batch_size = zis.shape[0]
+        if len(zis.shape) > 2:
+            # flatten
+            zis = zis.view(batch_size, -1)
+            zjs = zjs.view(batch_size, -1)
+        
+        
         representations = torch.cat([zjs, zis], dim=0)
 
         mask_samples_from_same_repr = self._get_correlated_mask(batch_size=batch_size).type(torch.bool)

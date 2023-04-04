@@ -5,6 +5,7 @@ import numpy as np
 import scipy.signal
 import matplotlib.pyplot as plt
 
+
 def preprocess_EEG(file, out_folder = None):
 
     raw = mne.io.read_raw_edf(file, stim_channel='Event marker', preload = True)
@@ -16,8 +17,6 @@ def preprocess_EEG(file, out_folder = None):
     anno_path = glob.glob(f'{file_path}/{subject}{session}*-Hypnogram.edf')[0]
     
     annot_train = mne.read_annotations(anno_path)
-    annot_train.crop(annot_train[1]['onset'] - 30 * 60,
-                     annot_train[-2]['onset'] + 30 * 60)
     raw.set_annotations(annot_train, emit_warning=False)
     out_path = f'{out_folder}/{subject}/'
     os.makedirs(out_path, exist_ok = True)

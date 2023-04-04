@@ -1,0 +1,37 @@
+Configuratron:
+  preload: True
+
+use_gpu: False
+deep1010: False
+
+datasets:
+  sleepedf:
+    name: "Sleep EDFx Cassette"
+    filename_format: "SC4{subject:2}{session:1}"
+    annotation_format: "SC4{subject:2}{session:1}*Hypnogram*"
+    toplevel: /Users/theb/Desktop/sleep_edf/physionet-sleep-data/
+    tmin: 0
+    tlen: 30
+    data_max: 4460.6
+    data_min: -4465.7
+    extensions:
+      - .edf
+    chunk_duration: 30
+    events:
+      'Sleep stage W': 0
+      'Sleep stage 1': 1
+      'Sleep stage 2': 2
+      'Sleep stage 3': 3
+      'Sleep stage 4': 3
+      'Sleep stage R': 4
+    rename_channels:
+      FPZ: 'EEG Fpz-Cz'
+      PZ: 'EEG Pz-Oz'
+      HEOGL: "EOG horizontal"
+    picks:
+      - eeg
+    exclude_channels:
+      - "Resp oro-nasal"
+      - 'EMG submental'
+      - 'Temp rectal' # Comfiest sleep ever
+      - 'Event marker'
