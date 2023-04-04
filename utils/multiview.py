@@ -81,7 +81,7 @@ class GNNMultiview(nn.Module):
         out_dim = self.wave2vec.out_shape * out_dim
         self.state_dim = out_dim
         self.flat = nn.Flatten()
-
+        print('out_dim', out_dim)
         self.classifier = Classifier(in_features=out_dim, num_classes=num_classes)
 
         # Message passing layers (from_state, to_state) -> message
