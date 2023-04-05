@@ -187,6 +187,8 @@ if __name__ == '__main__':
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
     parser.add_argument('--encoder', type = str, default = 'wave2vec')
     parser.add_argument('--choose_best', type = eval, default = True)
+    parser.add_argument('--conv_do', type = float, default = 0.1)
+    parser.add_argument('--feat_do', type = float, default = 0.1)
 
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjects', type = eval, default = 3)
