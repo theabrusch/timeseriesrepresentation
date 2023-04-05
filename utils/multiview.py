@@ -79,7 +79,7 @@ class GNNMultiview(nn.Module):
                  norm = 'group', 
                  conv_do = 0.1,
                  feat_do = 0.1,
-                 num_message_passing_rounds = 3, 
+                 num_message_passing_rounds = 2, 
                  hidden_channels = 256, 
                  nlayers = 6, 
                  out_dim = 64,
