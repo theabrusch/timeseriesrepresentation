@@ -92,12 +92,11 @@ def main(args):
         # pretrain model
         model.fit(pretrain_loader,
                 pretrain_val_loader,
-                args.epochs,
+                args.pretrain_epochs,
                 optimizer,
                 device,
                 time_loss = ~args.flatten,
                 temperature = 0.5,
-                backup_path = None,
                 log = True)
         
         time2 = datetime.datetime.now()    
@@ -143,7 +142,7 @@ def main(args):
         
         wandb.config.update({'Target distribution': np.unique(targets, return_counts=True)[-1]})
 
-        classifier = model.finetune(
+        model.finetune(
                  finetune_loader,
                  finetune_val_loader,
                  args.finetune_epochs,
@@ -173,13 +172,11 @@ if __name__ == '__main__':
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
+    parser.add_argument('--output_path', type = str, default = 'outputs')
 
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
-    parser.add_argument('--batchsize', type = int, default = 128)
-    parser.add_argument('--target_batchsize', type = int, default = 128)
-    parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
 
     # model arguments
@@ -189,6 +186,10 @@ if __name__ == '__main__':
     parser.add_argument('--choose_best', type = eval, default = True)
     parser.add_argument('--conv_do', type = float, default = 0.1)
     parser.add_argument('--feat_do', type = float, default = 0.1)
+    parser.add_argument('--num_message_passing_rounds', type = int, default = 3)
+    parser.add_argument('--hidden_channels', type = int, default = 256)
+    parser.add_argument('--out_dim', type = int, default = 64)
+
 
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjects', type = eval, default = 3)
@@ -203,8 +204,10 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--ft_learning_rate', type = float, default = 1e-3)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
+    parser.add_argument('--pretrain_epochs', type = int, default = 10)
     parser.add_argument('--finetune_epochs', type = int, default = 1)
-    parser.add_argument('--epochs', type = int, default = 10)
+    parser.add_argument('--batchsize', type = int, default = 128)
+    parser.add_argument('--target_batchsize', type = int, default = 128)
     args = parser.parse_args()
     main(args)
 
