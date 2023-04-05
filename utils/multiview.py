@@ -82,7 +82,7 @@ class GNNMultiview(nn.Module):
                  num_message_passing_rounds = 3, 
                  hidden_channels = 256, 
                  nlayers = 6, 
-                 out_dim = 256,
+                 out_dim = 64,
                  **kwargs):
         super().__init__()
         self.channels = channels
