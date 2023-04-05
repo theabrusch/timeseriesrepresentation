@@ -57,13 +57,13 @@ def conv1D_out_shape(input_shape, kernel, stride, padding):
     return shape
 
 class Wave2Vec(nn.Module):
-    def __init__(self, channels, input_shape, out_dim = 64, hidden_channels = 512, nlayers = 6, norm = 'group'):
+    def __init__(self, channels, input_shape, out_dim = 64, hidden_channels = 512, nlayers = 6, do = 0.1, norm = 'group'):
         super().__init__()
         self.channels = channels
         width = [3] + [2]*(nlayers-1)
         in_channels = [channels] + [hidden_channels]*(nlayers-1)
         out_channels = [hidden_channels]*(nlayers - 1) + [out_dim]
-        self.convblocks = nn.Sequential(*[wave2vecblock(channels_in= in_channels[i], channels_out = out_channels[i], kernel = width[i], stride = width[i], norm = norm) for i in range(nlayers)])
+        self.convblocks = nn.Sequential(*[wave2vecblock(channels_in= in_channels[i], channels_out = out_channels[i], kernel = width[i], stride = width[i], norm = norm, dropout = do) for i in range(nlayers)])
         self.out_shape = conv1D_out_shape(input_shape, width, width, [w//2 for w in width])
     def forward(self, x):
         return self.convblocks(x)
@@ -77,6 +77,8 @@ class GNNMultiview(nn.Module):
                  num_classes, 
                  flatten = True,
                  norm = 'group', 
+                 conv_do = 0.1,
+                 feat_do = 0.1,
                  num_message_passing_rounds = 3, 
                  hidden_channels = 512, 
                  nlayers = 6, 
@@ -87,7 +89,7 @@ class GNNMultiview(nn.Module):
         self.time_length = time_length
         self.num_classes = num_classes
         self.flatten = flatten
-        self.wave2vec = Wave2Vec(channels, input_shape = time_length, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers, norm = norm)
+        self.wave2vec = Wave2Vec(channels, input_shape = time_length, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers, norm = norm, do = conv_do)
 
         if self.flatten:
             out_dim = self.wave2vec.out_shape * out_dim
@@ -105,7 +107,8 @@ class GNNMultiview(nn.Module):
         self.message_nets = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(out_dim*2, out_dim),
-                nn.Tanh()
+                nn.Dropout(feat_do),
+                nn.ReLU()
             )
             for _ in range(num_message_passing_rounds)
         ])
@@ -113,7 +116,8 @@ class GNNMultiview(nn.Module):
         # Readout layer
         self.readout_net = nn.Sequential(
             nn.Linear(out_dim, out_dim),
-            nn.Tanh()
+            nn.Dropout(feat_do),
+            nn.ReLU()
         )
 
     def forward(self, x, classify = False):
