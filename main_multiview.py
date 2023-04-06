@@ -95,12 +95,12 @@ def main(args):
                 args.pretrain_epochs,
                 optimizer,
                 device,
-                time_loss = ~args.flatten,
+                time_loss = not args.flatten,
                 temperature = 0.5,
                 log = True)
         
         time2 = datetime.datetime.now()    
-        print('Pre-training for', args.epochs,'epochs took', time2-time, 's.')
+        print('Pre-training for', args.pretrain_epochs,'epochs took', time2-time, 's.')
 
         if args.save_model:
             model.eval()
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     # training arguments
     parser.add_argument('--save_model', type = eval, default = False)
     parser.add_argument('--load_model', type = eval, default = False)
-    parser.add_argument('--pretrain', type = eval, default = False)
+    parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
@@ -176,11 +176,11 @@ if __name__ == '__main__':
 
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
-    parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
+    parser.add_argument('--finetune_path', type = str, default = 'same')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
 
     # model arguments
-    parser.add_argument('--flatten', type = eval, default = False)
+    parser.add_argument('--flatten', type = eval, default = True)
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
     parser.add_argument('--encoder', type = str, default = 'wave2vec')
     parser.add_argument('--choose_best', type = eval, default = True)
@@ -193,9 +193,9 @@ if __name__ == '__main__':
 
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjects', type = eval, default = 3)
-    parser.add_argument('--sample_finetune_train_subjects', type = eval, default = False)
-    parser.add_argument('--sample_finetune_val_subjects', type = eval, default = False)
-    parser.add_argument('--sample_test_subjects', type = eval, default = False)
+    parser.add_argument('--sample_finetune_train_subjects', type = eval, default = 1)
+    parser.add_argument('--sample_finetune_val_subjects', type = eval, default = 1)
+    parser.add_argument('--sample_test_subjects', type = eval, default = 1)
 
     # augmentation arguments
     parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg

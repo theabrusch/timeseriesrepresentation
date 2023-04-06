@@ -149,3 +149,35 @@ def compute_weights(targets):
     weights = 1 / count
     weights = weights / weights.sum()
     return torch.tensor(weights).float()
+
+class COCOAloss(torch.nn.Module):
+    def __init__(self, temperature, lambda_):
+        super(COCOAloss, self).__init__()
+        self.temperature = temperature
+        self.lambda_ = lambda_
+        self.criterion = torch.nn.CrossEntropyLoss(reduction="sum")
+
+    def forward(self, z):
+        batch_size, view_size = z.shape[1], z.shape[0]
+        pos_error = []
+        for i in range(batch_size):
+            sim = torch.matmul(z[:, i, :], z[:, i, :].T)
+            sim = torch.ones([view_size, view_size]).to(z.device)-sim
+            sim = torch.exp(sim/self.temperature)
+            pos_error.append(sim.mean())
+        
+        neg_error = 0
+        for i in range(view_size):
+            sim = torch.matmul(z[i], z[i].T)
+            sim = torch.exp(sim / self.temperature)
+            tri_mask = np.ones(batch_size ** 2, dtype=np.bool).reshape(batch_size, batch_size)
+            tri_mask[np.diag_indices(batch_size)] = False
+            tri_mask = torch.tensor(tri_mask).to(z.device)
+            off_diag_sim = torch.reshape(torch.masked_select(sim, tri_mask), [batch_size, batch_size - 1])
+            neg_error += off_diag_sim.mean(-1)
+
+        logits = torch.div(torch.stack(pos_error), pos_error+neg_error)
+        lbl = torch.ones(batch_size).to(z.device).long()
+        error = self.criterion(y_pred=logits, y_true=lbl)
+        return error
+

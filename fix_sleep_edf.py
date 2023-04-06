@@ -35,6 +35,7 @@ def preprocess_EEG(file, out_folder = None):
 root_folder = '/Users/theb/Desktop/sleep_edf/physionet-sleep-data/*-PSG.edf'
 
 subjects = glob.glob(root_folder)
+ss = [subj.split('/')[-1][:5] for subj in subjects]
 file = subjects[0]
 
 file_split = file.split('/')
