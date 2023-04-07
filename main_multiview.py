@@ -180,7 +180,7 @@ if __name__ == '__main__':
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
 
     # model arguments
-    parser.add_argument('--flatten', type = eval, default = True)
+    parser.add_argument('--flatten', type = eval, default = False)
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
     parser.add_argument('--encoder', type = str, default = 'wave2vec')
     parser.add_argument('--choose_best', type = eval, default = True)

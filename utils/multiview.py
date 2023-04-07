@@ -193,8 +193,10 @@ class GNNMultiview(nn.Module):
             log = True):
         
         if time_loss:
+            print('Using time contrastive loss')
             loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
         else:
+            print('Using contrastive loss')
             loss_fn = ContrastiveLoss(device, temperature).to(device)
         self.to(device)
         for epoch in range(epochs):
