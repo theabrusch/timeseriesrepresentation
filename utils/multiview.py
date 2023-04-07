@@ -178,7 +178,7 @@ class GNNMultiview(nn.Module):
         if isinstance(loss, tuple):
             return loss
         else:
-            return loss, *[0]*2
+            return loss, *[torch.tensor(0)]*2
 
 
     def fit(self, 
