@@ -228,13 +228,13 @@ def load_thinkers(config, sample_subjects = False, subjects = None):
 
 def construct_epoch_dset(file, config):
     raw = mne.io.read_raw_fif(file, preload = config.preload)
-    if config.name == 'sleepedf':
-        annotations = raw.annotations
-        start_crop = annotations.orig_time + timedelta(seconds=annotations[1]['onset']) - timedelta(minutes=30)
-        end_crop = annotations.orig_time + timedelta(seconds=annotations[-2]['onset']) + timedelta(minutes=30)
-        annotations.crop(start_crop, end_crop)
-        raw.set_annotations(annotations, emit_warning=False)
-        
+    #if config.name == 'sleepedf':
+    #    annotations = raw.annotations
+    #    start_crop = annotations.orig_time + timedelta(seconds=annotations[1]['onset']) - timedelta(minutes=30)
+    #    end_crop = annotations.orig_time + timedelta(seconds=annotations[-2]['onset']) + timedelta(minutes=30)
+    #    annotations.crop(start_crop, end_crop)
+    #    raw.set_annotations(annotations, emit_warning=False)
+
     if config.normalize and config.preload:
         raw.apply_function(lambda x: (x-np.mean(x))/np.std(x))
     sfreq = raw.info['sfreq']
