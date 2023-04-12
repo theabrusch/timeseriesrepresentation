@@ -175,7 +175,7 @@ if __name__ == '__main__':
 
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
-    parser.add_argument('--finetune_path', type = str, default = 'same')
+    parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
     parser.add_argument('--seed_generator', type = eval, default = True)
 
@@ -194,7 +194,7 @@ if __name__ == '__main__':
 
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjects', type = eval, default = 3)
-    parser.add_argument('--sample_finetune_train_subjects', type = eval, default = 1)
+    parser.add_argument('--sample_finetune_train_subjects', type = eval, default = 3)
     parser.add_argument('--sample_finetune_val_subjects', type = eval, default = 1)
     parser.add_argument('--sample_test_subjects', type = eval, default = 1)
 

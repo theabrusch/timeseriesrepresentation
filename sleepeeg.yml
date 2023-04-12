@@ -6,7 +6,7 @@ deep1010: False
 
 datasets:
   sleepeeg:
-    name: "EEG data"
+    name: "sleepeeg"
     toplevel: '/work3/theb/timeseries/training_raw/'
     events: {'nonrem1': 0, 'nonrem2': 1, 'nonrem3': 2, 'rem': 3, 'wake': 4}
     tmin: 0
