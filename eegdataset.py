@@ -17,7 +17,6 @@ def construct_eeg_datasets(data_path,
                            finetune_path,
                            batchsize, 
                            target_batchsize,
-                           normalize = False,
                            standardize_epochs = False,
                            balanced_sampling = 'None',
                            sample_pretrain_subjects = False, 
@@ -26,11 +25,12 @@ def construct_eeg_datasets(data_path,
                            sample_test_subjects = False,
                            exclude_subjects = None,
                            train_mode = 'both',
+                           seed_generator = False,
                            **kwargs):
     experiment = ExperimentConfig(data_path)
     dset = data_path.split('/')[-1].strip('.yml').split('_')[0]
     config = experiment.datasets[dset]
-    config.normalize = normalize
+    config.normalize = False
     if balanced_sampling == 'pretrain' or balanced_sampling == 'both':
         config.balanced_sampling = True
     else:
@@ -64,7 +64,11 @@ def construct_eeg_datasets(data_path,
         pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(pretrain_val_dset, aug_config, standardize_epochs=standardize_epochs)
 
         if config.balanced_sampling:
-            sample_weights, counts = get_label_balance(pretrain_dset)
+            if seed_generator:
+                sample_weights, counts = fixed_label_balance(pretrain_dset)
+            else:
+                sample_weights, counts = get_label_balance(pretrain_dset)
+                
             pretrain_sampler = WeightedRandomSampler(sample_weights, len(counts) * int(counts.min()), replacement=False)
             pretrain_loader = DataLoader(pretrain_dset, batch_size=batchsize, sampler=pretrain_sampler)
         else:
@@ -85,7 +89,7 @@ def construct_eeg_datasets(data_path,
             experiment = ExperimentConfig(finetune_path)
             dset = finetune_path.split('/')[-1].strip('.yml').split('_')[0]
             config = experiment.datasets[dset]
-            config.normalize = normalize
+            config.normalize = False
 
             if balanced_sampling == 'finetune' or balanced_sampling == 'both':
                 config.balanced_sampling = True
@@ -110,7 +114,10 @@ def construct_eeg_datasets(data_path,
         }
         finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs)
         if config.balanced_sampling:
-            sample_weights, counts = get_label_balance(finetune_train_dset)
+            if seed_generator:
+                sample_weights, counts = fixed_label_balance(finetune_train_dset)
+            else:
+                sample_weights, counts = get_label_balance(finetune_train_dset)
             finetune_sampler = WeightedRandomSampler(sample_weights, len(counts) * int(counts.min()), replacement=False)
             finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler)
         else:
@@ -154,6 +161,30 @@ def divide_subjects(config, sample_train, sample_val, test_size = 0.2, subjects 
             np.random.seed(0)
             val = np.random.choice(val, sample_val, replace=False)
     return train, val
+
+def fixed_label_balance(dataset):
+    """
+    Given a dataset, sample a fixed balanced dataset
+    Parameters
+    ----------
+    dataset
+    Returns
+    -------
+    sample_weights, counts
+    """
+    labels = dataset.dn3_dset.get_targets()
+    labs, counts = np.unique(labels, return_counts=True)
+    sample_weights = np.zeros(len(labels))
+    min_count = np.min(counts)
+    w = 1. / min_count
+    for i, lab in enumerate(labs):
+        # randomly sample min_count examples from each class and
+        # assign them a weight of 1/min_count
+        idx = np.where(labels == lab)[0]
+        idx = np.random.choice(idx, min_count, replace=False)
+        sample_weights[idx] = w
+
+    return sample_weights, counts
 
 def get_label_balance(dataset):
     """

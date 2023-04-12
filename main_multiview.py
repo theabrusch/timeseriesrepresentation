@@ -51,7 +51,6 @@ def main(args):
 
     if 'eeg' in args.data_path:
         args.train_mode = 'pretrain' if args.pretrain and not args.finetune else 'finetune' if args.finetune and not args.pretrain else 'both'
-        args.normalize = False
         args.standardize_epochs = 'channelwise'
         pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     else:
@@ -178,6 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'same')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
+    parser.add_argument('--seed_generator', type = eval, default = True)
 
     # model arguments
     parser.add_argument('--flatten', type = eval, default = False)
