@@ -34,7 +34,7 @@ class wave2vecblock(nn.Module):
         super().__init__()
         self.layer = nn.Sequential(
             nn.Conv1d(channels_in, channels_out, kernel_size=kernel, stride=stride, padding = kernel // 2),
-            nn.Dropout2d(dropout),
+            nn.Dropout1d(dropout),
             nn.GroupNorm(channels_out // 2, channels_out) if norm == 'group' else nn.BatchNorm1d(channels_out),
             nn.GELU()
         )
