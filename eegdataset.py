@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import WeightedRandomSampler
 import os
 import glob
+from datetime import timedelta
 import json
 import mne 
 from dn3.configuratron import ExperimentConfig
@@ -68,7 +69,7 @@ def construct_eeg_datasets(data_path,
                 sample_weights, counts = fixed_label_balance(pretrain_dset)
             else:
                 sample_weights, counts = get_label_balance(pretrain_dset)
-                
+
             pretrain_sampler = WeightedRandomSampler(sample_weights, len(counts) * int(counts.min()), replacement=False)
             pretrain_loader = DataLoader(pretrain_dset, batch_size=batchsize, sampler=pretrain_sampler)
         else:
@@ -227,6 +228,13 @@ def load_thinkers(config, sample_subjects = False, subjects = None):
 
 def construct_epoch_dset(file, config):
     raw = mne.io.read_raw_fif(file, preload = config.preload)
+    if config.name == 'sleepedf':
+        annotations = raw.annotations
+        start_crop = annotations.orig_time + timedelta(seconds=annotations[1]['onset']) - timedelta(minutes=30)
+        end_crop = annotations.orig_time + timedelta(seconds=annotations[-2]['onset']) + timedelta(minutes=30)
+        annotations.crop(start_crop, end_crop)
+        raw.set_annotations(annotations, emit_warning=False)
+        
     if config.normalize and config.preload:
         raw.apply_function(lambda x: (x-np.mean(x))/np.std(x))
     sfreq = raw.info['sfreq']
