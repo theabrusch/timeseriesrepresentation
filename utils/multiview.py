@@ -75,7 +75,6 @@ class GNNMultiview(nn.Module):
                  channels, 
                  time_length, 
                  num_classes, 
-                 flatten = True,
                  norm = 'group', 
                  conv_do = 0.1,
                  feat_do = 0.1,
@@ -88,21 +87,14 @@ class GNNMultiview(nn.Module):
         self.channels = channels
         self.time_length = time_length
         self.num_classes = num_classes
-        self.flatten = flatten
         self.wave2vec = Wave2Vec(channels, input_shape = time_length, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers, norm = norm, do = conv_do)
 
-        if self.flatten:
-            out_dim = self.wave2vec.out_shape * out_dim
-            self.classifier = Classifier(in_features=out_dim, num_classes=num_classes)
-        else:
-            out_dim = out_dim
-            self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = channels, time_length = time_length)
 
+        out_dim = out_dim
+        self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = channels, time_length = time_length)
         self.state_dim = out_dim
-        self.flat = nn.Flatten()
         print('out_dim', out_dim)
         
-
         # Message passing layers (from_state, to_state) -> message
         self.message_nets = nn.ModuleList([
             nn.Sequential(
@@ -131,10 +123,7 @@ class GNNMultiview(nn.Module):
         idx = ~torch.eye(ch).view(1, ch, ch).repeat(b, 1, 1).bool()
         message_to = message_to[idx].view(-1).to(x.device)
 
-        if self.flatten:
-            latents = self.flat(latents)
-        else:
-            latents = latents.permute(0,2,1)
+        latents = latents.permute(0,2,1)
 
         for message_net in self.message_nets:
             message = message_net(torch.cat([latents[message_from], latents[message_to]], dim=-1))
@@ -145,8 +134,7 @@ class GNNMultiview(nn.Module):
         y.index_add_(0, view_id, latents)
         out = self.readout_net(y)
 
-        if not self.flatten:
-            out = out.permute(0,2,1)
+        out = out.permute(0,2,1)
 
         if classify:
             return self.classifier(out)

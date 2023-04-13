@@ -94,7 +94,7 @@ def main(args):
                 args.pretrain_epochs,
                 optimizer,
                 device,
-                time_loss = not args.flatten,
+                time_loss = args.loss == 'timeloss',
                 temperature = 0.5,
                 log = True)
         
@@ -180,7 +180,6 @@ if __name__ == '__main__':
     parser.add_argument('--seed_generator', type = eval, default = True)
 
     # model arguments
-    parser.add_argument('--flatten', type = eval, default = False)
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
     parser.add_argument('--encoder', type = str, default = 'wave2vec')
     parser.add_argument('--layers', type = int, default = 6)
@@ -202,6 +201,7 @@ if __name__ == '__main__':
     parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg
 
     # optimizer arguments
+    parser.add_argument('--loss', type = str, default = 'contrastive')
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--ft_learning_rate', type = float, default = 1e-3)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
