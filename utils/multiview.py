@@ -215,6 +215,7 @@ class GNNMultiview(nn.Module):
                 val_loss += loss.item()
                 val_inst += inst_loss.item()
                 val_temp += temp_loss.item()
+
             if log:
                 log_dict = {'val_loss': val_loss/(i+1), 'train_loss': train_loss}
                 if time_loss:
@@ -235,6 +236,7 @@ class GNNMultiview(nn.Module):
                  optimizer,
                  weights,
                  device,
+                 test_loader = None, 
                  choose_best = True,
                  backup_path = None):
         self.to(device)
@@ -272,7 +274,27 @@ class GNNMultiview(nn.Module):
             acc = balanced_accuracy_score(collect_y, collect_pred)
             prec, rec, f, _ = precision_recall_fscore_support(collect_y, collect_pred)
 
-            wandb.log({'train_class_loss': train_loss, 'val_class_loss': val_loss/(i+1), 'val_acc': acc, 'val_prec': prec, 'val_rec': rec, 'val_f': f})
+            if test_loader is not None:
+                test_acc, test_prec, test_rec, test_f = self.evaluate_classifier(test_loader, device)
+                wandb.log({'train_class_loss': train_loss, 
+                           'val_class_loss': val_loss/(i+1), 
+                           'val_acc': acc, 
+                           'val_prec': np.mean(prec), 
+                           'val_rec': np.mean(rec), 
+                           'val_f': np.mean(f),
+                           'test_acc': test_acc,
+                           'test_prec': np.mean(test_prec),
+                           'test_rec': np.mean(test_rec),
+                           'test_f': np.mean(test_f)
+                           })
+            else:
+                wandb.log({'train_class_loss': train_loss, 
+                           'val_class_loss': val_loss/(i+1), 
+                           'val_acc': acc, 
+                           'val_prec': np.mean(prec), 
+                           'val_rec': np.mean(rec), 
+                           'val_f': np.mean(f)
+                           })
             if choose_best:
                 if acc > best_accuracy:
                     best_accuracy = acc
