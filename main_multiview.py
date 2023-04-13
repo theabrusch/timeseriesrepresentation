@@ -148,6 +148,7 @@ def main(args):
                  optimizer,
                  weights,
                  device,
+                 test_loader = test_loader if args.track_test_performance else None,
                  choose_best = args.choose_best,
         )
 
@@ -202,6 +203,7 @@ if __name__ == '__main__':
 
     # optimizer arguments
     parser.add_argument('--loss', type = str, default = 'contrastive')
+    parser.add_argument('--track_test_performance', type = eval, default = False)
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--ft_learning_rate', type = float, default = 1e-3)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)
