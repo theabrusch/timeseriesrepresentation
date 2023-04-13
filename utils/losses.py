@@ -106,8 +106,8 @@ class ContrastiveLoss(torch.nn.Module):
         batch_size = zis.shape[0]
         if len(zis.shape) > 2:
             # flatten
-            zis = zis.view(batch_size, -1)
-            zjs = zjs.view(batch_size, -1)
+            zis = zis.reshape(batch_size, -1)
+            zjs = zjs.reshape(batch_size, -1)
         
         
         representations = torch.cat([zjs, zis], dim=0)
