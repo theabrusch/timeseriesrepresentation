@@ -4,7 +4,6 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import WeightedRandomSampler
 import os
 import glob
-from utils.losses import ContrastiveLoss, TS2VecLoss
 import json
 import mne 
 from dn3.configuratron import ExperimentConfig
