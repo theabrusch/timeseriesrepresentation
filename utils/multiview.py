@@ -82,19 +82,25 @@ class Multiview(nn.Module):
         super().__init__()
         self.channels = channels
         self.num_classes = num_classes
+        self.out_dim = out_dim
         self.wave2vec = Wave2Vec(channels, input_shape = 33, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers, norm = 'group', do = conv_do)
         self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = orig_channels)
     
     def forward(self, x, classify = False):
         b, ch, ts = x.shape
         x = x.view(b*ch, 1, ts)
-
         x = self.wave2vec(x)
-        x = x.view(b, ch, -1)
-
+        time_out = x.shape[-1]
+        x = x.view(b, ch, self.out_dim, time_out)
         if classify:
             return self.classifier(x)
         return x
+
+    def train_step(self, x, loss_fn, device):
+        x = x.to(device)
+        out = self.forward(x)
+        out = out.reshape(out.shape[0], out.shape[1], -1)
+        return loss_fn(out.permute(1, 0, 2)), *[torch.tensor(0)]*2
 
 
 class GNNMultiview(nn.Module):

@@ -76,14 +76,14 @@ def main(args):
         if args.loss == 'timeloss':
             loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
         else:
-            loss_fn = ContrastiveLoss(device, temperature = 0.5).to(device)
+            loss_fn = ContrastiveLoss(device, tau = 0.5).to(device)
     elif args.pretraining_setup in ['COCOA', 'CMC']:
         model = Multiview(channels = channels, orig_channels=orig_channels, time_length = time_length, num_classes = num_classes, norm = norm, **vars(args))
         if args.pretraining_setup == 'COCOA':
             loss_fn = COCOAloss(temperature = 0.5).to(device)
         elif args.pretraining_setup == 'CMC':
-            loss_fn = CMCloss(temperature = 0.5).to(device)
-            
+            loss_fn = CMCloss(device, temperature = 0.5).to(device)
+
     model.to(device)
     
     if args.load_model:
