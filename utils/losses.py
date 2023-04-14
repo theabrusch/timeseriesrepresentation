@@ -151,14 +151,15 @@ def compute_weights(targets):
     return torch.tensor(weights).float()
 
 class COCOAloss(torch.nn.Module):
-    def __init__(self, temperature, lambda_):
+    def __init__(self, temperature):
         super(COCOAloss, self).__init__()
         self.temperature = temperature
-        self.lambda_ = lambda_
         self.criterion = torch.nn.CrossEntropyLoss(reduction="sum")
 
     def forward(self, z):
         batch_size, view_size = z.shape[1], z.shape[0]
+        z = z.reshape([view_size, batch_size, -1])
+
         pos_error = []
         for i in range(batch_size):
             sim = torch.matmul(z[:, i, :], z[:, i, :].T)
@@ -181,3 +182,20 @@ class COCOAloss(torch.nn.Module):
         error = self.criterion(y_pred=logits, y_true=lbl)
         return error
 
+class CMCloss(torch.nn.Module):
+    def __init__(self, device, temperature):
+        super(CMCloss, self).__init__()
+        self.criterion = ContrastiveLoss(device, temperature)
+
+    def forward(self, z):
+        view_size = z.shape[0]
+
+        loss = torch.Tensor([0]).to(z.device)
+        for i in range(z.shape[0]):
+            for j in range(z.shape[0]):
+                if i != j:
+                    loss += self.criterion(z[i], z[j])
+        
+        return loss / (view_size * (view_size - 1))
+        
+        
