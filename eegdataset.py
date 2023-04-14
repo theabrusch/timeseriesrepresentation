@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import WeightedRandomSampler
 import os
 import glob
-from datetime import timedelta
+from utils.losses import ContrastiveLoss, TS2VecLoss
 import json
 import mne 
 from dn3.configuratron import ExperimentConfig
@@ -66,7 +66,7 @@ def construct_eeg_datasets(data_path,
 
         if config.balanced_sampling:
             if seed_generator:
-                sample_weights, counts = fixed_label_balance(pretrain_dset)
+                sample_weights, counts = fixed_label_balance(pretrain_dset, sample_size = seed_generator)
             else:
                 sample_weights, counts = get_label_balance(pretrain_dset)
 
@@ -116,10 +116,10 @@ def construct_eeg_datasets(data_path,
         finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs)
         if config.balanced_sampling:
             if seed_generator:
-                sample_weights, counts = fixed_label_balance(finetune_train_dset)
+                sample_weights, length = fixed_label_balance(finetune_train_dset, sample_size = seed_generator)
             else:
-                sample_weights, counts = get_label_balance(finetune_train_dset)
-            finetune_sampler = WeightedRandomSampler(sample_weights, len(counts) * int(counts.min()), replacement=False)
+                sample_weights, length = get_label_balance(finetune_train_dset)
+            finetune_sampler = WeightedRandomSampler(sample_weights, length, replacement=False)
             finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler)
         else:
             finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, shuffle = True)
@@ -163,7 +163,7 @@ def divide_subjects(config, sample_train, sample_val, test_size = 0.2, subjects 
             val = np.random.choice(val, sample_val, replace=False)
     return train, val
 
-def fixed_label_balance(dataset):
+def fixed_label_balance(dataset, sample_size = None):
     """
     Given a dataset, sample a fixed balanced dataset
     Parameters
@@ -176,16 +176,20 @@ def fixed_label_balance(dataset):
     labels = dataset.dn3_dset.get_targets()
     labs, counts = np.unique(labels, return_counts=True)
     sample_weights = np.zeros(len(labels))
-    min_count = np.min(counts)
-    w = 1. / min_count
+    if isinstance(sample_size, int):
+        min_count = sample_size
+    else:
+        min_count = np.min(counts)
+    w = 1
     for i, lab in enumerate(labs):
         # randomly sample min_count examples from each class and
         # assign them a weight of 1/min_count
         idx = np.where(labels == lab)[0]
-        idx = np.random.choice(idx, min_count, replace=False)
+        samp = min_count if len(idx) > min_count else len(idx)
+        idx = np.random.choice(idx, samp, replace=False)
         sample_weights[idx] = w
 
-    return sample_weights, counts
+    return sample_weights, int(sum(sample_weights))
 
 def get_label_balance(dataset):
     """
@@ -202,7 +206,7 @@ def get_label_balance(dataset):
     train_weights = 1. / torch.tensor(counts, dtype=torch.float)
     sample_weights = train_weights[labels]
     class_freq = counts/counts.sum()
-    return sample_weights, counts
+    return sample_weights, len(counts) * int(counts.min())
 
 def load_thinkers(config, sample_subjects = False, subjects = None):
     if subjects is None:
