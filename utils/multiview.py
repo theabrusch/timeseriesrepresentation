@@ -69,6 +69,39 @@ class Wave2Vec(nn.Module):
         return self.convblocks(x)
 
 
+class Multiview(nn.Module):
+    def __init__(self, 
+                 channels,
+                 orig_channels,
+                 num_classes,
+                 conv_do = 0.1,
+                 hidden_channels = 256, 
+                 nlayers = 6,
+                 out_dim = 64,
+                 **kwargs):
+        super().__init__()
+        self.channels = channels
+        self.num_classes = num_classes
+        self.out_dim = out_dim
+        self.wave2vec = Wave2Vec(channels, input_shape = 33, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers, norm = 'group', do = conv_do)
+        self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = orig_channels)
+    
+    def forward(self, x, classify = False):
+        b, ch, ts = x.shape
+        x = x.view(b*ch, 1, ts)
+        x = self.wave2vec(x)
+        time_out = x.shape[-1]
+        x = x.view(b, ch, self.out_dim, time_out)
+        if classify:
+            return self.classifier(x)
+        return x
+
+    def train_step(self, x, loss_fn, device):
+        x = x.to(device)
+        out = self.forward(x)
+        out = out.reshape(out.shape[0], out.shape[1], -1)
+        return loss_fn(out.permute(1, 0, 2)), *[torch.tensor(0)]*2
+
 
 class GNNMultiview(nn.Module):
     def __init__(self, 
@@ -77,11 +110,12 @@ class GNNMultiview(nn.Module):
                  num_classes, 
                  norm = 'group', 
                  conv_do = 0.1,
-                 feat_do = 0.1,
+                 feat_do = 0.4,
                  num_message_passing_rounds = 2, 
                  hidden_channels = 256, 
                  nlayers = 6, 
                  out_dim = 64,
+                 loss = 'contrastive',
                  **kwargs):
         super().__init__()
         self.channels = channels
@@ -169,158 +203,151 @@ class GNNMultiview(nn.Module):
             return loss, *[torch.tensor(0)]*2
 
 
-    def fit(self, 
+def pretrain(model, 
             dataloader,
             val_dataloader,
             epochs,
             optimizer,
             device,
-            time_loss = False,
-            temperature = 0.5,
+            loss_fn,
             backup_path = None,
             log = True):
-        
-        if time_loss:
-            print('Using time contrastive loss')
-            loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
-        else:
-            print('Using contrastive loss')
-            loss_fn = ContrastiveLoss(device, temperature).to(device)
-        self.to(device)
-        for epoch in range(epochs):
-            epoch_loss = 0
-            epoch_inst = 0 
-            epoch_temp = 0
-            self.train()
-            for i, data in enumerate(dataloader):
-                x = data[0].to(device).float()
-                optimizer.zero_grad()
-                loss, inst_loss, temp_loss = self.train_step(x, loss_fn, device)
-                loss.backward()
-                optimizer.step()
-                epoch_loss += loss.item()
-                epoch_inst += inst_loss.item()
-                epoch_temp += temp_loss.item()
-            train_loss = epoch_loss/(i+1)
-            train_inst = epoch_inst/(i+1)
-            train_temp = epoch_temp/(i+1)
-
-            val_loss = 0
-            val_inst = 0 
-            val_temp = 0
-            self.eval()
-            for i, data in enumerate(val_dataloader):
-                x = data[0].to(device).float()
-                loss, inst_loss, temp_loss = self.train_step(x, loss_fn, device)
-                val_loss += loss.item()
-                val_inst += inst_loss.item()
-                val_temp += temp_loss.item()
-
-            if log:
-                log_dict = {'val_loss': val_loss/(i+1), 'train_loss': train_loss}
-                if time_loss:
-                    log_dict['train_inst_loss'] = train_inst
-                    log_dict['train_temp_loss'] = train_temp
-                    log_dict['val_inst_loss'] = val_inst/(i+1)
-                    log_dict['val_temp_loss'] = val_temp/(i+1)
-                wandb.log(log_dict)
-
-            if backup_path is not None:
-                path = f'{backup_path}/pretrained_model.pt'
-                torch.save(self.state_dict(), path)
     
-    def finetune(self,
-                 dataloader,
-                 val_dataloader,
-                 epochs,
-                 optimizer,
-                 weights,
-                 device,
-                 test_loader = None, 
-                 choose_best = True,
-                 backup_path = None):
-        self.to(device)
-        loss = nn.CrossEntropyLoss(weight=weights)
-        best_accuracy = 0
-        best_model = self.state_dict()
-        for epoch in range(epochs):
-            epoch_loss = 0
-            self.train()
-            for i, data in enumerate(dataloader):
-                x = data[0].to(device).float()
-                y = data[-1].to(device)
-                optimizer.zero_grad()
-                out = self.forward(x, classify = True)
-                loss_ = loss(out, y)
-                loss_.backward()
-                optimizer.step()
-                epoch_loss += loss_.item()
-            train_loss = epoch_loss/(i+1)
-            val_loss = 0
-            collect_y = []
-            collect_pred = []
+    model.to(device)
+    for epoch in range(epochs):
+        epoch_loss = 0
+        epoch_inst = 0 
+        epoch_temp = 0
+        model.train()
+        for i, data in enumerate(dataloader):
+            x = data[0].to(device).float()
+            optimizer.zero_grad()
+            loss, inst_loss, temp_loss = model.train_step(x, loss_fn, device)
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item()
+            epoch_inst += inst_loss.item()
+            epoch_temp += temp_loss.item()
+        train_loss = epoch_loss/(i+1)
+        train_inst = epoch_inst/(i+1)
+        train_temp = epoch_temp/(i+1)
 
-            self.eval()
-            for i, data in enumerate(val_dataloader):
-                x = data[0].to(device).float()
-                y = data[-1].to(device)
-                out = self.forward(x, classify = True)
-                loss_ = loss(out, y)
-                val_loss += loss_.item()
-                collect_y.append(y.detach().cpu().numpy())
-                collect_pred.append(out.argmax(dim=1).detach().cpu().numpy())
-            collect_y = np.concatenate(collect_y)
-            collect_pred = np.concatenate(collect_pred)
-            acc = balanced_accuracy_score(collect_y, collect_pred)
-            prec, rec, f, _ = precision_recall_fscore_support(collect_y, collect_pred)
+        val_loss = 0
+        val_inst = 0 
+        val_temp = 0
+        model.eval()
+        for i, data in enumerate(val_dataloader):
+            x = data[0].to(device).float()
+            loss, inst_loss, temp_loss = model.train_step(x, loss_fn, device)
+            val_loss += loss.item()
+            val_inst += inst_loss.item()
+            val_temp += temp_loss.item()
 
-            if test_loader is not None:
-                test_acc, test_prec, test_rec, test_f = self.evaluate_classifier(test_loader, device)
-                wandb.log({'train_class_loss': train_loss, 
-                           'val_class_loss': val_loss/(i+1), 
-                           'val_acc': acc, 
-                           'val_prec': np.mean(prec), 
-                           'val_rec': np.mean(rec), 
-                           'val_f': np.mean(f),
-                           'test_acc': test_acc,
-                           'test_prec': np.mean(test_prec),
-                           'test_rec': np.mean(test_rec),
-                           'test_f': np.mean(test_f)
-                           })
-            else:
-                wandb.log({'train_class_loss': train_loss, 
-                           'val_class_loss': val_loss/(i+1), 
-                           'val_acc': acc, 
-                           'val_prec': np.mean(prec), 
-                           'val_rec': np.mean(rec), 
-                           'val_f': np.mean(f)
-                           })
-            if choose_best:
-                if acc > best_accuracy:
-                    best_accuracy = acc
-                    best_model = copy.deepcopy(self.state_dict())
+        if log:
+            log_dict = {'val_loss': val_loss/(i+1), 'train_loss': train_loss}
+            if inst_loss > 0:
+                log_dict['train_inst_loss'] = train_inst
+                log_dict['train_temp_loss'] = train_temp
+                log_dict['val_inst_loss'] = val_inst/(i+1)
+                log_dict['val_temp_loss'] = val_temp/(i+1)
+            wandb.log(log_dict)
 
-            if backup_path is not None:
-                path = f'{backup_path}/finetuned_model.pt'
-                torch.save(self.state_dict(), path)
-
-        if choose_best:
-            self.load_state_dict(best_model)
-
-    def evaluate_classifier(self,
-                            test_loader,
-                            device):
-        self.eval()
-        collect_y = []
-        collect_pred = []
-        for i, data in enumerate(test_loader):
+        if backup_path is not None:
+            path = f'{backup_path}/pretrained_model.pt'
+            torch.save(model.state_dict(), path)
+    
+def finetune(model,
+            dataloader,
+            val_dataloader,
+            epochs,
+            optimizer,
+            weights,
+            device,
+            test_loader = None, 
+            choose_best = True,
+            backup_path = None):
+    model.to(device)
+    loss = nn.CrossEntropyLoss(weight=weights)
+    best_accuracy = 0
+    best_model = model.state_dict()
+    for epoch in range(epochs):
+        epoch_loss = 0
+        model.train()
+        for i, data in enumerate(dataloader):
             x = data[0].to(device).float()
             y = data[-1].to(device)
-            out = self.forward(x, classify = True)
+            optimizer.zero_grad()
+            out = model.forward(x, classify = True)
+            loss_ = loss(out, y)
+            loss_.backward()
+            optimizer.step()
+            epoch_loss += loss_.item()
+        train_loss = epoch_loss/(i+1)
+        val_loss = 0
+        collect_y = []
+        collect_pred = []
+
+        model.eval()
+        for i, data in enumerate(val_dataloader):
+            x = data[0].to(device).float()
+            y = data[-1].to(device)
+            out = model.forward(x, classify = True)
+            loss_ = loss(out, y)
+            val_loss += loss_.item()
             collect_y.append(y.detach().cpu().numpy())
             collect_pred.append(out.argmax(dim=1).detach().cpu().numpy())
         collect_y = np.concatenate(collect_y)
         collect_pred = np.concatenate(collect_pred)
         acc = balanced_accuracy_score(collect_y, collect_pred)
         prec, rec, f, _ = precision_recall_fscore_support(collect_y, collect_pred)
-        return acc, prec, rec, f
+
+        if test_loader is not None:
+            test_acc, test_prec, test_rec, test_f = evaluate_classifier(model, test_loader, device)
+            wandb.log({'train_class_loss': train_loss, 
+                        'val_class_loss': val_loss/(i+1), 
+                        'val_acc': acc, 
+                        'val_prec': np.mean(prec), 
+                        'val_rec': np.mean(rec), 
+                        'val_f': np.mean(f),
+                        'test_acc': test_acc,
+                        'test_prec': np.mean(test_prec),
+                        'test_rec': np.mean(test_rec),
+                        'test_f': np.mean(test_f)
+                        })
+        else:
+            wandb.log({'train_class_loss': train_loss, 
+                        'val_class_loss': val_loss/(i+1), 
+                        'val_acc': acc, 
+                        'val_prec': np.mean(prec), 
+                        'val_rec': np.mean(rec), 
+                        'val_f': np.mean(f)
+                        })
+        if choose_best:
+            if acc > best_accuracy:
+                best_accuracy = acc
+                best_model = copy.deepcopy(model.state_dict())
+
+        if backup_path is not None:
+            path = f'{backup_path}/finetuned_model.pt'
+            torch.save(model.state_dict(), path)
+
+    if choose_best:
+        model.load_state_dict(best_model)
+
+def evaluate_classifier(model,
+                        test_loader,
+                        device):
+    model.eval()
+    collect_y = []
+    collect_pred = []
+    for i, data in enumerate(test_loader):
+        x = data[0].to(device).float()
+        y = data[-1].to(device)
+        out = model.forward(x, classify = True)
+        collect_y.append(y.detach().cpu().numpy())
+        collect_pred.append(out.argmax(dim=1).detach().cpu().numpy())
+    collect_y = np.concatenate(collect_y)
+    collect_pred = np.concatenate(collect_pred)
+    acc = balanced_accuracy_score(collect_y, collect_pred)
+    prec, rec, f, _ = precision_recall_fscore_support(collect_y, collect_pred)
+    return acc, prec, rec, f

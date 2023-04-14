@@ -1,9 +1,10 @@
 import torch
 import argparse
-from utils.multiview import GNNMultiview
+from utils.multiview import GNNMultiview, Multiview, pretrain, finetune, evaluate_classifier
 from utils.dataset import get_datasets
 from eegdataset import construct_eeg_datasets
 from torch.optim import AdamW
+from utils.losses import ContrastiveLoss, TS2VecLoss, COCOAloss, CMCloss
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
 import os
@@ -70,7 +71,19 @@ def main(args):
     
     print('time', time_length, 'num classes', num_classes)
 
-    model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, norm = norm, **vars(args))
+    if args.pretraining_setup == 'GNN':
+        model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, norm = norm, **vars(args))
+        if args.loss == 'timeloss':
+            loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
+        else:
+            loss_fn = ContrastiveLoss(device, tau = 0.5).to(device)
+    elif args.pretraining_setup in ['COCOA', 'CMC']:
+        model = Multiview(channels = channels, orig_channels=orig_channels, time_length = time_length, num_classes = num_classes, norm = norm, **vars(args))
+        if args.pretraining_setup == 'COCOA':
+            loss_fn = COCOAloss(temperature = 0.5).to(device)
+        elif args.pretraining_setup == 'CMC':
+            loss_fn = CMCloss(device, temperature = 0.5).to(device)
+
     model.to(device)
     
     if args.load_model:
@@ -86,13 +99,13 @@ def main(args):
         print('Training model')
         time = datetime.datetime.now()
         # pretrain model
-        model.fit(pretrain_loader,
+        pretrain(model,
+                pretrain_loader,
                 pretrain_val_loader,
                 args.pretrain_epochs,
                 optimizer,
                 device,
-                time_loss = args.loss == 'timeloss',
-                temperature = 0.5,
+                loss_fn = loss_fn,
                 log = True)
         
         time2 = datetime.datetime.now()    
@@ -138,7 +151,7 @@ def main(args):
         
         wandb.config.update({'Target distribution': np.unique(targets, return_counts=True)[-1]})
 
-        model.finetune(
+        finetune(model,
                  finetune_loader,
                  finetune_val_loader,
                  args.finetune_epochs,
@@ -149,7 +162,7 @@ def main(args):
                  choose_best = args.choose_best,
         )
 
-        accuracy, prec, rec, f = model.evaluate_classifier(test_loader, device)
+        accuracy, prec, rec, f = evaluate_classifier(model, test_loader, device)
         wandb.config.update({'Test accuracy': accuracy, 'Test precision': prec, 'Test recall': rec, 'Test f1': f})
         print('test accuracy', accuracy)
         print('test precision', prec)
@@ -170,12 +183,13 @@ if __name__ == '__main__':
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
+    parser.add_argument('--pretraining_setup', type = str, default = 'GNN')
 
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
-    parser.add_argument('--seed_generator', type = eval, default = True)
+    parser.add_argument('--seed_generator', type = eval, default = '100')
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
