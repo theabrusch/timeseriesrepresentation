@@ -1,1 +1,1 @@
-rsync -Pav -a /Users/theb/Desktop/sleep_edf/mne_files --rsh=ssh theb@transfer.gbar.dtu.dk:/work3/theb/timeseries/
+rsync -Pav -a /Users/theb/Documents/PhD/code/alignement_of_representations/data/features/humanactivity_prefinetuning/layer_5/ --rsh=ssh theb@transfer.gbar.dtu.dk:/work3/theb/alignment/data/features/humanactivity_prefinetuning/layer_5/
