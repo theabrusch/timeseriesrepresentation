@@ -185,17 +185,35 @@ class COCOAloss(torch.nn.Module):
 class CMCloss(torch.nn.Module):
     def __init__(self, device, temperature):
         super(CMCloss, self).__init__()
-        self.criterion = ContrastiveLoss(device, temperature)
+        self.criterion = torch.nn.CrossEntropyLoss(reduction="mean")
+        self.temperature = temperature
 
     def forward(self, z):
-        view_size = z.shape[0]
+        batch_size, dim_size = z.shape[1], z.shape[0]
+        z = F.normalize(z, dim = -1)
+        # Positive Pairs
+        pos_error = []
+        for i in range(batch_size):
+            sim = torch.exp(torch.matmul(z[:,i,:], z[:,i,:].transpose(0, 1)) / self.temperature)
+            tri_mask = torch.ones((dim_size, dim_size), dtype=torch.bool)
+            tri_mask.fill_diagonal_(0)
+            off_diag_sim = sim.masked_select(tri_mask)
+            off_diag_sim = off_diag_sim.reshape(dim_size, dim_size - 1)
+            pos_error.append(off_diag_sim.sum())
 
-        loss = torch.Tensor([0]).to(z.device)
-        for i in range(z.shape[0]):
-            for j in range(z.shape[0]):
-                if i != j:
-                    loss += self.criterion(z[i], z[j])
-        
-        return loss / (view_size * (view_size - 1))
+        # Negative pairs
+        neg_error = 0
+        for i in range(dim_size):
+            sim = torch.exp(torch.matmul(z[i], z[i].transpose(0, 1)) / self.temperature)
+            tri_mask = torch.ones((batch_size, batch_size), dtype=torch.bool)
+            tri_mask.fill_diagonal_(0)
+            off_diag_sim = sim.masked_select(tri_mask)
+            off_diag_sim = off_diag_sim.reshape(batch_size, batch_size - 1)
+            neg_error += off_diag_sim.mean(dim=-1)
+
+        logits = torch.stack(pos_error) / (torch.stack(pos_error) + neg_error)
+        lbl = torch.ones(batch_size)
+        error = self.criterion(logits, lbl)
+        return error
         
         

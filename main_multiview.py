@@ -183,7 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
-    parser.add_argument('--pretraining_setup', type = str, default = 'GNN')
+    parser.add_argument('--pretraining_setup', type = str, default = 'CMC')
 
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
