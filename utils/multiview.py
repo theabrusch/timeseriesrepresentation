@@ -96,10 +96,14 @@ class Multiview(nn.Module):
             return self.classifier(x)
         return x
 
+    def update_classifier(self, num_classes, orig_channels):
+        self.classifier = TimeClassifier(in_features = self.out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = orig_channels), 
+
     def train_step(self, x, loss_fn, device):
         x = x.to(device)
         out = self.forward(x)
         out = out.reshape(out.shape[0], out.shape[1], -1)
+
         return loss_fn(out.permute(1, 0, 2)), *[torch.tensor(0)]*2
 
 

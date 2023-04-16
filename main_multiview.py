@@ -78,7 +78,7 @@ def main(args):
         else:
             loss_fn = ContrastiveLoss(device, tau = 0.5).to(device)
     elif args.pretraining_setup in ['COCOA', 'CMC']:
-        model = Multiview(channels = channels, orig_channels=orig_channels, time_length = time_length, num_classes = num_classes, norm = norm, **vars(args))
+        model = Multiview(channels = channels, orig_channels=6, time_length = time_length, num_classes = num_classes, norm = norm, **vars(args))
         if args.pretraining_setup == 'COCOA':
             loss_fn = COCOAloss(temperature = 0.5).to(device)
         elif args.pretraining_setup == 'CMC':
@@ -138,7 +138,7 @@ def main(args):
         else:
             optimizer = AdamW(model.classifier.parameters(), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
 
-        
+        model.update_classifier(num_classes, orig_channels=orig_channels)
         if 'eeg' in args.data_path:
             targets = finetune_loader.dataset.dn3_dset.get_targets()
         else:
@@ -177,7 +177,7 @@ if __name__ == '__main__':
     # training arguments
     parser.add_argument('--save_model', type = eval, default = False)
     parser.add_argument('--load_model', type = eval, default = False)
-    parser.add_argument('--pretrain', type = eval, default = True)
+    parser.add_argument('--pretrain', type = eval, default = False)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
