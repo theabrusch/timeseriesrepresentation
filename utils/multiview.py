@@ -97,7 +97,7 @@ class Multiview(nn.Module):
         return x
 
     def update_classifier(self, num_classes, orig_channels):
-        self.classifier = TimeClassifier(in_features = self.out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = orig_channels), 
+        self.classifier = TimeClassifier(in_features = self.out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = orig_channels)
 
     def train_step(self, x, loss_fn, device):
         x = x.to(device)
