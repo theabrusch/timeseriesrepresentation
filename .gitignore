@@ -5,3 +5,4 @@ logs/*
 *.pickle
 *.png
 wandb/*
+timeseries-env/*
