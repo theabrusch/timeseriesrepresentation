@@ -102,9 +102,7 @@ class Multiview(nn.Module):
     def train_step(self, x, loss_fn, device):
         x = x.to(device)
         out = self.forward(x)
-        out = out.reshape(out.shape[0], out.shape[1], -1)
-
-        return loss_fn(out.permute(1, 0, 2)), *[torch.tensor(0)]*2
+        return loss_fn(out), *[torch.tensor(0)]*2
 
 
 class GNNMultiview(nn.Module):
@@ -200,7 +198,9 @@ class GNNMultiview(nn.Module):
         view_2 = self.take_channel(x, torch.tensor(view_2_idx).to(device))
         out1 = self.forward(view_1)
         out2 = self.forward(view_2)
-        loss = loss_fn(out1, out2)
+
+        out = torch.cat([out1.unsqueeze(1), out2.unsqueeze(1)], dim = 1)
+        loss = loss_fn(out)
         if isinstance(loss, tuple):
             return loss
         else:
@@ -360,10 +360,13 @@ def evaluate_classifier(model,
 def load_model(pretraining_setup, device, channels, time_length, num_classes, model_args):
     if pretraining_setup == 'GNN':
         model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
-        if model_args.loss == 'timeloss':
+        if model_args.loss == 'time_loss':
             loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
-        else:
+        elif model_args.loss == 'contrastive':
             loss_fn = ContrastiveLoss(device, tau = 0.5).to(device)
+        elif model_args.loss == 'COCOA':
+            loss_fn = COCOAloss(temperature = 0.5).to(device)
+
     elif pretraining_setup in ['COCOA', 'CMC']:
         model = Multiview(channels = channels, orig_channels=6, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
         if pretraining_setup == 'COCOA':

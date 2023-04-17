@@ -120,13 +120,13 @@ if __name__ == '__main__':
     # training arguments
     parser.add_argument('--save_model', type = eval, default = False)
     parser.add_argument('--load_model', type = eval, default = False)
-    parser.add_argument('--pretrain', type = eval, default = False)
+    parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
-    parser.add_argument('--finetune', type = eval, default = True)
+    parser.add_argument('--finetune', type = eval, default = False)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
-    parser.add_argument('--pretraining_setup', type = str, default = 'CMC')
+    parser.add_argument('--pretraining_setup', type = str, default = 'GNN')
 
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
