@@ -115,15 +115,37 @@ def construct_eeg_datasets(data_path,
         finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs)
         if config.balanced_sampling:
             if seed_generator:
-                sample_weights, length = fixed_label_balance(finetune_train_dset, sample_size = seed_generator)
+                # compute sample weights for train and val sets
+                sample_weights_train, length_train = fixed_label_balance(finetune_train_dset, sample_size = seed_generator)
+                if isinstance(seed_generator, list):
+                    val_seed_generator = [int(sg*0.2) for sg in seed_generator]
+                elif isinstance(seed_generator, int):
+                    val_seed_generator = int(seed_generator*0.2)
+
+                sample_weights_val, length_val = fixed_label_balance(finetune_val_dset, sample_size = val_seed_generator)
             else:
-                sample_weights, length = get_label_balance(finetune_train_dset)
-            finetune_sampler = WeightedRandomSampler(sample_weights, length, replacement=False)
-            finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler)
+                sample_weights_train, length_train = get_label_balance(finetune_train_dset)
+                sample_weights_val, length_val = get_label_balance(finetune_val_dset)
+            if sample_weights_train.shape[1] == 1:
+                finetune_sampler = WeightedRandomSampler(sample_weights_train[:,0], int(length_train[0]), replacement=False)
+                finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler)
+
+                finetune_val_sampler = WeightedRandomSampler(sample_weights_val[:,0], int(length_val[0]), replacement=False)
+                finetune_val_loader = DataLoader(finetune_val_dset, batch_size=target_batchsize, sampler=finetune_val_sampler)
+            else:
+                # create a sampler and a dataloader for each sampleweight
+                finetune_loader = []
+                finetune_val_loader = []
+                for i in range(sample_weights_train.shape[1]):
+                    finetune_sampler = WeightedRandomSampler(sample_weights_train[:,i], int(length_train[i]), replacement=False)
+                    finetune_loader.append(DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler))
+
+                    finetune_val_sampler = WeightedRandomSampler(sample_weights_val[:,i], int(length_val[i]), replacement=False)
+                    finetune_val_loader.append(DataLoader(finetune_val_dset, batch_size=target_batchsize, sampler=finetune_val_sampler))
         else:
             finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, shuffle = True)
-
-        finetune_val_loader = DataLoader(finetune_val_dset, batch_size=target_batchsize, shuffle = True)
+            finetune_val_loader = DataLoader(finetune_val_dset, batch_size=target_batchsize, shuffle = True)
+        
         # get test set
         print('Loading test data')
         config.balanced_sampling = False
@@ -174,21 +196,25 @@ def fixed_label_balance(dataset, sample_size = None):
     """
     labels = dataset.dn3_dset.get_targets()
     labs, counts = np.unique(labels, return_counts=True)
-    sample_weights = np.zeros(len(labels))
     if isinstance(sample_size, int):
+        min_count = [sample_size]
+    elif isinstance(sample_size, list):
         min_count = sample_size
     else:
-        min_count = np.min(counts)
+        min_count = [np.min(counts)]
     w = 1
-    for i, lab in enumerate(labs):
-        # randomly sample min_count examples from each class and
-        # assign them a weight of 1/min_count
-        idx = np.where(labels == lab)[0]
-        samp = min_count if len(idx) > min_count else len(idx)
-        idx = np.random.choice(idx, samp, replace=False)
-        sample_weights[idx] = w
 
-    return sample_weights, int(sum(sample_weights))
+    sample_weights = np.zeros((len(labels), len(min_count)))
+    for i, lab in enumerate(labs):
+        for j, samp in enumerate(min_count):
+            # randomly sample min_count examples from each class and
+            # assign them a weight of 1/min_count
+            idx = np.where(labels == lab)[0]
+            samp = samp if len(idx) > samp else len(idx)
+            idx = np.random.choice(idx, samp, replace=False)
+            sample_weights[idx, j] = w
+
+    return sample_weights, sample_weights.sum(axis = 0)
 
 def get_label_balance(dataset):
     """
