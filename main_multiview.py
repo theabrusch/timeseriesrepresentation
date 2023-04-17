@@ -1,6 +1,6 @@
 import torch
 import argparse
-from utils.multiview import GNNMultiview, Multiview, pretrain, finetune, evaluate_classifier
+from utils.multiview import load_model, pretrain, finetune, evaluate_classifier
 from utils.dataset import get_datasets
 from eegdataset import construct_eeg_datasets
 from torch.optim import AdamW
@@ -33,71 +33,38 @@ def main(args):
     if not args.multi_channel_setup == 'sample_channel' and args.encoder == 'wave2vec' and args.pretrain:
         raise ValueError('Wave2Vec encoder is only available for multi-channel setup.')
 
-    if 'eeg' in args.data_path or 'edf' in args.data_path:
-         dset = args.data_path.split('/')[-1].strip('.yml')
-    else:
-        dset = args.data_path.split('/')[-2]
-    #device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    dset = args.data_path.split('/')[-1].strip('.yml')
     output_path = f'{args.output_path}/MultiView_{dset}_pretrain_{args.pretrain}_pretrain_subjs_{args.sample_pretrain_subjects}_multi_channel_setup_{args.multi_channel_setup}'
     
     output_path = check_output_path(output_path)
     args.outputh_path = output_path
-    wandb.init(project = 'MultiView', config = args)
         
     print('Saving outputs in', output_path)
 
-    if 'eeg' in args.data_path:
-        args.train_mode = 'pretrain' if args.pretrain and not args.finetune else 'finetune' if args.finetune and not args.pretrain else 'both'
-        args.standardize_epochs = 'channelwise'
-        pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
-    else:
-        args.ssl_mode = 'TS2Vec'
-        args.downsample = False
-        args.sample_channel = False
-        pretrain_loader, pretrain_val_loader, test_loader, (channels, time_length, num_classes) = get_datasets(**vars(args))
-        finetune_loader = pretrain_loader
-        finetune_val_loader = pretrain_val_loader
+    args.train_mode = 'pretrain' if args.pretrain and not args.finetune else 'finetune' if args.finetune and not args.pretrain else 'both'
+    args.standardize_epochs = 'channelwise'
+    pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
     orig_channels = channels
     if args.multi_channel_setup == 'sample_channel' or args.multi_channel_setup == 'avg_ch':
         orig_channels = channels
         channels = 1
-        
-    if device.type == 'mps':
-        norm = 'batch'
-    else:
-        norm = 'group'
     
-    print('time', time_length, 'num classes', num_classes)
-
-    if args.pretraining_setup == 'GNN':
-        model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, norm = norm, **vars(args))
-        if args.loss == 'timeloss':
-            loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
-        else:
-            loss_fn = ContrastiveLoss(device, tau = 0.5).to(device)
-    elif args.pretraining_setup in ['COCOA', 'CMC']:
-        model = Multiview(channels = channels, orig_channels=6, time_length = time_length, num_classes = num_classes, norm = norm, **vars(args))
-        if args.pretraining_setup == 'COCOA':
-            loss_fn = COCOAloss(temperature = 0.5).to(device)
-        elif args.pretraining_setup == 'CMC':
-            loss_fn = CMCloss(device, temperature = 0.5).to(device)
-
-    model.to(device)
+    # group norm doesn't work with MPS
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
+    model, loss_fn = load_model(args.pretraining_setup, device, channels, time_length, num_classes, args)
+
     if args.load_model:
         model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
 
+    wandb.init(project = 'MultiView', group = args.pretraining_setup, config = args)
+
     if args.pretrain:
-        # get datasets
-        print('Initializing model')
         wandb.config.update({'Pretrain samples': len(pretrain_loader.dataset), 'Pretrain validation samples': len(pretrain_val_loader.dataset)})
         
         optimizer = AdamW(model.parameters(), lr = args.learning_rate, weight_decay=args.weight_decay)
 
-        print('Training model')
-        time = datetime.datetime.now()
         # pretrain model
         pretrain(model,
                 pretrain_loader,
@@ -105,31 +72,16 @@ def main(args):
                 args.pretrain_epochs,
                 optimizer,
                 device,
+                backup_path=output_path,
                 loss_fn = loss_fn,
                 log = True)
-        
-        time2 = datetime.datetime.now()    
-        print('Pre-training for', args.pretrain_epochs,'epochs took', time2-time, 's.')
 
         if args.save_model:
             model.eval()
             path = f'{output_path}/pretrained_model.pt'
             torch.save(model.state_dict(), path)
-    #if args.evaluate_latent_space:
-    #    print('Evaluating latent space')
-    #    train_outputs = model.evaluate_latent_space(finetune_loader, device=device, maxpool=True)
-    #   val_outputs = model.evaluate_latent_space(finetune_val_loader, device=device, maxpool=True)
-    #    test_outputs = model.evaluate_latent_space(test_loader, device=device, maxpool=True)
-
-    #    with open(f'{output_path}/pretrain_latents.pickle', 'wb') as file:
-    #            pickle.dump(train_outputs, file)
-    #    with open(f'{output_path}/pretrain_val_latents.pickle', 'wb') as file:
-    #            pickle.dump(val_outputs, file)
-    #    with open(f'{output_path}/pretrain_test_latents.pickle', 'wb') as file:
-    #            pickle.dump(test_outputs, file)
 
     if args.finetune:
-        print('Finetuning model')
 
         wandb.config.update({'Finetune samples': len(finetune_loader.dataset), 'Finetune validation samples': len(finetune_val_loader.dataset), 'Test samples': len(test_loader.dataset)})
 
@@ -140,11 +92,8 @@ def main(args):
         if args.pretraining_setup != 'GNN':
             model.update_classifier(num_classes, orig_channels=orig_channels)
             model.to(device)
-        if 'eeg' in args.data_path:
-            targets = finetune_loader.dataset.dn3_dset.get_targets()
-        else:
-            targets = finetune_loader.dataset.Y
 
+        targets = finetune_loader.dataset.dn3_dset.get_targets()
         if not args.balanced_sampling == 'finetune' or args.balanced_sampling == 'both':
             weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float().to(device)
         else:
@@ -165,13 +114,6 @@ def main(args):
 
         accuracy, prec, rec, f = evaluate_classifier(model, test_loader, device)
         wandb.config.update({'Test accuracy': accuracy, 'Test precision': prec, 'Test recall': rec, 'Test f1': f})
-        print('test accuracy', accuracy)
-        print('test precision', prec)
-        print('test recall', rec)
-        print('test f1', f)
-
-        
-    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -190,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
-    parser.add_argument('--seed_generator', type = eval, default = '100')
+    parser.add_argument('--seed_generator', type = eval, default = '[10,20]')
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
@@ -215,7 +157,7 @@ if __name__ == '__main__':
 
     # optimizer arguments
     parser.add_argument('--loss', type = str, default = 'contrastive')
-    parser.add_argument('--track_test_performance', type = eval, default = False)
+    parser.add_argument('--track_test_performance', type = eval, default = True)
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--ft_learning_rate', type = float, default = 1e-3)
     parser.add_argument('--weight_decay', type = float, default = 5e-4)

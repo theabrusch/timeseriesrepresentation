@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from utils.models import wave2vecblock
 import numpy as np
 from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support
-from utils.losses import ContrastiveLoss, TS2VecLoss
+from utils.losses import ContrastiveLoss, TS2VecLoss, COCOAloss, CMCloss
 import wandb
 import copy
 
@@ -355,3 +355,20 @@ def evaluate_classifier(model,
     acc = balanced_accuracy_score(collect_y, collect_pred)
     prec, rec, f, _ = precision_recall_fscore_support(collect_y, collect_pred)
     return acc, prec, rec, f
+
+
+def load_model(pretraining_setup, device, channels, time_length, num_classes, model_args):
+    if pretraining_setup == 'GNN':
+        model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
+        if model_args.loss == 'timeloss':
+            loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
+        else:
+            loss_fn = ContrastiveLoss(device, tau = 0.5).to(device)
+    elif pretraining_setup in ['COCOA', 'CMC']:
+        model = Multiview(channels = channels, orig_channels=6, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
+        if pretraining_setup == 'COCOA':
+            loss_fn = COCOAloss(temperature = 0.5).to(device)
+        elif pretraining_setup == 'CMC':
+            loss_fn = CMCloss(device, temperature = 0.5).to(device)
+    
+    return model, loss_fn
