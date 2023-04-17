@@ -137,9 +137,9 @@ def main(args):
             optimizer = AdamW(model.parameters(), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
         else:
             optimizer = AdamW(model.classifier.parameters(), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
-
-        model.update_classifier(num_classes, orig_channels=orig_channels)
-        model.to(device)
+        if args.pretraining_setup != 'GNN':
+            model.update_classifier(num_classes, orig_channels=orig_channels)
+            model.to(device)
         if 'eeg' in args.data_path:
             targets = finetune_loader.dataset.dn3_dset.get_targets()
         else:
