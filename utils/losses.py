@@ -226,5 +226,4 @@ class CMCloss(torch.nn.Module):
         logits = torch.stack(pos_error) / (torch.stack(pos_error) + neg_error)
         lbl = torch.ones(batch_size).to(self.device)
         error = self.criterion(logits, lbl)
-        return error / batch_size
-        
+        return error 
