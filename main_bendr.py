@@ -103,11 +103,12 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # training arguments
+    parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
+    parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--no_save', type = eval, default = False)
     parser.add_argument('--load_model', type = eval, default = False)
     parser.add_argument('--num-workers', default=6, type=int)
-    parser.add_argument('--resume', default=None, type=int, help="Whether to continue training the encoder from the "
-                                                                 "specified epoch.")
+    parser.add_argument('--resume', default=None, type=int)
 
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
@@ -118,8 +119,6 @@ if __name__ == '__main__':
     parser.add_argument('--pretraining_setup', type = str, default = 'GNN')
 
     # data arguments
-    parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
-    parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
     parser.add_argument('--seed_generator', type = eval, default = '[10,20]')
 
