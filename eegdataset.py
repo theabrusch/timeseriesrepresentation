@@ -8,6 +8,7 @@ import json
 import mne 
 from dn3.configuratron import ExperimentConfig
 from dn3.data.dataset import EpochTorchRecording, Thinker, Dataset, DatasetInfo
+from dn3.transforms.instance import To1020
 import numpy as np
 from sklearn.model_selection import train_test_split
 import warnings
@@ -101,6 +102,8 @@ def construct_eeg_datasets(data_path,
             config.chunk_duration = str(config.tlen)
             finetunesubjects = splits['finetune']
             test_subjects = splits['test']
+        info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
+                            targets=config._targets if config._targets is not None else len(config._unique_events))
         print('Loading finetuning data')
         train_subjs, val_subjs = divide_subjects(config, sample_finetune_train_subjects, sample_finetune_val_subjects, subjects = finetunesubjects, test_size=config.val_size)
         finetune_train_thinkers = load_thinkers(config, sample_subjects=False, subjects = train_subjs)
@@ -362,9 +365,6 @@ class EEG_dataset(TorchDataset):
             elif self.standardize_epochs == 'channelwise':
                 signal = (signal-torch.mean(signal, axis = 1)[:,np.newaxis])/torch.std(signal, axis = 1)[:,np.newaxis]
 
-        fft = torch.fft.fft(signal, axis = -1).abs()
-        if not self.fine_tune_mode:
-            time_aug, freq_aug = self._perform_augmentations(signal, fft)
-            return signal, fft, time_aug, freq_aug, label
-        else:
-            return signal, fft, label
+        #fft = torch.fft.fft(signal, axis = -1).abs()
+    
+        return signal, label
