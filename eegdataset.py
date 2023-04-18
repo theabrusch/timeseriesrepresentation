@@ -118,9 +118,9 @@ def construct_eeg_datasets(data_path,
                 # compute sample weights for train and val sets
                 sample_weights_train, length_train = fixed_label_balance(finetune_train_dset, sample_size = seed_generator)
                 if isinstance(seed_generator, list):
-                    val_seed_generator = [int(sg*0.2) for sg in seed_generator]
+                    val_seed_generator = [int(sg*1) for sg in seed_generator]
                 elif isinstance(seed_generator, int):
-                    val_seed_generator = int(seed_generator*0.2)
+                    val_seed_generator = int(seed_generator*1)
 
                 sample_weights_val, length_val = fixed_label_balance(finetune_val_dset, sample_size = val_seed_generator)
             else:
