@@ -50,7 +50,6 @@ def main(args):
         orig_channels = channels
         channels = 1
     
-    # group norm doesn't work with MPS
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     model, loss_fn = load_model(args.pretraining_setup, device, channels, time_length, num_classes, args)
@@ -122,7 +121,7 @@ if __name__ == '__main__':
     parser.add_argument('--load_model', type = eval, default = False)
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
-    parser.add_argument('--finetune', type = eval, default = False)
+    parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
@@ -156,7 +155,7 @@ if __name__ == '__main__':
     parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg
 
     # optimizer arguments
-    parser.add_argument('--loss', type = str, default = 'contrastive')
+    parser.add_argument('--loss', type = str, default = 'CMC')
     parser.add_argument('--track_test_performance', type = eval, default = True)
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--ft_learning_rate', type = float, default = 1e-3)

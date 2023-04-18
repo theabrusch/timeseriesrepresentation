@@ -191,11 +191,13 @@ class GNNMultiview(nn.Module):
     def train_step(self, x, loss_fn, device):
         # partition the dataset into two views
         ch_size = np.random.randint(2, x.size(1)-1)
-        random_channels = np.random.rand(x.size(0), x.size(1)).argpartition(ch_size,axis=1)
-        view_1_idx = random_channels[:,:ch_size] # randomly select ch_size channels per input
-        view_2_idx = random_channels[:,ch_size:] # take the remaining as the second view
-        view_1 = self.take_channel(x, torch.tensor(view_1_idx).to(device))
-        view_2 = self.take_channel(x, torch.tensor(view_2_idx).to(device))
+        random_channels = np.random.rand(x.size(1)).argpartition(x.size(1)-1)
+        view_1_idx = random_channels[:ch_size] # randomly select ch_size channels per input
+        view_2_idx = random_channels[ch_size:] # take the remaining as the second view
+        #view_1 = self.take_channel(x, torch.tensor(view_1_idx).to(device))
+        #view_2 = self.take_channel(x, torch.tensor(view_2_idx).to(device))
+        view_1 = x[:, view_1_idx, :]
+        view_2 = x[:, view_2_idx, :]
         out1 = self.forward(view_1)
         out2 = self.forward(view_2)
 
@@ -360,18 +362,16 @@ def evaluate_classifier(model,
 def load_model(pretraining_setup, device, channels, time_length, num_classes, model_args):
     if pretraining_setup == 'GNN':
         model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
-        if model_args.loss == 'time_loss':
-            loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
-        elif model_args.loss == 'contrastive':
-            loss_fn = ContrastiveLoss(device, tau = 0.5).to(device)
-        elif model_args.loss == 'COCOA':
-            loss_fn = COCOAloss(temperature = 0.5).to(device)
-
-    elif pretraining_setup in ['COCOA', 'CMC']:
+    elif pretraining_setup == 'COCOA':
         model = Multiview(channels = channels, orig_channels=6, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
-        if pretraining_setup == 'COCOA':
-            loss_fn = COCOAloss(temperature = 0.5).to(device)
-        elif pretraining_setup == 'CMC':
-            loss_fn = CMCloss(device, temperature = 0.5).to(device)
-    
+        
+    if model_args.loss == 'time_loss':
+        loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
+    elif model_args.loss == 'contrastive':
+        loss_fn = ContrastiveLoss(device, tau = 0.5).to(device)
+    elif model_args.loss == 'COCOA':
+        loss_fn = COCOAloss(temperature = 0.5).to(device)
+    elif model_args.loss == 'CMC':
+        loss_fn = CMCloss(device, temperature = 0.5).to(device)
+
     return model, loss_fn
