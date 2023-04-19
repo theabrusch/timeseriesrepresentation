@@ -146,16 +146,3 @@ class CMCloss(torch.nn.Module):
                 d += 1
         return loss/d
 
-
-
-
-    
-
-
-temp1 = torch.randn(4, 4)
-temp2 = torch.randn(4, 4)
-loss = ContrastiveLoss(device = 'cpu', tau = 0.1)
-loss2 = ContrastiveLoss2(temperature=0.1)
-
-loss(temp1, temp2)
-loss2(temp1, temp2)
