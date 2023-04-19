@@ -2,21 +2,36 @@ Configuratron:
   preload: True
 
 use_gpu: False
-deep1010: False
+deep1010: True
 
 datasets:
   sleepedf:
     name: "sleepedf"
-    toplevel: '/Users/theb/Desktop/sleep_edf/mne_files/'
+    toplevel: '/Users/theb/Desktop/sleep_edf/subset/'
+    filename_format: "SC4{subject:2}{session:1}"
+    annotation_format: "SC4{subject:2}{session:1}*Hypnogram*"
+    data_max: 4460.6
+    data_min: -4465.7
+    deep100:
+      max_scale: 4460.6
+      return_mask: True
+    extensions:
+      - .edf
     events: {'Sleep stage W': 0, 'Sleep stage 1': 1, 'Sleep stage 2': 2, 'Sleep stage 3': 3, 'Sleep stage 4': 3, 'Sleep stage R': 4}
     tmin: 0
     tlen: 30
     test_size: 0.3
     val_size: 0.5
-    chunk_duration: '30'
+    chunk_duration: 30
     exclude_channels: ['Event marker']
     preload: True
-    picks: ['EEG Fpz-Cz', 'EEG Pz-Oz']
+    picks:
+      - eeg
+    exclude_channels:
+      - "Resp oro-nasal"
+      - 'EMG submental'
+      - 'Temp rectal' # Comfiest sleep ever
+      - 'Event marker'
     rename_channels: 
       FPZ: 'EEG Fpz-Cz'
       PZ: 'EEG Pz-Oz'

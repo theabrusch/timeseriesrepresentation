@@ -126,7 +126,6 @@ if __name__ == '__main__':
     parser.add_argument('--hidden_size', type = int, default = 256)
     parser.add_argument('--out_dim', type = int, default = 64)
 
-
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjects', type = eval, default = 3)
     parser.add_argument('--sample_finetune_train_subjects', type = eval, default = 3)
