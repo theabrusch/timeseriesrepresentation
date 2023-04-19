@@ -10,11 +10,12 @@
 #BSUB -R "rusage[mem=64GB]"
 ### Number of hours needed
 #BSUB -N 
-#BSUB -W 01:00
+#BSUB -W 10:00
 ### added outputs and errors to files
 #BSUB -o logs/Output_bendr_%J.out
 #BSUB -e logs/Error_bendr_%J.err
 
 module load python3/3.9.11
+source timeseries-env/bin/activate
 
-python3 main_bendr.py --data_path /work3/theb/timeseries/HAR/ --epochs 40 --finetune_epochs 40 --sample_pretrain_subjs 3 --sample_test_subjs False --batch_size 80 --load_model False --pretrained_model_path outputs/ts2vec_sleepeeg_v_16/pretrained_model.pt --sample_finetune_train_subjs 2 --sample_finetune_val_subjs 1 --save_model True --pretrain True --finetune False --optimize_encoder True --learning_rate 1e-3 --pool 'max' --choose_best True --evaluate_latent_space True
+python3 main_bendr.py --data_path 'sleepeeg.yml' --finetune_path 'sleepedf.yml' --sample_pretrain_subjects False
