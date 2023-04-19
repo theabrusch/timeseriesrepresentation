@@ -62,91 +62,29 @@ class TS2VecLoss(torch.nn.Module):
         i = torch.arange(B, device=z1.device)
         loss = (logits[:, i, B + i - 1].mean() + logits[:, B + i, i].mean()) / 2 
         return loss
-
+    
 class ContrastiveLoss(torch.nn.Module):
+    def __init__(self, temperature):
+        super().__init__()
+        self.temperature = temperature
 
-    def __init__(self, device, tau, normalize = True, use_cosine_similarity = True):
-        super(ContrastiveLoss, self).__init__()
-        self.temperature = tau
-        self.device = device
-        self.softmax = torch.nn.Softmax(dim=-1)
-        self.similarity_function = self._get_similarity_function(use_cosine_similarity)
-        self.criterion = torch.nn.CrossEntropyLoss(reduction="sum")
-        self.normalize = True
+    def forward(self, z1, z2):
+        # z1, z2 : B x C X L or B X L
+        B = z1.shape[0]
+        if len(z1.shape) > 2:
+            z1 = z1.reshape(B, -1)
+            z2 = z2.reshape(B, -1)
+        z1 = F.normalize(z1, dim=-1)
+        z2 = F.normalize(z2, dim=-1)
 
-    def _get_similarity_function(self, use_cosine_similarity):
-        if use_cosine_similarity:
-            self._cosine_similarity = torch.nn.CosineSimilarity(dim=-1)
-            return self._cosine_simililarity
-        else:
-            return self._dot_simililarity
-
-    def _get_correlated_mask(self, batch_size):
-        diag = np.eye(2 * batch_size)
-        l1 = np.eye((2 * batch_size), 2 * batch_size, k=-batch_size)
-        l2 = np.eye((2 * batch_size), 2 * batch_size, k=batch_size)
-        mask = torch.from_numpy((diag + l1 + l2))
-        mask = (1 - mask).type(torch.bool)
-        return mask.to(self.device)
-
-    @staticmethod
-    def _dot_simililarity(x, y):
-        v = torch.tensordot(x.unsqueeze(1), y.T.unsqueeze(0), dims=2)
-        # x shape: (N, 1, C)
-        # y shape: (1, C, 2N)
-        # v shape: (N, 2N)
-        return v
-
-    def _cosine_simililarity(self, x, y):
-        # x shape: (N, 1, C)
-        # y shape: (1, 2N, C)
-        # v shape: (N, 2N)
-        v = self._cosine_similarity(x.unsqueeze(1), y.unsqueeze(0))
-        return v
-
-    def forward(self, z, reduce = True):
-        batch_size = z.shape[0]
-        zis = z[:,0, ...]
-        zjs = z[:,1, ...]
+        z = torch.cat([z1,z2], dim = 0) # 2B x C x T
+        sim = torch.matmul(z, z.transpose(0,1)) # T x 2B x 2B
+        logits = torch.tril(sim, diagonal=-1)[:, :-1]    # T x 2B x (2B-1)
+        logits += torch.triu(sim, diagonal=1)[:, 1:] 
+        logits = -F.log_softmax(logits/self.temperature, dim=-1) 
         
-        if len(zis.shape) > 2:
-            zis = zis.reshape(batch_size, -1)
-            zjs = zjs.reshape(batch_size, -1)
-
-        if zis is None or zjs is None:
-            return torch.tensor(0.).to(self.device)
-        
-        representations = torch.cat([zjs, zis], dim=0)
-
-        mask_samples_from_same_repr = self._get_correlated_mask(batch_size=batch_size).type(torch.bool)
-
-        similarity_matrix = self.similarity_function(representations, representations)
-        if len(similarity_matrix.shape) > 2:
-            similarity_matrix = similarity_matrix.mean(dim = 2)
-
-        # filter out the scores from the positive samples
-        l_pos = torch.diag(similarity_matrix, batch_size)
-        r_pos = torch.diag(similarity_matrix, -batch_size)
-        positives = torch.cat([l_pos, r_pos]).view(2 * batch_size, 1)
-
-        negatives = similarity_matrix[mask_samples_from_same_repr].view(2 * batch_size, -1)
-
-        logits = torch.cat((positives, negatives), dim=1)
-        logits /= self.temperature
-
-        """Criterion has an internal one-hot function. Here, make all positives as 1 while all negatives as 0. """
-        labels = torch.zeros(2 * batch_size).to(self.device).long()
-        CE = self.criterion(logits, labels)
-
-        onehot_label = torch.cat((torch.ones(2 * batch_size, 1),torch.zeros(2 * batch_size, negatives.shape[-1])),dim=-1).to(self.device).long()
-        # Add poly loss
-        pt = torch.mean(onehot_label* torch.nn.functional.softmax(logits,dim=-1))
-
-        epsilon = batch_size
-        # loss = CE/ (2 * self.batch_size) + epsilon*(1-pt) # replace 1 by 1/self.batch_size
-        loss = CE / (2 * batch_size) + epsilon * (1/batch_size - pt)
-        # loss = CE / (2 * self.batch_size)
-
+        i = torch.arange(B, device=z1.device)
+        loss = (logits[i, B + i - 1].mean() + logits[B + i, i].mean()) / 2 
         return loss
 
 
@@ -192,38 +130,32 @@ class COCOAloss(torch.nn.Module):
         return error
 
 class CMCloss(torch.nn.Module):
-    def __init__(self, device, temperature):
+    def __init__(self, temperature):
         super(CMCloss, self).__init__()
-        self.criterion = torch.nn.CrossEntropyLoss(reduction="sum")
-        self.temperature = temperature
-        self.device = device
+        self.criterion = ContrastiveLoss(temperature)
 
     def forward(self, z):
-        z = z.reshape(z.shape[0], z.shape[1], -1)
+        # make the number of views as the first dimension
         z = z.transpose(1, 0)
         batch_size, dim_size = z.shape[1], z.shape[0]
-        z = F.normalize(z, dim = -1)
-        # Positive Pairs
-        pos_error = []
-        for i in range(batch_size):
-            sim = torch.exp(torch.matmul(z[:,i,:], z[:,i,:].transpose(0, 1)) / self.temperature)
-            tri_mask = torch.ones((dim_size, dim_size), dtype=torch.bool).to(self.device)
-            tri_mask.fill_diagonal_(0)
-            off_diag_sim = sim.masked_select(tri_mask)
-            off_diag_sim = off_diag_sim.reshape(dim_size, dim_size - 1)
-            pos_error.append(off_diag_sim.sum())
-
-        # Negative pairs
-        neg_error = 0
+        loss = 0
+        d = 0
         for i in range(dim_size):
-            sim = torch.exp(torch.matmul(z[i], z[i].transpose(0, 1)) / self.temperature)
-            tri_mask = torch.ones((batch_size, batch_size), dtype=torch.bool).to(self.device)
-            tri_mask.fill_diagonal_(0)
-            off_diag_sim = sim.masked_select(tri_mask)
-            off_diag_sim = off_diag_sim.reshape(batch_size, batch_size - 1)
-            neg_error += off_diag_sim.mean(dim=-1)
+            for j in range(i+1, dim_size):
+                loss += self.criterion(z[i], z[j])
+                d += 1
+        return loss/d
 
-        logits = torch.stack(pos_error) / (torch.stack(pos_error) + neg_error)
-        lbl = torch.ones(batch_size).to(self.device)
-        error = self.criterion(logits, lbl)
-        return error 
+
+
+
+    
+
+
+temp1 = torch.randn(4, 4)
+temp2 = torch.randn(4, 4)
+loss = ContrastiveLoss(device = 'cpu', tau = 0.1)
+loss2 = ContrastiveLoss2(temperature=0.1)
+
+loss(temp1, temp2)
+loss2(temp1, temp2)
