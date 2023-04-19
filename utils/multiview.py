@@ -398,10 +398,6 @@ def finetune(model,
                 print("Early stopping")
                 break
 
-        if backup_path is not None:
-            path = f'{backup_path}/finetuned_model.pt'
-            torch.save(model.state_dict(), path)
-
     if early_stopping_criterion is not None:
         path = f'{backup_path}/finetuned_model.pt'
         model.load_state_dict(torch.load(path))
