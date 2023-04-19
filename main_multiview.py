@@ -54,9 +54,9 @@ def main(args):
 
     if args.pretrain:
         model, loss_fn = load_model(args.pretraining_setup, device, channels, time_length, num_classes, args)
+
         if args.load_model:
             model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
-        model.to(device)
         wandb.init(project = 'MultiView', group = 'pretrain' + args.pretraining_setup, config = args)
         wandb.config.update({'Pretrain samples': len(pretrain_loader.dataset), 'Pretrain validation samples': len(pretrain_val_loader.dataset)})
         
@@ -85,7 +85,6 @@ def main(args):
             ft_val_loader = finetune_val_loader[i]
             model, loss_fn = load_model(args.pretraining_setup, device, channels, time_length, num_classes, args)
             if args.load_model:
-                print('Loading pretrained model')
                 model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
 
             wandb.config.update({'Finetune samples': len(ft_loader.dataset), 'Finetune validation samples': len(ft_val_loader.dataset), 'Test samples': len(test_loader.dataset)})
@@ -139,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
-    parser.add_argument('--seed_generator', type = eval, default = '100')
+    parser.add_argument('--seed_generator', type = eval, default = '[10,20]')
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
