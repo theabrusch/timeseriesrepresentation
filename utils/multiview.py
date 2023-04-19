@@ -366,12 +366,10 @@ def load_model(pretraining_setup, device, channels, time_length, num_classes, mo
         model = Multiview(channels = channels, orig_channels=6, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
         
     if model_args.loss == 'time_loss':
-        loss_fn = TS2VecLoss(alpha = 0.5, temporal_unit = 0).to(device)
+        loss_fn = CMCloss(temperature = 0.5, criterion='TS2Vec').to(device)
     elif model_args.loss == 'contrastive':
-        loss_fn = ContrastiveLoss(temperature = 0.5).to(device)
+        loss_fn = CMCloss(temperature = 0.5, criterion='contrastive').to(device)
     elif model_args.loss == 'COCOA':
         loss_fn = COCOAloss(temperature = 0.5).to(device)
-    elif model_args.loss == 'CMC':
-        loss_fn = CMCloss(temperature = 0.5).to(device)
 
     return model, loss_fn
