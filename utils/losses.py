@@ -3,12 +3,11 @@ import torch.nn.functional as F
 import numpy as np
 
 class TS2VecLoss(torch.nn.Module):
-    def __init__(self, alpha, temporal_unit, normalize = False) -> None:
+    def __init__(self, alpha = 0.5, temporal_unit = 0) -> None:
         super().__init__()
         self.alpha = alpha
         self.temporal_unit = temporal_unit
         self.maxpool = torch.nn.MaxPool1d(2)
-        self.normalize = normalize
     
     def dual_loss(self, z1, z2, d):
         # z1, z2 : B x C x T
@@ -130,10 +129,12 @@ class COCOAloss(torch.nn.Module):
         return error
 
 class CMCloss(torch.nn.Module):
-    def __init__(self, temperature):
+    def __init__(self, temperature, criterion = 'contrastive'):
         super(CMCloss, self).__init__()
-        self.criterion = ContrastiveLoss(temperature)
-
+        if criterion == 'contrastive':
+            self.criterion = ContrastiveLoss(temperature)
+        elif criterion == 'TS2Vec':
+            self.criterion = TS2VecLoss(temperature)
     def forward(self, z):
         # make the number of views as the first dimension
         z = z.transpose(1, 0)
