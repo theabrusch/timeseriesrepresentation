@@ -29,10 +29,8 @@ class TS2VecLoss(torch.nn.Module):
 
         return dual_loss, inst_loss.detach().cpu(), temp_loss.detach().cpu()
 
-    def forward(self, z):
+    def forward(self, z1, z2):
         # z1, z2 : B x C x T
-        z1 = z[:,0,...]
-        z2 = z[:,1,...]
         loss, inst_loss, temp_loss = self.dual_loss(z1, z2, d=0)
         d = 1
         while z1.shape[-1] > 1:
