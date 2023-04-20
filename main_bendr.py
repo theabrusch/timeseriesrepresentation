@@ -83,11 +83,11 @@ def main(args):
             encoder.save('checkpoints/encoder_epoch_{}.pt'.format(metrics['epoch']))
             contextualizer.save('checkpoints/contextualizer_epoch_{}.pt'.format(metrics['epoch']))
 
-    #def simple_checkpoint(metrics):
-    ##    if not args.no_save:
-    ##        torch.save(process.best)
-    #       encoder.save('checkpoints/encoder.pt')
-    #        contextualizer.save('checkpoints/contextualizer.pt')
+    def simple_checkpoint(metrics):
+        if not args.no_save:
+            #torch.save(process.best)
+            encoder.save('checkpoints/encoder.pt')
+            contextualizer.save('checkpoints/contextualizer.pt')
 
     process.fit(pretrain_loader, epoch_callback=epoch_checkpoint, num_workers=args.num_workers,
                 validation_dataset=pretrain_val_loader, resume_epoch=args.resume, log_callback=simple_checkpoint,
