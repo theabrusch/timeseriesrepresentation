@@ -51,6 +51,7 @@ class TS2VecLoss(torch.nn.Module):
         B = z1.shape[0]
         z = torch.cat([z1,z2], dim = 0) # 2B x C x T
         z = z.permute((2,0,1)) # T x 2B x C
+        z = F.normalize(z, dim=-1)
         sim = torch.matmul(z, z.transpose(1,2)) # T x 2B x 2B
         logits = torch.tril(sim, diagonal=-1)[:, :, :-1]    # T x 2B x (2B-1)
         logits += torch.triu(sim, diagonal=1)[:, :, 1:] 
@@ -138,10 +139,16 @@ class CMCloss(torch.nn.Module):
         z = z.transpose(1, 0)
         batch_size, dim_size = z.shape[1], z.shape[0]
         loss = 0
+        time_loss = 0
+        inst_loss = 0
         d = 0
         for i in range(dim_size):
             for j in range(i+1, dim_size):
-                loss += self.criterion(z[i], z[j])
+                l = self.criterion(z[i], z[j])
+                if isinstance(l, tuple):
+                    inst_loss += l[1]
+                    time_loss += l[2]
+                    loss += l[0]
                 d += 1
-        return loss/d
+        return loss/d, time_loss/d, inst_loss/d
 
