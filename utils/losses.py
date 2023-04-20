@@ -137,9 +137,9 @@ class CMCloss(torch.nn.Module):
         # make the number of views as the first dimension
         z = z.transpose(1, 0)
         batch_size, dim_size = z.shape[1], z.shape[0]
-        loss = 0
-        time_loss = 0
-        inst_loss = 0
+        loss = torch.tensor(0).to(z.device)
+        time_loss = torch.tensor(0).to(z.device)
+        inst_loss = torch.tensor(0).to(z.device)
         d = 0
         for i in range(dim_size):
             for j in range(i+1, dim_size):
