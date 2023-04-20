@@ -129,22 +129,15 @@ def construct_eeg_datasets(data_path,
             else:
                 sample_weights_train, length_train = get_label_balance(finetune_train_dset)
                 sample_weights_val, length_val = get_label_balance(finetune_val_dset)
-            if sample_weights_train.shape[1] == 1:
-                finetune_sampler = WeightedRandomSampler(sample_weights_train[:,0], int(length_train[0]), replacement=False)
-                finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler)
 
-                finetune_val_sampler = WeightedRandomSampler(sample_weights_val[:,0], int(length_val[0]), replacement=False)
-                finetune_val_loader = DataLoader(finetune_val_dset, batch_size=target_batchsize, sampler=finetune_val_sampler)
-            else:
-                # create a sampler and a dataloader for each sampleweight
-                finetune_loader = []
-                finetune_val_loader = []
-                for i in range(sample_weights_train.shape[1]):
-                    finetune_sampler = WeightedRandomSampler(sample_weights_train[:,i], int(length_train[i]), replacement=False)
-                    finetune_loader.append(DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler))
+            finetune_loader = []
+            finetune_val_loader = []
+            for i in range(sample_weights_train.shape[1]):
+                finetune_sampler = WeightedRandomSampler(sample_weights_train[:,i], int(length_train[i]), replacement=False)
+                finetune_loader.append(DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler))
 
-                    finetune_val_sampler = WeightedRandomSampler(sample_weights_val[:,i], int(length_val[i]), replacement=False)
-                    finetune_val_loader.append(DataLoader(finetune_val_dset, batch_size=target_batchsize, sampler=finetune_val_sampler))
+                finetune_val_sampler = WeightedRandomSampler(sample_weights_val[:,i], int(length_val[i]), replacement=False)
+                finetune_val_loader.append(DataLoader(finetune_val_dset, batch_size=target_batchsize, sampler=finetune_val_sampler))
         else:
             finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, shuffle = True)
             finetune_val_loader = DataLoader(finetune_val_dset, batch_size=target_batchsize, shuffle = True)
