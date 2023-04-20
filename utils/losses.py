@@ -148,6 +148,8 @@ class CMCloss(torch.nn.Module):
                     inst_loss += l[1]
                     time_loss += l[2]
                     loss += l[0]
+                else:
+                    loss += l
                 d += 1
         return loss/d, time_loss/d, inst_loss/d
 
