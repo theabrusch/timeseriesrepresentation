@@ -112,7 +112,7 @@ def main(args):
                     weights,
                     device,
                     test_loader = test_loader if args.track_test_performance else None,
-                    choose_best = args.choose_best,
+                    early_stopping_criterion=args.early_stopping_criterion,
             )
 
             accuracy, prec, rec, f = evaluate_classifier(model, test_loader, device)
