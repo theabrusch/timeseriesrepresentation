@@ -112,7 +112,7 @@ def main(args):
 
             accuracy, prec, rec, f = evaluate_classifier(model, test_loader, device)
             wandb.config.update({'Test accuracy': accuracy, 'Test precision': prec, 'Test recall': rec, 'Test f1': f})
-
+    wandb.finish()
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # training arguments
