@@ -63,7 +63,7 @@ def main(args):
         "batch_crop_frac": 0.05
     }
     training_params = {
-        "epochs": 1,
+        "epochs": args.epochs,
         "validation_interval": 100,
         "train_log_interval": 100,
         "batch_size": 64,
@@ -125,6 +125,7 @@ if __name__ == '__main__':
     # model arguments
     parser.add_argument('--hidden_size', type = int, default = 256)
     parser.add_argument('--out_dim', type = int, default = 64)
+    parser.add_argument('--epochs', type = int, default = 10)
 
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjects', type = eval, default = 3)
