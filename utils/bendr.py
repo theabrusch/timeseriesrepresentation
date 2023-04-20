@@ -320,9 +320,8 @@ class BENDRContextualizer(nn.Module):
                 mask_c = _make_mask((bs, feat), self.p_c, x.shape[1], self.mask_c_span)
 
         if mask_t is not None:
-            x = x.transpose(2, 1)
-            x[mask_t] = self.mask_replacement
-            x = x.transpose(2, 1)
+            x = x*(1-mask_t.unsqueeze(1).int()) + (mask_t.unsqueeze(1).repeat(1,x.shape[1],1)).int()*self.mask_replacement.unsqueeze(0).unsqueeze(2).repeat(x.shape[0],1,x.shape[2])
+            # x.transpose(2,1)[mask_t] = self.mask_replacement
         if mask_c is not None:
             x[mask_c] = 0
 
