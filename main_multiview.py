@@ -75,11 +75,16 @@ def main(args):
             model.eval()
             path = f'{output_path}/pretrained_model.pt'
             torch.save(model.state_dict(), path)
+        wandb.finish()
 
     if args.finetune:
 
         for ft_loader, ft_val_loader in zip(finetune_loader, finetune_val_loader):
             wandb.init(project = 'MultiView', group = args.pretraining_setup, config = args)
+            model, loss_fn = load_model(args.pretraining_setup, device, channels, time_length, num_classes, args)
+
+            if args.load_model:
+                model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
 
             wandb.config.update({'Finetune samples': len(ft_loader.dataset), 'Finetune validation samples': len(ft_val_loader.dataset), 'Test samples': len(test_loader.dataset)})
 
@@ -112,7 +117,7 @@ def main(args):
 
             accuracy, prec, rec, f = evaluate_classifier(model, test_loader, device)
             wandb.config.update({'Test accuracy': accuracy, 'Test precision': prec, 'Test recall': rec, 'Test f1': f})
-    wandb.finish()
+            wandb.finish()
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # training arguments
