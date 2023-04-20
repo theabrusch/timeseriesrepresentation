@@ -51,7 +51,6 @@ class TS2VecLoss(torch.nn.Module):
         B = z1.shape[0]
         z = torch.cat([z1,z2], dim = 0) # 2B x C x T
         z = z.permute((2,0,1)) # T x 2B x C
-        z = F.normalize(z, dim=-1)
         sim = torch.matmul(z, z.transpose(1,2)) # T x 2B x 2B
         logits = torch.tril(sim, diagonal=-1)[:, :, :-1]    # T x 2B x (2B-1)
         logits += torch.triu(sim, diagonal=1)[:, :, 1:] 
