@@ -102,8 +102,11 @@ class Multiview(nn.Module):
     def train_step(self, x, loss_fn, device):
         x = x.to(device)
         out = self.forward(x)
-        return loss_fn(out), *[torch.tensor(0)]*2
-
+        loss = loss_fn(out)
+        if isinstance(loss, tuple):
+            return loss
+        else:
+            return loss, *[torch.tensor(0)]*2
 
 class GNNMultiview(nn.Module):
     def __init__(self, 
@@ -261,7 +264,58 @@ def pretrain(model,
         if backup_path is not None:
             path = f'{backup_path}/pretrained_model.pt'
             torch.save(model.state_dict(), path)
-    
+
+
+class EarlyStopping:
+    """Early stops the training if validation loss doesn't improve after a given patience.
+    From https://github.com/Bjarten/early-stopping-pytorch """
+    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', trace_func=print):
+        """
+        Args:
+            patience (int): How long to wait after last time validation loss improved.
+                            Default: 7
+            verbose (bool): If True, prints a message for each validation loss improvement. 
+                            Default: False
+            delta (float): Minimum change in the monitored quantity to qualify as an improvement.
+                            Default: 0
+            path (str): Path for the checkpoint to be saved to.
+                            Default: 'checkpoint.pt'
+            trace_func (function): trace print function.
+                            Default: print            
+        """
+        self.patience = patience
+        self.verbose = verbose
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+        self.val_loss_min = np.Inf
+        self.delta = delta
+        self.path = path
+        self.trace_func = trace_func
+    def __call__(self, val_loss, model):
+
+        score = -val_loss
+
+        if self.best_score is None:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model)
+        elif score < self.best_score + self.delta:
+            self.counter += 1
+            self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model)
+            self.counter = 0
+
+    def save_checkpoint(self, val_loss, model):
+        '''Saves model when validation loss decrease.'''
+        if self.verbose:
+            self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+        torch.save(model.state_dict(), self.path)
+        self.val_loss_min = val_loss
+
 def finetune(model,
             dataloader,
             val_dataloader,
@@ -270,12 +324,12 @@ def finetune(model,
             weights,
             device,
             test_loader = None, 
-            choose_best = True,
+            early_stopping_criterion = True,
             backup_path = None):
     model.to(device)
     loss = nn.CrossEntropyLoss(weight=weights)
-    best_accuracy = 0
-    best_model = model.state_dict()
+    if early_stopping_criterion is not None:
+        early_stopping = EarlyStopping(patience=7, verbose=True, path = f'{backup_path}/finetuned_model.pt')
     for epoch in range(epochs):
         epoch_loss = 0
         model.train()
@@ -328,17 +382,24 @@ def finetune(model,
                         'val_rec': np.mean(rec), 
                         'val_f': np.mean(f)
                         })
-        if choose_best:
-            if acc > best_accuracy:
-                best_accuracy = acc
-                best_model = copy.deepcopy(model.state_dict())
+        if early_stopping_criterion is not None:
+            if early_stopping_criterion == 'val_loss':
+                early_stopping(val_loss/(i+1), model)
+            elif early_stopping_criterion == 'val_acc':
+                early_stopping(-acc, model)
+            if early_stopping.early_stop:
+                # load best model
+                model.load_state_dict(torch.load(f'{backup_path}/finetuned_model.pt'))
+                print("Early stopping")
+                break
 
         if backup_path is not None:
             path = f'{backup_path}/finetuned_model.pt'
             torch.save(model.state_dict(), path)
 
-    if choose_best:
-        model.load_state_dict(best_model)
+    if early_stopping.early_stop:
+        # load best model
+        model.load_state_dict(torch.load(f'{backup_path}/finetuned_model.pt'))
 
 def evaluate_classifier(model,
                         test_loader,

@@ -142,7 +142,7 @@ if __name__ == '__main__':
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
     parser.add_argument('--encoder', type = str, default = 'wave2vec')
     parser.add_argument('--layers', type = int, default = 6)
-    parser.add_argument('--choose_best', type = eval, default = True)
+    parser.add_argument('--early_stopping_criterion', type = str, default = None)
     parser.add_argument('--conv_do', type = float, default = 0.1)
     parser.add_argument('--feat_do', type = float, default = 0.1)
     parser.add_argument('--num_message_passing_rounds', type = int, default = 3)
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg
 
     # optimizer arguments
-    parser.add_argument('--loss', type = str, default = 'CMC')
+    parser.add_argument('--loss', type = str, default = 'time_loss')
     parser.add_argument('--track_test_performance', type = eval, default = True)
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--ft_learning_rate', type = float, default = 1e-3)
