@@ -324,7 +324,7 @@ def finetune(model,
             weights,
             device,
             test_loader = None, 
-            early_stopping_criterion = True,
+            early_stopping_criterion = None,
             backup_path = None):
     model.to(device)
     loss = nn.CrossEntropyLoss(weight=weights)
@@ -383,9 +383,9 @@ def finetune(model,
                         'val_f': np.mean(f)
                         })
         if early_stopping_criterion is not None:
-            if early_stopping_criterion == 'val_loss':
+            if early_stopping_criterion == 'loss':
                 early_stopping(val_loss/(i+1), model)
-            elif early_stopping_criterion == 'val_acc':
+            elif early_stopping_criterion == 'acc':
                 early_stopping(-acc, model)
             if early_stopping.early_stop:
                 # load best model

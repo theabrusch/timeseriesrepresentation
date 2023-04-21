@@ -31,6 +31,7 @@ def main(args):
         raise ValueError('Wave2Vec encoder is only available for multi-channel setup.')
 
     dset = args.data_path.split('/')[-1].strip('.yml')
+    
     output_path = f'{args.output_path}/MultiView_{dset}_pretrain_{args.pretrain}_pretrain_subjs_{args.sample_pretrain_subjects}_multi_channel_setup_{args.multi_channel_setup}'
     
     output_path = check_output_path(output_path)
