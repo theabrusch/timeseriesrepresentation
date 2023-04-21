@@ -77,14 +77,19 @@ def main(args):
         wandb.finish()
 
     if args.finetune:
-        output_path = f'{args.output_path}/MultiView_{args.pretraining_setup}_{args.loss}'
+        if args.load_model:
+            output_path = f'{args.output_path}/MultiView_{args.pretraining_setup}_{args.loss}'
+            group = f'{args.pretraining_setup}_{args.loss}'
+        else:
+            output_path = f'{args.output_path}/MultiView_{args.pretraining_setup}_scratch'
+            group = f'{args.pretraining_setup}_scratch'
     
         output_path = check_output_path(output_path)
         args.outputh_path = output_path
         print('Saving outputs in', output_path)
 
         for ft_loader, ft_val_loader in zip(finetune_loader, finetune_val_loader):
-            wandb.init(project = 'MultiView', group = f'{args.pretraining_setup}_{args.loss}', config = args)
+            wandb.init(project = 'MultiView', group = group, config = args)
             model, loss_fn = load_model(args.pretraining_setup, device, channels, time_length, num_classes, args)
             train_samples = len(ft_loader.sampler)
             val_samples = len(ft_val_loader.sampler)
