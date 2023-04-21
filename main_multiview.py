@@ -31,13 +31,6 @@ def main(args):
         raise ValueError('Wave2Vec encoder is only available for multi-channel setup.')
 
     dset = args.data_path.split('/')[-1].strip('.yml')
-    
-    output_path = f'{args.output_path}/MultiView_{dset}_pretrain_{args.pretrain}_pretrain_subjs_{args.sample_pretrain_subjects}_multi_channel_setup_{args.multi_channel_setup}'
-    
-    output_path = check_output_path(output_path)
-    args.outputh_path = output_path
-        
-    print('Saving outputs in', output_path)
 
     args.train_mode = 'pretrain' if args.pretrain and not args.finetune else 'finetune' if args.finetune and not args.pretrain else 'both'
     args.standardize_epochs = 'channelwise'
@@ -51,6 +44,11 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if args.pretrain:
+        output_path = f'{args.output_path}/MultiView_{dset}_pretrain_subjs_{args.sample_pretrain_subjects}_multi_channel_setup_{args.multi_channel_setup}'
+    
+        output_path = check_output_path(output_path)
+        args.outputh_path = output_path
+        print('Saving outputs in', output_path)
         wandb.init(project = 'MultiView', group = args.pretraining_setup, config = args)
         model, loss_fn = load_model(args.pretraining_setup, device, channels, time_length, num_classes, args)
 
@@ -79,15 +77,26 @@ def main(args):
         wandb.finish()
 
     if args.finetune:
+        output_path = f'{args.output_path}/MultiView_{args.pretraining_setup}_{args.loss}'
+    
+        output_path = check_output_path(output_path)
+        args.outputh_path = output_path
+        print('Saving outputs in', output_path)
 
         for ft_loader, ft_val_loader in zip(finetune_loader, finetune_val_loader):
-            wandb.init(project = 'MultiView', group = args.pretraining_setup, config = args)
+            wandb.init(project = 'MultiView', group = f'{args.pretraining_setup}_{args.loss}', config = args)
             model, loss_fn = load_model(args.pretraining_setup, device, channels, time_length, num_classes, args)
+            train_samples = len(ft_loader.sampler)
+            val_samples = len(ft_val_loader.sampler)
 
             if args.load_model:
-                model.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
+                pretrained_model_path = f'pretrained_models/MultiView_sleepeeg_big_{args.pretraining_setup}_{args.loss}/pretrained_model.pt'
+                model.load_state_dict(torch.load(pretrained_model_path, map_location=device))
+            
+            ft_output_path = output_path + f'/{train_samples}_samples'
+            os.makedirs(ft_output_path, exist_ok=True)
 
-            wandb.config.update({'Finetune samples': len(ft_loader.dataset), 'Finetune validation samples': len(ft_val_loader.dataset), 'Test samples': len(test_loader.dataset)})
+            wandb.config.update({'Finetune samples': train_samples, 'Finetune validation samples': val_samples, 'Test samples': len(test_loader.dataset)})
 
             if args.optimize_encoder:
                 optimizer = AdamW(model.parameters(), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
@@ -96,15 +105,14 @@ def main(args):
             if args.pretraining_setup != 'GNN':
                 model.update_classifier(num_classes, orig_channels=orig_channels)
                 model.to(device)
-
-            targets = ft_loader.dataset.dn3_dset.get_targets()
+            
             if not args.balanced_sampling == 'finetune' or args.balanced_sampling == 'both':
+                targets = ft_loader.dataset.dn3_dset.get_targets()
                 weights = torch.tensor(compute_class_weight('balanced', classes = np.unique(targets), y = targets)).float().to(device)
+                wandb.config.update({'Target distribution': np.unique(targets, return_counts=True)[-1]})
             else:
                 weights = None
             
-            wandb.config.update({'Target distribution': np.unique(targets, return_counts=True)[-1]})
-
             finetune(model,
                     ft_loader,
                     ft_val_loader,
@@ -114,7 +122,7 @@ def main(args):
                     device,
                     test_loader = test_loader if args.track_test_performance else None,
                     early_stopping_criterion=args.early_stopping_criterion,
-                    backup_path=output_path,
+                    backup_path=ft_output_path,
             )
 
             accuracy, prec, rec, f = evaluate_classifier(model, test_loader, device)
@@ -126,7 +134,7 @@ if __name__ == '__main__':
     parser.add_argument('--job_id', type = str, default = '0')
     parser.add_argument('--save_model', type = eval, default = False)
     parser.add_argument('--load_model', type = eval, default = False)
-    parser.add_argument('--pretrain', type = eval, default = True)
+    parser.add_argument('--pretrain', type = eval, default = False)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
@@ -138,7 +146,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
-    parser.add_argument('--seed_generator', type = eval, default = '[10,20]')
+    parser.add_argument('--seed_generator', type = eval, nargs = '+', default = [10, 20, None])
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
