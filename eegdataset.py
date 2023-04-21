@@ -209,7 +209,7 @@ def fixed_label_balance(dataset, sample_size = None):
             # assign them a weight of 1/min_count
             idx = np.where(labels == lab)[0]
             samp = samp if len(idx) > samp else len(idx)
-            np.random.seed(42+i)
+            np.random.seed(42+i+samp)
             idx = np.random.choice(idx, samp, replace=False)
             sample_weights[idx, j] = w
 
