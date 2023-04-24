@@ -38,9 +38,10 @@ def main(args):
 
     args.train_mode = 'pretrain' if args.pretrain and not args.finetune else 'finetune' if args.finetune else 'both' 
     args.standardize_epochs = 'channelwise'
+    args.bendr_setup = True
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
-    encoder = ConvEncoderBENDR(channels, encoder_h=args.hidden_size, out_dim=args.out_dim)
+    encoder = ConvEncoderBENDR(6, encoder_h=args.hidden_size, out_dim=args.out_dim)
     
     if args.pretrain:
         contextualizer = BENDRContextualizer(args.out_dim, layer_drop=0.01)

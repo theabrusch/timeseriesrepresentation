@@ -27,6 +27,7 @@ def construct_eeg_datasets(data_path,
                            exclude_subjects = None,
                            train_mode = 'both',
                            seed_generator = False,
+                           bendr_setup = False,
                            **kwargs):
     experiment = ExperimentConfig(data_path)
     dset = data_path.split('/')[-1].strip('.yml').split('_')[0]
@@ -115,7 +116,7 @@ def construct_eeg_datasets(data_path,
             'jitter_ratio': 0.8,
             'max_seg': 8
         }
-        finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs)
+        finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs, bendr_setup=bendr_setup)
         if config.balanced_sampling:
             if seed_generator:
                 # compute sample weights for train and val sets
@@ -147,7 +148,7 @@ def construct_eeg_datasets(data_path,
         config.balanced_sampling = False
         test_thinkers = load_thinkers(config, sample_subjects = sample_test_subjects, subjects = test_subjects)
         test_dset = Dataset(test_thinkers, dataset_info=info)
-        test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs)
+        test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup)
         test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True)
         num_classes = len(np.unique(test_dset.dn3_dset.get_targets()))
     else:
@@ -323,13 +324,14 @@ def add_frequency(x, pertub_ratio=0,):
     return x+pertub_matrix
 
 class EEG_dataset(TorchDataset):
-    def __init__(self, dn3_dset, augmentation_config, preloaded = False, fine_tune_mode = False, standardize_epochs = False):
+    def __init__(self, dn3_dset, augmentation_config, preloaded = False, fine_tune_mode = False, standardize_epochs = False, bendr_setup = False):
         super().__init__()
         self.dn3_dset = dn3_dset
         self.aug_config = augmentation_config
         self.preloaded = preloaded
         self.fine_tune_mode = fine_tune_mode
         self.standardize_epochs = standardize_epochs
+        self.bendr_setup = bendr_setup
     
     def _time_augmentations(self, signal):
         time_augs = [jitter, scaling, permutation]
@@ -360,6 +362,11 @@ class EEG_dataset(TorchDataset):
             elif self.standardize_epochs == 'channelwise':
                 signal = (signal-torch.mean(signal, axis = 1)[:,np.newaxis])/torch.std(signal, axis = 1)[:,np.newaxis]
 
+        if self.bendr_setup:
+            sig = torch.zeros([6, signal.shape[1]])
+            sig[0:2,:] = signal[0,:]
+            sig[4:,:] = signal[1,:]
+            signal = sig
         #fft = torch.fft.fft(signal, axis = -1).abs()
     
         return signal, label
