@@ -2,6 +2,7 @@ import copy
 import mne
 import parse
 import tqdm
+from utils.multiview import TimeClassifier
 
 import torch
 import torch.nn.functional as F
@@ -12,9 +13,9 @@ from math import ceil
 from pathlib import Path
 
 from dn3.trainable.processes import StandardClassification, BaseProcess
-from dn3.trainable.models import StrideClassifier, Classifier
 from dn3.trainable.layers import Flatten, Permute
-from dn3.utils import DN3ConfigException
+from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support
+import wandb
 
 
 class BendingCollegeWav2Vec(BaseProcess):
@@ -351,3 +352,14 @@ class BENDRContextualizer(nn.Module):
 
     def save(self, filename):
         torch.save(self.state_dict(), filename)
+
+class BENDRClassifier(nn.Module):
+    def __init__(self, encoder, num_classes, hidden_dim):
+        super().__init__()
+        self.encoder = encoder
+        self.classifier = TimeClassifier(hidden_dim, num_classes, 'adapt_avg', orig_channels = 2, time_length = 32)
+    
+    def forward(self, x, classify = True):
+        x = self.encoder(x)
+        return self.classifier(x)
+
