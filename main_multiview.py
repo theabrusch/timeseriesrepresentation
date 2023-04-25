@@ -25,10 +25,6 @@ mul_channel_explanations = {
      'avg_ch': 'Multi channel setup is set to ch_avg. This means that the channels are averaged before convolutions.'
 }
 def main(args):
-    assert args.multi_channel_setup in ['None', 'sample_channel', 'avg_ch']
-    print(mul_channel_explanations[args.multi_channel_setup])
-    if not args.multi_channel_setup == 'sample_channel' and args.encoder == 'wave2vec' and args.pretrain:
-        raise ValueError('Wave2Vec encoder is only available for multi-channel setup.')
 
     dset = args.data_path.split('/')[-1].strip('.yml')
 
@@ -37,9 +33,6 @@ def main(args):
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
     orig_channels = channels
-    if args.multi_channel_setup == 'sample_channel' or args.multi_channel_setup == 'avg_ch':
-        orig_channels = channels
-        channels = 1
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -145,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
-    parser.add_argument('--pretraining_setup', type = str, default = 'COCOA')
+    parser.add_argument('--pretraining_setup', type = str, default = 'None')
 
     # data arguments
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')

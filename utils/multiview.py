@@ -88,10 +88,12 @@ class Multiview(nn.Module):
     
     def forward(self, x, classify = False):
         b, ch, ts = x.shape
-        x = x.view(b*ch, 1, ts)
+        if ch > self.channels:
+            x = x.view(b*ch, 1, ts)
         x = self.wave2vec(x)
         time_out = x.shape[-1]
-        x = x.view(b, ch, self.out_dim, time_out)
+        if ch > self.channels:
+            x = x.view(b, ch, self.out_dim, time_out)
         if classify:
             return self.classifier(x)
         return x
@@ -393,10 +395,6 @@ def finetune(model,
                 print("Early stopping")
                 break
 
-        if backup_path is not None:
-            path = f'{backup_path}/finetuned_model.pt'
-            torch.save(model.state_dict(), path)
-
     if early_stopping.early_stop:
         # load best model
         model.load_state_dict(torch.load(f'{backup_path}/finetuned_model.pt'))
@@ -425,6 +423,9 @@ def load_model(pretraining_setup, device, channels, time_length, num_classes, mo
         model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
     elif pretraining_setup == 'COCOA':
         model = Multiview(channels = channels, orig_channels=6, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
+    elif pretraining_setup == 'None':
+        model = Multiview(channels = channels, orig_channels=channels, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
+
         
     if model_args.loss == 'time_loss':
         loss_fn = CMCloss(temperature = 0.5, criterion='TS2Vec').to(device)
