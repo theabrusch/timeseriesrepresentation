@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from dn3.configuratron import ExperimentConfig
 from dn3.data.dataset import EpochTorchRecording, Thinker, DatasetInfo, Dataset
 from dn3.transforms.instance import To1020
-
+from dn3.utils import min_max_normalize
 
 
 def preprocess_EEG(file, out_folder = None):
@@ -27,15 +27,29 @@ def preprocess_EEG(file, out_folder = None):
     raw.save(f'{out_path}{subject}{session}_raw.fif', overwrite = True)
 
 
-config_filename = 'sleepeeg_local.yml'
+config_filename = 'sleepedf_local_temp.yml'
 experiment = ExperimentConfig(config_filename)
-ds_config = experiment.datasets['sleepeeg']
-ds_config.deep1010 = {'max_scale': ds_config.data_max,  'return_mask': False}
+ds_config = experiment.datasets['sleepedf']
+ds_config.deep1010 = {'max_scale': None,  'return_mask': True}
+ds_config.data_max = None
+ds_config.data_min = None
+
 #ds_config.deep1010.return_mask = True
 info = DatasetInfo(ds_config.name, ds_config.data_max, ds_config.data_min, ds_config._excluded_people,
                            targets=ds_config._targets if ds_config._targets is not None else len(ds_config._unique_events))
 dset = ds_config.auto_construct_dataset()
-dset.add_transform(To1020())
+
+# original data
+
+config_filename = 'sleepedf_local_temp.yml'
+experiment = ExperimentConfig(config_filename)
+ds_config = experiment.datasets['sleepedf']
+ds_config.deep1010 = None
+#ds_config.deep1010.return_mask = True
+info = DatasetInfo(ds_config.name, ds_config.data_max, ds_config.data_min, ds_config._excluded_people,
+                           targets=ds_config._targets if ds_config._targets is not None else len(ds_config._unique_events))
+dset_2 = ds_config.auto_construct_dataset()
+
 #alice_files = ['/Users/theb/Desktop/sleep_edf/physionet-sleep-data/SC4001E0-PSG.edf', '/Users/theb/Desktop/sleep_edf/physionet-sleep-data/SC4001EC-Hypnogram.edf']
 #raw_train = mne.io.read_raw_edf(alice_files[0], stim_channel='Event marker')
 #annot_train = mne.read_annotations(alice_files[1])

@@ -10,10 +10,10 @@ datasets:
     toplevel: '/Users/theb/Desktop/sleep_edf/subset/'
     filename_format: "SC4{subject:2}{session:1}"
     annotation_format: "SC4{subject:2}{session:1}*Hypnogram*"
-    data_max: 4460.6
-    data_min: -4465.7
+    data_max: None
+    data_min: None
     deep100:
-      max_scale: 4460.6
+      max_scale: None
       return_mask: True
     extensions:
       - .edf

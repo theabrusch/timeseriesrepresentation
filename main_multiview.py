@@ -95,14 +95,14 @@ def main(args):
             os.makedirs(ft_output_path, exist_ok=True)
 
             wandb.config.update({'Finetune samples': train_samples, 'Finetune validation samples': val_samples, 'Test samples': len(test_loader.dataset)})
+            if args.pretraining_setup != 'GNN':
+                model.update_classifier(num_classes, orig_channels=orig_channels)
+                model.to(device)
 
             if args.optimize_encoder:
                 optimizer = AdamW(model.parameters(), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
             else:
                 optimizer = AdamW(model.classifier.parameters(), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
-            if args.pretraining_setup != 'GNN':
-                model.update_classifier(num_classes, orig_channels=orig_channels)
-                model.to(device)
             
             if not args.balanced_sampling == 'finetune' or args.balanced_sampling == 'both':
                 targets = ft_loader.dataset.dn3_dset.get_targets()
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain', type = eval, default = False)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--finetune', type = eval, default = True)
-    parser.add_argument('--optimize_encoder', type = eval, default = True)
+    parser.add_argument('--optimize_encoder', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--pretraining_setup', type = str, default = 'None')
