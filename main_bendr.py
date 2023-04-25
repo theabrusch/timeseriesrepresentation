@@ -41,9 +41,8 @@ def main(args):
     args.bendr_setup = True
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
-    encoder = ConvEncoderBENDR(6, encoder_h=args.hidden_size, out_dim=args.out_dim)
-    
     if args.pretrain:
+        encoder = ConvEncoderBENDR(6, encoder_h=args.hidden_size, out_dim=args.out_dim)
         contextualizer = BENDRContextualizer(args.out_dim, layer_drop=0.01)
         # add arguments from BENDR config
         bending_college_args = {
@@ -111,12 +110,12 @@ def main(args):
         for ft_loader, ft_val_loader in zip(finetune_loader, finetune_val_loader):
             wandb.init(project = 'MultiView', group = 'bendr', config = args)
             #encoder.load(args.pretrained_model_path)
-            model = BENDRClassifier(encoder, num_classes, hidden_dim=args.out_dim)
+            encoder = ConvEncoderBENDR(6, encoder_h=args.hidden_size, out_dim=args.out_dim)
+            
+            if args.load_model:
+                encoder.load(args.pretrained_model_path)
 
-            if args.optimize_encoder:
-                optimizer = AdamW(model.parameters(), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
-            else:
-                optimizer = AdamW(model.classifier.parameters(), lr = args.ft_learning_rate, weight_decay=args.weight_decay)
+            model = BENDRClassifier(encoder, num_classes, hidden_dim=args.out_dim)
 
             train_samples = len(ft_loader.sampler)
             val_samples = len(ft_val_loader.sampler)

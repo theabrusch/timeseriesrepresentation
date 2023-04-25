@@ -7,9 +7,9 @@ from matplotlib import rc
 
 api = wandb.Api()
 
-optenc = False
+optenc = True
 methods = ['GNN', 'COCOA']
-learning_rates = {'GNN': [5e-4], 'COCOA': [3e-3]}
+learning_rates = {'GNN': [5e-4], 'COCOA': [1e-3]}
 losses = ['COCOA', 'contrastive', 'time_loss', 'scratch']
 
 all_results = dict()
@@ -51,7 +51,7 @@ fig, ax = plt.subplots(1, 1, figsize = (8, 4))
 ax.set_xlabel('Number of samples per class', fontsize = 14)
 ax.set_ylabel('Test accuracy (%)', fontsize = 14)
 ax.set_title('Test accuracy vs. number of samples', fontsize = 14)
-ax.set_ylim(15, 70)
+ax.set_ylim(15, 80)
 # make x axis logarithmic
 ax.set_xscale('log')
 rc('font',**{'family':'serif','serif':['Times']})
@@ -59,7 +59,7 @@ rc('font',**{'family':'serif','serif':['Times']})
 method_names = {'GNN': ', GNN', 'COCOA': ''}
 methods = ['COCOA', 'GNN']
 
-learning_rates = {'GNN': 5e-4, 'COCOA': 3e-3}
+learning_rates = {'GNN': 5e-4, 'COCOA': 1e-3}
 loss_names = {'scratch': 'Scratch', 'contrastive': 'NT-Xent', 'time_loss': 'TS2Vec', 'COCOA': 'COCOA'}
 # define 8 different markers for each method and loss
 markers = ['o', 'v', 's', 'p', '*', 'h', 'D', 'X']
