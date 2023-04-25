@@ -420,9 +420,9 @@ def evaluate_classifier(model,
 
 def load_model(pretraining_setup, device, channels, time_length, num_classes, model_args):
     if pretraining_setup == 'GNN':
-        model = GNNMultiview(channels = channels, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
+        model = GNNMultiview(channels = 1, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
     elif pretraining_setup == 'COCOA':
-        model = Multiview(channels = channels, orig_channels=6, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
+        model = Multiview(channels = 1, orig_channels=6, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
     elif pretraining_setup == 'None':
         model = Multiview(channels = channels, orig_channels=channels, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
 
