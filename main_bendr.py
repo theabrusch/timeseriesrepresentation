@@ -111,7 +111,7 @@ def main(args):
             wandb.init(project = 'MultiView', group = 'bendr', config = args)
             #encoder.load(args.pretrained_model_path)
             encoder = ConvEncoderBENDR(6, encoder_h=args.hidden_size, out_dim=args.out_dim)
-            
+
             if args.load_model:
                 encoder.load(args.pretrained_model_path)
 
@@ -169,7 +169,7 @@ if __name__ == '__main__':
 
     # data arguments
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
-    parser.add_argument('--seed_generator', type = eval, default = '[10,20]')
+    parser.add_argument('--seed_generator', type = eval, nargs = '+', default = [10, 20, None])
 
     # model arguments
     parser.add_argument('--hidden_size', type = int, default = 256)
