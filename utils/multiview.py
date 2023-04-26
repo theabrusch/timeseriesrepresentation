@@ -98,7 +98,8 @@ class Multiview(nn.Module):
             return self.classifier(x)
         return x
 
-    def update_classifier(self, num_classes, orig_channels):
+    def update_classifier(self, num_classes, orig_channels, seed = None):
+        torch.manual_seed(seed)
         self.classifier = TimeClassifier(in_features = self.out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = orig_channels)
 
     def train_step(self, x, loss_fn, device):
@@ -419,6 +420,7 @@ def evaluate_classifier(model,
 
 
 def load_model(pretraining_setup, device, channels, time_length, num_classes, model_args):
+    torch.manual_seed(model_args.seed)
     if pretraining_setup == 'GNN':
         model = GNNMultiview(channels = 1, time_length = time_length, num_classes = num_classes, **vars(model_args)).to(device)
     elif pretraining_setup == 'COCOA':

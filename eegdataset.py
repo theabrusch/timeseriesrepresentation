@@ -26,8 +26,9 @@ def construct_eeg_datasets(data_path,
                            sample_test_subjects = False,
                            exclude_subjects = None,
                            train_mode = 'both',
-                           seed_generator = False,
+                           sample_generator = False,
                            bendr_setup = False,
+                           seed = None,
                            **kwargs):
     experiment = ExperimentConfig(data_path)
     dset = data_path.split('/')[-1].strip('.yml').split('_')[0]
@@ -66,8 +67,8 @@ def construct_eeg_datasets(data_path,
         pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(pretrain_val_dset, aug_config, standardize_epochs=standardize_epochs)
 
         if config.balanced_sampling:
-            if seed_generator:
-                sample_weights, counts = fixed_label_balance(pretrain_dset, sample_size = seed_generator)
+            if sample_generator:
+                sample_weights, counts = fixed_label_balance(pretrain_dset, sample_size = sample_generator, seed=seed)
             else:
                 sample_weights, counts = get_label_balance(pretrain_dset)
 
@@ -118,15 +119,15 @@ def construct_eeg_datasets(data_path,
         }
         finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs, bendr_setup=bendr_setup)
         if config.balanced_sampling:
-            if seed_generator:
+            if sample_generator:
                 # compute sample weights for train and val sets
-                sample_weights_train, length_train = fixed_label_balance(finetune_train_dset, sample_size = seed_generator)
-                if isinstance(seed_generator, list):
-                    val_seed_generator = [int(sg*1) if not sg is None else sg for sg in seed_generator]
-                elif isinstance(seed_generator, int):
-                    val_seed_generator = int(seed_generator*1)
+                sample_weights_train, length_train = fixed_label_balance(finetune_train_dset, sample_size = sample_generator, seed = seed)
+                if isinstance(sample_generator, list):
+                    val_seed_generator = [int(sg*1) if not sg is None else sg for sg in sample_generator]
+                elif isinstance(sample_generator, int):
+                    val_seed_generator = int(sample_generator*1)
 
-                sample_weights_val, length_val = fixed_label_balance(finetune_val_dset, sample_size = val_seed_generator)
+                sample_weights_val, length_val = fixed_label_balance(finetune_val_dset, sample_size = val_seed_generator, seed=seed)
             else:
                 sample_weights_train, length_train = get_label_balance(finetune_train_dset)
                 sample_weights_val, length_val = get_label_balance(finetune_val_dset)
@@ -181,7 +182,7 @@ def divide_subjects(config, sample_train, sample_val, test_size = 0.2, subjects 
             val = np.random.choice(val, sample_val, replace=False)
     return train, val
 
-def fixed_label_balance(dataset, sample_size = None):
+def fixed_label_balance(dataset, sample_size = None, seed = 42):
     """
     Given a dataset, sample a fixed balanced dataset
     Parameters
@@ -210,7 +211,7 @@ def fixed_label_balance(dataset, sample_size = None):
             # assign them a weight of 1/min_count
             idx = np.where(labels == lab)[0]
             samp = samp if len(idx) > samp else len(idx)
-            np.random.seed(42+i+samp)
+            np.random.seed(seed+i+samp)
             idx = np.random.choice(idx, samp, replace=False)
             sample_weights[idx, j] = w
 
