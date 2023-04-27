@@ -123,7 +123,7 @@ class GNNMultiview(nn.Module):
                  hidden_channels = 256, 
                  nlayers = 6, 
                  out_dim = 64,
-                 loss = 'contrastive',
+                 readout_linear = False,
                  **kwargs):
         super().__init__()
         self.channels = channels
@@ -142,8 +142,8 @@ class GNNMultiview(nn.Module):
             nn.Sequential(
                 nn.Linear(out_dim*2, out_dim),
                 nn.Dropout(feat_do),
-                nn.ReLU()
-            )
+                nn.ReLU(),
+        )
             for _ in range(num_message_passing_rounds)
         ])
 
@@ -151,7 +151,8 @@ class GNNMultiview(nn.Module):
         self.readout_net = nn.Sequential(
             nn.Linear(out_dim, out_dim),
             nn.Dropout(feat_do),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.Linear(out_dim, out_dim) if readout_linear else nn.Identity(),
         )
 
     def forward(self, x, classify = False):
