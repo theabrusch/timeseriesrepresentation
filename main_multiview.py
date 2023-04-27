@@ -95,7 +95,7 @@ def main(args):
 
             wandb.config.update({'Finetune samples': train_samples, 'Finetune validation samples': val_samples, 'Test samples': len(test_loader.dataset)})
             if args.pretraining_setup != 'GNN':
-                model.update_classifier(num_classes, orig_channels=orig_channels)
+                model.update_classifier(num_classes, orig_channels=orig_channels, seed = args.seed)
                 model.to(device)
 
             if args.optimize_encoder:
