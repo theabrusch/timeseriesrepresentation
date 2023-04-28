@@ -185,13 +185,15 @@ class GNNMultiview(nn.Module):
         latents = latents.permute(0,2,1)
 
         for message_net in self.message_nets:
-            message = message_net(torch.cat([latents[message_from], latents[message_to]], dim=-1))
+            # divide by ch-1 to take mean
+            message = message_net(torch.cat([latents[message_from], latents[message_to]], dim=-1))/(ch-1)
             # Sum messages
             latents.index_add_(0, message_to.to(x.device), message)
 
         y = torch.zeros(b, *latents.shape[1:]).to(x.device)
         y.index_add_(0, view_id, latents)
-        out = self.readout_net(y)
+        # divide by ch to take mean
+        out = self.readout_net(y)/ch
 
         out = out.permute(0,2,1)
 

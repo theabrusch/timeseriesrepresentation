@@ -146,7 +146,7 @@ if __name__ == '__main__':
     parser.add_argument('--optimize_encoder', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
-    parser.add_argument('--pretraining_setup', type = str, default = 'None')
+    parser.add_argument('--pretraining_setup', type = str, default = 'GNN')
     parser.add_argument('--seed', type = int, default = 42)
 
     # data arguments
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
     parser.add_argument('--sample_generator', type = eval, nargs = '+', default = [10, 20, None])
-    parser.add_argument('--readout_layer', type = eval, default = False)
+    parser.add_argument('--readout_layer', type = eval, default = True)
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
