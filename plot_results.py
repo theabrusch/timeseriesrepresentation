@@ -46,6 +46,29 @@ for method in methods:
                 print(f'test acc: {np.mean(all_results[method][lr][loss]["test_acc"])}')
                 print(f'n_samples: {np.mean(all_results[method][lr][loss]["n_samples"])}\n')
 
+method = 'GNN'
+lr = 5e-4
+loss = 'time_loss'
+method_names = {'GNN': ', MPNN', 'COCOA': ''}
+methods = ['COCOA', 'GNN']
+losses = ['COCOA', 'contrastive', 'time_loss', 'scratch']
+loss_names = {'scratch': 'Scratch', 'contrastive': 'NT-Xent', 'time_loss': 'TS2Vec', 'COCOA': 'COCOA'}
+learning_rates = {'GNN': 5e-4, 'COCOA': 5e-4}
+
+table = ''
+idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])
+test_accuracy = np.array(all_results[method][learning_rates[method]][loss]['test_acc'])[idx]
+print(test_accuracy.reshape(6,5))
+test_accuracy = np.reshape(test_accuracy, (6,5)).mean(1)
+n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx].reshape(6,5).mean(1)
+print(n_samples)
+sub_idx = [0,1,2,-1]
+sub_acc = test_accuracy[sub_idx]
+acc_str = [f'{s_acc:.3f}'[1:] for s_acc in sub_acc]
+method_name = method_names[method]
+table_line = f'{method_name} & {loss_names[loss]} & ${sub_acc[0]:.1f}\%$ & ${sub_acc[1]:.1f}\%$ & ${sub_acc[2]:.1f}\%$ & ${sub_acc[3]:.1f}\%$ \\\\' + '\n'
+table += table_line
+
 # plot results in same figure
 rc('font',**{'family':'serif','serif':['Times']})
 
@@ -85,10 +108,7 @@ for loss in losses:
     for method in methods:
         print(method, loss)
         # sort test accuracy by n_samples
-        if method == 'COCOA' and loss == 'scratch' and learning_rates[method] == 1e-3:
-            idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])[0::2]
-        else:
-            idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])
+        idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])
         test_accuracy = np.array(all_results[method][learning_rates[method]][loss]['test_acc'])[idx]
         n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx]
         # plot with marker on top of line
@@ -109,17 +129,17 @@ method_names = {'GNN': 'W. MPNN', 'COCOA': 'Wo. MPNN'}
 ## print results in overleaf table
 for method in methods:
      for loss in losses:
-        if method == 'COCOA' and loss == 'scratch' and learning_rates[method] == 1e-3:
-            idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])[0::2]
-        else:
-            idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])
+        idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])
 
         test_accuracy = np.array(all_results[method][learning_rates[method]][loss]['test_acc'])[idx]
-        n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx]
+        test_accuracy = np.reshape(test_accuracy, (6,5)).mean(1)
+        n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx].reshape(6,5).mean(1)
+        print(n_samples)
         sub_idx = [0,1,2,-1]
-        sub_acc = test_accuracy[sub_idx]*100
+        sub_acc = test_accuracy[sub_idx]
         method_name = method_names[method]
-        table_line = f'{method_name} & {loss_names[loss]} & ${sub_acc[0]:.1f}\%$ & ${sub_acc[1]:.1f}\%$ & ${sub_acc[2]:.1f}\%$ & ${sub_acc[3]:.1f}\%$ \\\\' + '\n'
+        acc_str = [f'{s_acc:.3f}'[1:] for s_acc in sub_acc]
+        table_line = f'{method_name} & {loss_names[loss]} & ${acc_str[0]}$ & ${acc_str[1]}$ & ${acc_str[2]}$ & ${acc_str[3]}$ \\\\' + '\n'
         table += table_line
 
 print(table)

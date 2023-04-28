@@ -45,6 +45,11 @@ def main(args):
         encoder = ConvEncoderBENDR(6, encoder_h=args.hidden_size, out_dim=args.out_dim)
         contextualizer = BENDRContextualizer(args.out_dim, layer_drop=0.01)
         # add arguments from BENDR config
+        experiment = {
+            'mask_threshold': 0.85,
+            'mask_inflation': 1.,
+            'mask_pct_max': 0.65
+        }
         bending_college_args = {
             "mask_rate": 0.065,
             "mask_span": 10,
@@ -86,10 +91,13 @@ def main(args):
                 contextualizer.save('checkpoints/contextualizer_epoch_{}.pt'.format(metrics['epoch']))
 
         def simple_checkpoint(metrics):
+            if metrics is not None and metrics['Accuracy'] > experiment['mask_threshold'] and \
+                    metrics['Mask_pct'] < experiment['mask_pct_max']:
+                process.mask_span = int(process.mask_span * experiment['mask_inflation'])
             if not args.no_save:
-                #torch.save(process.best)
                 encoder.save('checkpoints/encoder.pt')
                 contextualizer.save('checkpoints/contextualizer.pt')
+
 
         process.fit(pretrain_loader, epoch_callback=epoch_checkpoint, num_workers=args.num_workers,
                     validation_dataset=pretrain_val_loader, resume_epoch=args.resume, log_callback=simple_checkpoint,
@@ -158,6 +166,8 @@ if __name__ == '__main__':
     parser.add_argument('--load_model', type = eval, default = False)
     parser.add_argument('--num-workers', default=6, type=int)
     parser.add_argument('--resume', default=None, type=int)
+    parser.add_argument('--multi_gpu', default=eval, type=False)
+    
 
     parser.add_argument('--pretrain', type = eval, default = False)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
