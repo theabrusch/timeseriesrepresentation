@@ -6,9 +6,9 @@ raw = mne.io.read_raw_fif(path, preload=True)
 
 raw = raw.filter(l_freq=0.5, h_freq=10)
 raw = raw.resample(20)
-data = raw.get_data(start = 200000, stop = 200000+1000)
+data = raw.get_data(start = 100000, stop = 100000+1000)
 
-for i in [1, 3, 5]:
+for i in range(6):
     plt.figure()
     plt.plot(data[i], color = 'black', linewidth = 0.5)
     plt.axis('off')

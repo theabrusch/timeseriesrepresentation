@@ -39,6 +39,8 @@ info = DatasetInfo(ds_config.name, ds_config.data_max, ds_config.data_min, ds_co
                            targets=ds_config._targets if ds_config._targets is not None else len(ds_config._unique_events))
 dset = ds_config.auto_construct_dataset()
 
+temp1 = dset.__getitem__(0)[0].numpy().T
+
 # original data
 
 config_filename = 'sleepedf_local_temp.yml'
@@ -49,6 +51,14 @@ ds_config.deep1010 = None
 info = DatasetInfo(ds_config.name, ds_config.data_max, ds_config.data_min, ds_config._excluded_people,
                            targets=ds_config._targets if ds_config._targets is not None else len(ds_config._unique_events))
 dset_2 = ds_config.auto_construct_dataset()
+temp2 = np.zeros(temp1.shape)
+temp2[:,2] = dset_2.__getitem__(0)[0].numpy()[0,:]
+temp2[:,-29] = dset_2.__getitem__(0)[0].numpy()[1,:]
+
+plt.plot(temp1[:,2], color = 'red')
+plt.plot(min_max_normalize(temp2)[:,2], color = 'blue')
+plt.show()
+
 
 #alice_files = ['/Users/theb/Desktop/sleep_edf/physionet-sleep-data/SC4001E0-PSG.edf', '/Users/theb/Desktop/sleep_edf/physionet-sleep-data/SC4001EC-Hypnogram.edf']
 #raw_train = mne.io.read_raw_edf(alice_files[0], stim_channel='Event marker')

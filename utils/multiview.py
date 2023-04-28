@@ -57,16 +57,24 @@ def conv1D_out_shape(input_shape, kernel, stride, padding):
     return shape
 
 class Wave2Vec(nn.Module):
-    def __init__(self, channels, input_shape, out_dim = 64, hidden_channels = 512, nlayers = 6, do = 0.1, norm = 'group'):
+    def __init__(self, 
+                 channels, 
+                 input_shape, 
+                 out_dim = 64, 
+                 hidden_channels = 512, 
+                 nlayers = 6, do = 0.1, 
+                 norm = 'group',
+                 readout_layer = False,):
         super().__init__()
         self.channels = channels
         width = [3] + [2]*(nlayers-1)
         in_channels = [channels] + [hidden_channels]*(nlayers-1)
         out_channels = [hidden_channels]*(nlayers - 1) + [out_dim]
         self.convblocks = nn.Sequential(*[wave2vecblock(channels_in= in_channels[i], channels_out = out_channels[i], kernel = width[i], stride = width[i], norm = norm, dropout = do) for i in range(nlayers)])
+        self.readout = nn.Conv1d(out_dim, out_dim, 1) if readout_layer else nn.Identity()
         self.out_shape = conv1D_out_shape(input_shape, width, width, [w//2 for w in width])
     def forward(self, x):
-        return self.convblocks(x)
+        return self.readout(self.convblocks(x))
 
 
 class Multiview(nn.Module):
@@ -78,13 +86,17 @@ class Multiview(nn.Module):
                  hidden_channels = 256, 
                  nlayers = 6,
                  out_dim = 64,
+                 readout_layer = False,
                  **kwargs):
         super().__init__()
         self.channels = channels
         self.num_classes = num_classes
         self.out_dim = out_dim
-        self.wave2vec = Wave2Vec(channels, input_shape = 33, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers, norm = 'group', do = conv_do)
-        self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = orig_channels)
+        self.wave2vec = Wave2Vec(channels, input_shape = 33, out_dim = out_dim, 
+                                 hidden_channels = hidden_channels, nlayers = nlayers, 
+                                 norm = 'group', do = conv_do, readout_layer=readout_layer)
+        self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, 
+                                         pool = 'adapt_avg', orig_channels = orig_channels)
     
     def forward(self, x, classify = False):
         b, ch, ts = x.shape
@@ -123,17 +135,21 @@ class GNNMultiview(nn.Module):
                  hidden_channels = 256, 
                  nlayers = 6, 
                  out_dim = 64,
-                 readout_linear = False,
+                 readout_layer = False,
                  **kwargs):
         super().__init__()
         self.channels = channels
         self.time_length = time_length
         self.num_classes = num_classes
-        self.wave2vec = Wave2Vec(channels, input_shape = time_length, out_dim = out_dim, hidden_channels = hidden_channels, nlayers = nlayers, norm = norm, do = conv_do)
+        self.wave2vec = Wave2Vec(channels, input_shape = time_length, out_dim = out_dim, 
+                                 hidden_channels = hidden_channels, nlayers = nlayers, norm = norm, 
+                                 do = conv_do, readout_layer = readout_layer)
 
 
         out_dim = out_dim
-        self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, pool = 'adapt_avg', orig_channels = channels, time_length = time_length)
+        self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, 
+                                         pool = 'adapt_avg', orig_channels = channels, 
+                                         time_length = time_length)
         self.state_dim = out_dim
         print('out_dim', out_dim)
         
@@ -152,7 +168,7 @@ class GNNMultiview(nn.Module):
             nn.Linear(out_dim, out_dim),
             nn.Dropout(feat_do),
             nn.ReLU(),
-            nn.Linear(out_dim, out_dim) if readout_linear else nn.Identity(),
+            nn.Linear(out_dim, out_dim) if readout_layer else nn.Identity(),
         )
 
     def forward(self, x, classify = False):

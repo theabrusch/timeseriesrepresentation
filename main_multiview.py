@@ -36,7 +36,9 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if args.pretrain:
-        output_path = f'{args.output_path}/MultiView_{dset}_pretrain_subjs_{args.sample_pretrain_subjects}_multi_channel_setup_{args.multi_channel_setup}'
+        output_path = f'{args.output_path}/MultiView_sleepeeg_big_{args.pretraining_setup}_{args.loss}'
+        if args.readout_layer:
+            output_path += '_readout'
     
         output_path = check_output_path(output_path)
         args.outputh_path = output_path
@@ -75,7 +77,11 @@ def main(args):
         else:
             output_path = f'{args.output_path}/MultiView_{args.pretraining_setup}_scratch'
             group = f'{args.pretraining_setup}_scratch'
-    
+
+        if args.readout_layer:
+            output_path += '_readout'
+            group += '_readout'
+
         output_path = check_output_path(output_path)
         args.outputh_path = output_path
         print('Saving outputs in', output_path)
@@ -87,7 +93,10 @@ def main(args):
             val_samples = len(ft_val_loader.sampler)
 
             if args.load_model:
-                pretrained_model_path = f'pretrained_models/MultiView_sleepeeg_big_{args.pretraining_setup}_{args.loss}/pretrained_model.pt'
+                if not args.readout_layer:
+                    pretrained_model_path = f'pretrained_models/MultiView_sleepeeg_big_{args.pretraining_setup}_{args.loss}/pretrained_model.pt'
+                else:
+                    pretrained_model_path = f'pretrained_models/MultiView_sleepeeg_big_{args.pretraining_setup}_{args.loss}_readout/pretrained_model.pt'
                 model.load_state_dict(torch.load(pretrained_model_path, map_location=device))
             
             ft_output_path = output_path + f'/{train_samples}_samples'
@@ -145,6 +154,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
     parser.add_argument('--sample_generator', type = eval, nargs = '+', default = [10, 20, None])
+    parser.add_argument('--readout_layer', type = eval, default = False)
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
