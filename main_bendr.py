@@ -166,7 +166,7 @@ if __name__ == '__main__':
     parser.add_argument('--load_model', type = eval, default = False)
     parser.add_argument('--num-workers', default=6, type=int)
     parser.add_argument('--resume', default=None, type=int)
-    parser.add_argument('--multi_gpu', default=eval, type=False)
+    parser.add_argument('--multi_gpu', default=False, type=eval)
     
 
     parser.add_argument('--pretrain', type = eval, default = False)

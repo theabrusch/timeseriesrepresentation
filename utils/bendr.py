@@ -163,8 +163,6 @@ class ConvEncoderBENDR(_BENDREncoder):
             enc_downsample = [enc_downsample]
         assert len(enc_downsample) == len(enc_width)
 
-        # Centerable convolutions make life simpler
-        enc_width = [e if e % 2 else e+1 for e in enc_width]
         self._downsampling = enc_downsample
         self._width = enc_width
 

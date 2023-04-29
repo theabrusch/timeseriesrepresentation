@@ -72,7 +72,7 @@ table += table_line
 # plot results in same figure
 rc('font',**{'family':'serif','serif':['Times']})
 
-fig, ax = plt.subplots(1, 1, figsize = (8, 4))
+fig, ax = plt.subplots(1, 1, figsize = (8.5, 4))
 ax.set_xlabel('Number of samples per class', fontsize = 14)
 ax.set_ylabel('Test accuracy (%)', fontsize = 14)
 # increase tick size
@@ -94,8 +94,8 @@ learning_rates = {'GNN': 5e-4, 'COCOA': 5e-4}
 loss_names = {'scratch': 'Scratch', 'contrastive': 'NT-Xent', 'time_loss': 'TS2Vec', 'COCOA': 'COCOA'}
 # define 8 different markers for each method and loss
 colors = {
-    'GNN': ['salmon','orangered', 'red', 'coral'],
-    'COCOA': ['blue','deepskyblue', 'lightblue',  'steelblue']
+    'GNN': ['blue','orangered', 'green',  'purple'],
+    'COCOA': ['lightskyblue','lightsalmon', 'lightgreen', 'plum'],
 }
 orders = [7, 5, 3, 1, 8, 6, 4, 2]
 
@@ -109,8 +109,8 @@ for loss in losses:
         print(method, loss)
         # sort test accuracy by n_samples
         idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])
-        test_accuracy = np.array(all_results[method][learning_rates[method]][loss]['test_acc'])[idx]
-        n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx]
+        test_accuracy = np.array(all_results[method][learning_rates[method]][loss]['test_acc'])[idx].reshape(6,5).mean(1)
+        n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx].reshape(6,5).mean(1)
         # plot with marker on top of line
         ax.plot(n_samples/5, test_accuracy*100, label = f'{loss_names[loss]}{method_names[method]}', 
                 marker = markers[i], markersize = 6, color = colors[method][j], linewidth = 3, 
@@ -132,13 +132,15 @@ for method in methods:
         idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])
 
         test_accuracy = np.array(all_results[method][learning_rates[method]][loss]['test_acc'])[idx]
-        test_accuracy = np.reshape(test_accuracy, (6,5)).mean(1)
+        test_mean = np.reshape(test_accuracy, (6,5)).mean(1)
+        test_std = np.reshape(test_accuracy, (6,5)).std(1)
         n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx].reshape(6,5).mean(1)
         print(n_samples)
         sub_idx = [0,1,2,-1]
-        sub_acc = test_accuracy[sub_idx]
+        sub_acc = test_mean[sub_idx]
         method_name = method_names[method]
         acc_str = [f'{s_acc:.3f}'[1:] for s_acc in sub_acc]
+        std_str = [f'{s_std:.2f}'[1:] for s_std in test_std[sub_idx]]
         table_line = f'{method_name} & {loss_names[loss]} & ${acc_str[0]}$ & ${acc_str[1]}$ & ${acc_str[2]}$ & ${acc_str[3]}$ \\\\' + '\n'
         table += table_line
 
