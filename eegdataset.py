@@ -28,6 +28,7 @@ def construct_eeg_datasets(data_path,
                            train_mode = 'both',
                            sample_generator = False,
                            bendr_setup = False,
+                           upsample_bendr = False,
                            seed = None,
                            **kwargs):
     experiment = ExperimentConfig(data_path)
@@ -39,6 +40,9 @@ def construct_eeg_datasets(data_path,
     else:
         config.balanced_sampling = False
     
+    if bendr_setup and upsample_bendr:
+        config.chunk_duration = '60'
+        config.upsample = True
     
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects
@@ -258,6 +262,8 @@ def load_thinkers(config, sample_subjects = False, subjects = None):
 
 def construct_epoch_dset(file, config):
     raw = mne.io.read_raw_fif(file, preload = config.preload)
+    if config.upsample:
+        raw.resample(256)
     #if config.name == 'sleepedf':
     #    annotations = raw.annotations
     #    start_crop = annotations.orig_time + timedelta(seconds=annotations[1]['onset']) - timedelta(minutes=30)

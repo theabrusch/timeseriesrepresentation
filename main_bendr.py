@@ -178,6 +178,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretraining_setup', type = str, default = 'GNN')
 
     # data arguments
+    parser.add_argument('--upsample_bendr', type = eval, default = False)
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
     parser.add_argument('--seed_generator', type = eval, nargs = '+', default = [10, 20, None])
 
