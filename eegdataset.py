@@ -43,6 +43,8 @@ def construct_eeg_datasets(data_path,
     if bendr_setup and upsample_bendr:
         config.chunk_duration = '60'
         config.upsample = True
+    else:
+        config.upsample = False
     
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects
@@ -87,6 +89,7 @@ def construct_eeg_datasets(data_path,
     
     # construct finetuning dataset
     if train_mode == 'finetune' or train_mode == 'both':
+        
         #sample_subjects = int(sample_subjects/2) if sample_subjects else sample_subjects
         if balanced_sampling == 'finetune' or balanced_sampling == 'both':
             config.balanced_sampling = True
@@ -110,6 +113,12 @@ def construct_eeg_datasets(data_path,
             test_subjects = splits['test']
         info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
                             targets=config._targets if config._targets is not None else len(config._unique_events))
+        if bendr_setup and upsample_bendr:
+            config.chunk_duration = '60'
+            config.upsample = True
+        else:
+            config.upsample = False
+    
         print('Loading finetuning data')
         train_subjs, val_subjs = divide_subjects(config, sample_finetune_train_subjects, sample_finetune_val_subjects, subjects = finetunesubjects, test_size=config.val_size)
         finetune_train_thinkers = load_thinkers(config, sample_subjects=False, subjects = train_subjs)
