@@ -42,6 +42,7 @@ def main(args):
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
     if args.pretrain:
+        
         encoder = ConvEncoderBENDR(6, encoder_h=args.hidden_size, out_dim=args.out_dim)
         contextualizer = BENDRContextualizer(args.out_dim, layer_drop=0.01)
         # add arguments from BENDR config
@@ -51,13 +52,13 @@ def main(args):
             'mask_pct_max': 0.65
         }
         bending_college_args = {
-            "mask_rate": 0.065,
-            "mask_span": 10,
+            "mask_rate": args.mask_rate,
+            "mask_span": args.mask_span,
             "layer_drop": 0.01,
             "multi_gpu": True,
             "temp": 0.1,
             "encoder_grad_frac": 0.1,
-            "num_negatives": 20,
+            "num_negatives": args.num_negatives, 
             "enc_feat_l2": 1.0
         }
         optimizer_params = {
@@ -123,6 +124,7 @@ def main(args):
             if args.load_model:
                 encoder.load(args.pretrained_model_path)
 
+            torch.manual_seed(args.seed)
             model = BENDRClassifier(encoder, num_classes, hidden_dim=args.out_dim)
 
             train_samples = len(ft_loader.sampler)
@@ -169,22 +171,27 @@ if __name__ == '__main__':
     parser.add_argument('--multi_gpu', default=False, type=eval)
     
 
-    parser.add_argument('--pretrain', type = eval, default = False)
+    parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
-    parser.add_argument('--finetune', type = eval, default = True)
+    parser.add_argument('--finetune', type = eval, default = False)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--pretraining_setup', type = str, default = 'GNN')
 
     # data arguments
-    parser.add_argument('--upsample_bendr', type = eval, default = False)
+    parser.add_argument('--upsample_bendr', type = eval, default = True)
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
     parser.add_argument('--seed_generator', type = eval, nargs = '+', default = [10, 20, None])
 
     # model arguments
     parser.add_argument('--hidden_size', type = int, default = 256)
     parser.add_argument('--out_dim', type = int, default = 64)
+    parser.add_argument('--mask_rate', type = float, default = 0.065)
+    parser.add_argument('--mask_span', type = int, default = 10)
+    parser.add_argument('--chunk_duration', type = str, default='30')
+    parser.add_argument('--encoder', type = str, default = 'BENDR')
+
 
     # eeg arguments
     parser.add_argument('--sample_pretrain_subjects', type = eval, default = 3)
@@ -201,6 +208,7 @@ if __name__ == '__main__':
     parser.add_argument('--ft_learning_rate', type = float, default = 0.0001)
     parser.add_argument('--epochs', type = int, default = 10)
     parser.add_argument('--finetune_epochs', type = int, default = 40)
+    parser.add_argument('--seed', type = int, default = 42)
     args = parser.parse_args()
     main(args)
 

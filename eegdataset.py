@@ -30,6 +30,7 @@ def construct_eeg_datasets(data_path,
                            bendr_setup = False,
                            upsample_bendr = False,
                            seed = None,
+                           chunk_duration = '30',
                            **kwargs):
     experiment = ExperimentConfig(data_path)
     dset = data_path.split('/')[-1].strip('.yml').split('_')[0]
@@ -41,8 +42,8 @@ def construct_eeg_datasets(data_path,
         config.balanced_sampling = False
     
     if bendr_setup and upsample_bendr:
-        config.chunk_duration = '60'
-        config.upsample = True
+        config.chunk_duration = chunk_duration
+        config.upsample = False
     else:
         config.upsample = False
     

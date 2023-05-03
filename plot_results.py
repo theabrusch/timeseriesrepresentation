@@ -11,6 +11,7 @@ optenc = True
 methods = ['GNN', 'COCOA']
 learning_rates = {'GNN': [5e-4], 'COCOA': [5e-4]}
 losses = ['COCOA', 'contrastive', 'time_loss', 'scratch']
+readout = True
 
 all_results = dict()
 for method in methods:
@@ -22,7 +23,8 @@ for method in methods:
             all_results[method][lr][loss]['val_acc'] = []
             all_results[method][lr][loss]['test_acc'] = []
             all_results[method][lr][loss]['n_samples'] = []
-            runs = api.runs(path = 'theabrusch/MultiView', filters ={"$and": [{"group": f'{method}_{loss}'}, {'config.ft_learning_rate': lr}, {'config.optimize_encoder': optenc}]})
+            group = f'{method}_{loss}_readout' if readout else f'{method}_{loss}'
+            runs = api.runs(path = 'theabrusch/MultiView', filters ={"$and": [{"group": group}, {'config.ft_learning_rate': lr}, {'config.optimize_encoder': optenc}, {'config.feat_do': 0.4}]})
             print(f'{method}_{loss}')
             print(f'runs: {len(runs)}\n')
             for run in runs:
@@ -79,9 +81,10 @@ ax.set_ylabel('Test accuracy (%)', fontsize = 14)
 ax.tick_params(axis='both', which='major', labelsize=13)
 # set y axis limits
 if optenc:
-    ax.set_ylim(15, 80)
+    ax.set_ylim(20, 75)
 else:
     ax.set_ylim(15, 75)
+ax.set_xlim(9, 1050)
 # make x axis logarithmic
 ax.set_xscale('log')
 
@@ -109,8 +112,10 @@ for loss in losses:
         print(method, loss)
         # sort test accuracy by n_samples
         idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])
-        test_accuracy = np.array(all_results[method][learning_rates[method]][loss]['test_acc'])[idx].reshape(6,5).mean(1)
-        n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx].reshape(6,5).mean(1)
+        if method == 'GNN' and loss=='time_loss':
+            continue
+        test_accuracy = np.array(all_results[method][learning_rates[method]][loss]['test_acc'])[idx].reshape(7,5).mean(1)
+        n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx].reshape(7,5).mean(1)
         # plot with marker on top of line
         ax.plot(n_samples/5, test_accuracy*100, label = f'{loss_names[loss]}{method_names[method]}', 
                 marker = markers[i], markersize = 6, color = colors[method][j], linewidth = 3, 
@@ -132,11 +137,12 @@ for method in methods:
         idx = np.argsort(all_results[method][learning_rates[method]][loss]['n_samples'])
 
         test_accuracy = np.array(all_results[method][learning_rates[method]][loss]['test_acc'])[idx]
-        test_mean = np.reshape(test_accuracy, (6,5)).mean(1)
-        test_std = np.reshape(test_accuracy, (6,5)).std(1)
-        n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx].reshape(6,5).mean(1)
+        test_mean = np.reshape(test_accuracy, (7,5)).mean(1)
+        test_std = np.reshape(test_accuracy, (7,5)).std(1)
+        n_samples = np.array(all_results[method][learning_rates[method]][loss]['n_samples'])[idx].reshape(7,5).mean(1)
+        
         print(n_samples)
-        sub_idx = [0,1,2,-1]
+        sub_idx = [0,2,3,-1]
         sub_acc = test_mean[sub_idx]
         method_name = method_names[method]
         acc_str = [f'{s_acc:.3f}'[1:] for s_acc in sub_acc]
