@@ -379,10 +379,20 @@ class EEG_dataset(TorchDataset):
             elif self.standardize_epochs == 'channelwise':
                 signal = (signal-torch.mean(signal, axis = 1)[:,np.newaxis])/torch.std(signal, axis = 1)[:,np.newaxis]
 
-        if self.bendr_setup:
+        if self.bendr_setup == 1:
             sig = torch.zeros([6, signal.shape[1]])
             sig[0:2,:] = signal[0,:]
             sig[4:,:] = signal[1,:]
+            signal = sig
+        elif self.bendr_setup == 2:
+            sig = torch.zeros([6, signal.shape[1]])
+            sig[0,:] = signal[0,:]
+            sig[-1,:] = signal[1,:]
+            signal = sig
+        elif self.bendr_setup == 3:
+            sig = torch.zeros([6, signal.shape[1]])
+            sig[1,:] = signal[0,:]
+            sig[-2,:] = signal[1,:]
             signal = sig
         #fft = torch.fft.fft(signal, axis = -1).abs()
     
