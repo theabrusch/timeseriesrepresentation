@@ -176,9 +176,15 @@ def construct_eeg_datasets(data_path,
         if not seqclr_setup:
             test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup)
         else:
-            test_dset = SeqCLR_dataset(test_dset, fine_tune_mode=False, standardize_epochs=standardize_epochs)
-
-        test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True)
+            test_dset = SeqCLR_dataset(test_dset, fine_tune_mode=True, standardize_epochs=standardize_epochs)
+        
+        test = False
+        if test:
+            sample_weights_val, length_val = fixed_label_balance(test_dset, sample_size = 10, seed=seed)
+            finetune_sampler = WeightedRandomSampler(sample_weights_train[:,i], int(length_train[i]), replacement=False)
+            test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True, sampler=finetune_sampler)
+        else:
+            test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True)
         num_classes = len(np.unique(test_dset.dn3_dset.get_targets()))
     else:
         finetune_loader, finetune_val_loader, test_loader, num_classes = None, None, None, 5
@@ -378,7 +384,7 @@ class SeqCLR_dataset(TorchDataset):
             signal_2 = SeqCLR_augmentations(signal, aug2, window_length=2000)
             return signal_1.unsqueeze(1), signal_2.unsqueeze(1)
         else:
-            return signal.transpose(0,1), label
+            return signal.transpose(0,1)*10**6, label
         
 
 def SeqCLR_augmentations(x, aug_selection, window_length):
