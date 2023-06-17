@@ -1,5 +1,9 @@
 import wandb
 import torch
+import torch.nn as nn
+import numpy as np
+from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support
+
 
 def pretrain(encoder,
              projector, 

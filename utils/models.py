@@ -466,7 +466,7 @@ class SeqCLR_C(nn.Module):
         self.output_layer = nn.Sequential(
             nn.ReLU(), 
             nn.BatchNorm1d(250),
-            nn.Conv1d(250, 4, kernel_size=32, stride = 1, padding = 16, padding_mode='reflect'))
+            nn.Conv1d(250, 4, kernel_size=33, stride = 1, padding = 16, padding_mode='reflect'))
 
     def forward(self, x):
         x = x.transpose(1,2)
@@ -475,16 +475,16 @@ class SeqCLR_C(nn.Module):
         return self.output_layer(x).transpose(1,2)
         
 class SeqProjector(nn.Module):
-    def __init__(self):
+    def __init__(self, input_dim = 4, output_dim = 32):
         super(SeqProjector, self).__init__()
-        self.LSTM_1 = nn.LSTM(4, 256, batch_first = True, bidirectional = True)
-        self.LSTM_2 = nn.LSTM(4, 128, batch_first = True, bidirectional = True)
-        self.LSTM_3 = nn.LSTM(4, 64, batch_first = True,  bidirectional = True)
+        self.LSTM_1 = nn.LSTM(input_dim, 256, batch_first = True, bidirectional = True)
+        self.LSTM_2 = nn.LSTM(input_dim, 128, batch_first = True, bidirectional = True)
+        self.LSTM_3 = nn.LSTM(input_dim, 64, batch_first = True,  bidirectional = True)
 
         self.linear_layer = nn.Sequential(
             nn.Linear(896, 128), 
             nn.ReLU(),
-            nn.Linear(128, 32)
+            nn.Linear(128, output_dim)
         )
 
     def forward(self, x):
@@ -500,3 +500,17 @@ class SeqProjector(nn.Module):
         
         out = self.linear_layer(out)
         return out
+    
+
+class SeqCLR_classifier(nn.Module):
+    def __init__(self, encoder, channels, num_classes):
+        super(SeqCLR_classifier, self).__init__()
+        self.encoder = encoder
+        self.channels = channels
+        self.classifier = SeqProjector(input_dim = 4*channels, output_dim = num_classes)
+    def forward(self, x, classify = True):
+        b_size = x.shape[0]
+        x = x.reshape(b_size*self.channels, -1, 1)
+        x = self.encoder(x)
+        x = x.reshape(b_size, self.channels, -1, 4).transpose(2,3).reshape(b_size, 4*self.channels, -1).transpose(1,2)
+        return self.classifier(x)
