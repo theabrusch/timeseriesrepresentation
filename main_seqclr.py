@@ -1,7 +1,7 @@
 import torch
 import argparse
 from eegdataset import construct_eeg_datasets
-from utils.models import SeqCLR, SeqProjector
+from utils.models import SeqCLR_R, SeqCLR_C, SeqProjector
 from utils.seqclr_trainer import pretrain
 from torch.optim import AdamW
 import numpy as np
@@ -47,7 +47,10 @@ def main(args):
         args.outputh_path = output_path
         print('Saving outputs in', output_path)
         wandb.init(project = 'MultiView', group = 'SeqCLR', config = args)
-        encoder = SeqCLR()
+        if args.encoder == 'SeqCLR_R':
+            encoder = SeqCLR_R()
+        elif args.encoder == 'SeqCLR_C':
+            encoder = SeqCLR_C()
         projector = SeqProjector()
         loss_fn = ContrastiveLoss(temperature=0.05)
 
@@ -100,7 +103,7 @@ if __name__ == '__main__':
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
-    parser.add_argument('--encoder', type = str, default = 'wave2vec')
+    parser.add_argument('--encoder', type = str, default = 'SeqCLR_C')
     parser.add_argument('--layers', type = int, default = 6)
     parser.add_argument('--early_stopping_criterion', type = str, default = None)
     parser.add_argument('--conv_do', type = float, default = 0.1)

@@ -417,9 +417,9 @@ class GRU_encoder(nn.Module):
         out3 = F.interpolate(out3.transpose(1,2), scale_factor = 4).transpose(1,2)
         return torch.cat([out1, out2, out3], dim = -1)
 
-class SeqCLR(nn.Module):
+class SeqCLR_R(nn.Module):
     def __init__(self):
-        super(SeqCLR, self).__init__()
+        super(SeqCLR_R, self).__init__()
         self.encoder = nn.Sequential(GRU_encoder(),
                                      nn.Linear(448, 128),
                                      nn.ReLU(),
@@ -427,6 +427,52 @@ class SeqCLR(nn.Module):
                                      nn.Linear(128, 4))
     def forward(self, x):
         return self.encoder(x)
+
+class Conv_resblock(nn.Module):
+    def __init__(self):
+        super(Conv_resblock, self).__init__()
+        self.linear = nn.Linear(250, 250)
+        self.conv_layer = nn.Sequential(
+            nn.ReLU(),
+            nn.BatchNorm1d(250), 
+            nn.Conv1d(250, 250, kernel_size=33, stride = 1, padding = 16, padding_mode='reflect'),
+        )
+    def forward(self, x):
+        x = x.transpose(1,2)
+        x = self.linear(x)
+        x = x.transpose(1,2)
+        return x + self.conv_layer(x)
+
+class Conv_encoder(nn.Module):
+    def __init__(self):
+        super(Conv_encoder, self).__init__()
+        self.conv_1 = nn.Conv1d(1, 100, kernel_size=65, stride = 1, padding = 32, padding_mode='reflect')
+        self.conv_2 = nn.Conv1d(1, 100, kernel_size=33, stride = 1, padding = 16, padding_mode='reflect')
+        self.conv_3 = nn.Conv1d(1, 50, kernel_size=17, stride = 1, padding = 8, padding_mode='reflect')
+    def forward(self, x):
+        out1 = self.conv_1(x)
+        out2 = self.conv_2(x)
+        out3 = self.conv_3(x)
+        return torch.cat([out1, out2, out3], dim = 1)
+
+class SeqCLR_C(nn.Module):
+    def __init__(self):
+        super(SeqCLR_C, self).__init__()
+        self.encoder = Conv_encoder()
+        resblocks = []
+        for i in range(4):
+            resblocks.append(Conv_resblock())
+        self.resblocks = nn.Sequential(*resblocks)
+        self.output_layer = nn.Sequential(
+            nn.ReLU(), 
+            nn.BatchNorm1d(250),
+            nn.Conv1d(250, 4, kernel_size=32, stride = 1, padding = 16, padding_mode='reflect'))
+
+    def forward(self, x):
+        x = x.transpose(1,2)
+        x = self.encoder(x)
+        x = self.resblocks(x)
+        return self.output_layer(x).transpose(1,2)
         
 class SeqProjector(nn.Module):
     def __init__(self):
