@@ -46,7 +46,7 @@ def main(args):
         output_path = check_output_path(output_path)
         args.outputh_path = output_path
         print('Saving outputs in', output_path)
-        wandb.init(project = 'MultiView', group = args.pretraining_setup, config = args)
+        wandb.init(project = 'MultiView', group = 'SeqCLR', config = args)
         encoder = SeqCLR()
         projector = SeqProjector()
         loss_fn = ContrastiveLoss(temperature=0.05)
