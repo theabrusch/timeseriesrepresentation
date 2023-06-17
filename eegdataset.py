@@ -10,6 +10,7 @@ from dn3.configuratron import ExperimentConfig
 from dn3.data.dataset import EpochTorchRecording, Thinker, Dataset, DatasetInfo
 from dn3.transforms.instance import To1020
 import numpy as np
+from scipy.signal import filtfilt, butter, sosfiltfilt
 from sklearn.model_selection import train_test_split
 import warnings
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning) 
@@ -28,6 +29,7 @@ def construct_eeg_datasets(data_path,
                            train_mode = 'both',
                            sample_generator = False,
                            bendr_setup = False,
+                           seqclr_setup = False,
                            upsample_bendr = False,
                            seed = None,
                            chunk_duration = '30',
@@ -71,7 +73,11 @@ def construct_eeg_datasets(data_path,
             'jitter_ratio': 0.8,
             'max_seg': 8
         }
-        pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(pretrain_val_dset, aug_config, standardize_epochs=standardize_epochs)
+
+        if not seqclr_setup:
+            pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(pretrain_val_dset, aug_config, standardize_epochs=standardize_epochs)
+        else:
+            pretrain_dset, pretrain_val_dset = SeqCLR_dataset(pretrain_dset, standardize_epochs=standardize_epochs), SeqCLR_dataset(pretrain_val_dset, standardize_epochs=standardize_epochs)
 
         if config.balanced_sampling:
             if sample_generator:
@@ -131,7 +137,11 @@ def construct_eeg_datasets(data_path,
             'jitter_ratio': 0.8,
             'max_seg': 8
         }
-        finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs, bendr_setup=bendr_setup)
+        if not seqclr_setup:
+            finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs, bendr_setup=bendr_setup)
+        else:
+            finetune_train_dset, finetune_val_dset = SeqCLR_dataset(finetune_train_dset, fine_tune_mode=True, standardize_epochs=standardize_epochs), SeqCLR_dataset(finetune_val_dset, fine_tune_mode=True, standardize_epochs=standardize_epochs)
+        
         if config.balanced_sampling:
             if sample_generator:
                 # compute sample weights for train and val sets
@@ -163,7 +173,11 @@ def construct_eeg_datasets(data_path,
         config.balanced_sampling = False
         test_thinkers = load_thinkers(config, sample_subjects = sample_test_subjects, subjects = test_subjects)
         test_dset = Dataset(test_thinkers, dataset_info=info)
-        test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup)
+        if not seqclr_setup:
+            test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup)
+        else:
+            test_dset = SeqCLR_dataset(test_dset, fine_tune_mode=False, standardize_epochs=standardize_epochs)
+
         test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True)
         num_classes = len(np.unique(test_dset.dn3_dset.get_targets()))
     else:
@@ -294,51 +308,6 @@ def construct_epoch_dset(file, config):
     return recording
 
 
-#def construct_dataset(config):
-
-def jitter(x, sigma=0.8):
-    # https://arxiv.org/pdf/1706.00527.pdf
-    return x + np.random.normal(loc=0., scale=sigma, size=x.shape)
-
-def scaling(x, sigma = 1.1):
-    factor = np.random.normal(2, sigma, size = [1, x.shape[1]])
-    return x * factor 
-
-def permutation(x, max_segments=5, seg_mode="random"):
-    orig_steps = np.arange(x.shape[1])
-
-    num_segs = np.random.randint(1, max_segments)
-
-    ret = np.zeros_like(x)
-
-    if num_segs > 1:
-        if seg_mode == "random":
-            split_points = np.random.choice(x.shape[1] - 2, num_segs - 1, replace=False)
-            split_points.sort()
-            splits = np.split(orig_steps, split_points)
-        else:
-            splits = np.array_split(orig_steps, num_segs)
-        warp = np.concatenate(np.random.permutation(splits)).ravel()
-        ret = x[:,warp]
-    else:
-        ret = x
-
-    return ret
-
-
-def remove_frequency(x, maskout_ratio=0):
-    mask = torch.FloatTensor(x.shape).uniform_() > maskout_ratio # maskout_ratio are False
-    mask = mask.to(x.device)
-    return x*mask
-
-def add_frequency(x, pertub_ratio=0,):
-
-    mask = torch.FloatTensor(x.shape).uniform_() > (1-pertub_ratio) # only pertub_ratio of all values are True
-    mask = mask.to(x.device)
-    max_amplitude = x.max()
-    random_am = torch.rand(mask.shape)*(max_amplitude*0.1)
-    pertub_matrix = mask*random_am
-    return x+pertub_matrix
 
 class EEG_dataset(TorchDataset):
     def __init__(self, dn3_dset, augmentation_config, preloaded = False, fine_tune_mode = False, standardize_epochs = False, bendr_setup = False):
@@ -349,26 +318,10 @@ class EEG_dataset(TorchDataset):
         self.fine_tune_mode = fine_tune_mode
         self.standardize_epochs = standardize_epochs
         self.bendr_setup = bendr_setup
-    
-    def _time_augmentations(self, signal):
-        time_augs = [jitter, scaling, permutation]
-        time_args = [self.aug_config['jitter_ratio'], self.aug_config['jitter_scale_ratio'], self.aug_config['max_seg']]
-        li = np.random.randint(0, 3)
-        return time_augs[li](signal, time_args[li])
-    
-    def _freq_augmentations(self, signal):
-        freq_augs = [remove_frequency, add_frequency]
-        li = np.random.randint(0, 2)
-        return freq_augs[li](signal)
 
     def __len__(self):
         return len(self.dn3_dset)
     
-    def _perform_augmentations(self, signal, fft):
-        time_aug = self._time_augmentations(signal)
-        freq_aug = self._freq_augmentations(fft)
-
-        return time_aug, freq_aug
     
     def __getitem__(self, index):
         signal, label = self.dn3_dset.__getitem__(index)
@@ -397,3 +350,75 @@ class EEG_dataset(TorchDataset):
         #fft = torch.fft.fft(signal, axis = -1).abs()
     
         return signal, label
+    
+
+class SeqCLR_dataset(TorchDataset):
+    def __init__(self, 
+                 dn3_dset, 
+                 fine_tune_mode = False, 
+                 standardize_epochs = False):
+        super().__init__()
+        self.dn3_dset = dn3_dset
+        self.fine_tune_mode = fine_tune_mode
+        self.standardize_epochs = standardize_epochs
+
+    def __len__(self):
+        return len(self.dn3_dset)
+    
+    def __getitem__(self, index):
+        signal, label = self.dn3_dset.__getitem__(index)
+
+        if not self.fine_tune_mode:
+            # select two random channels
+            ch1, ch2 = np.random.choice(np.arange(signal.shape[0]), 2, replace = False)
+            signal = signal[ch1] - signal[ch2]
+            # select two random augmentations
+            aug1, aug2 = np.random.choice(np.arange(6), 2, replace = False)
+            signal_1 = SeqCLR_augmentations(signal, aug1, window_length=2000)
+            signal_2 = SeqCLR_augmentations(signal, aug2, window_length=2000)
+            return signal_1.unsqueeze(1), signal_2.unsqueeze(1)
+        else:
+            return signal.transpose(0,1), label
+        
+
+def SeqCLR_augmentations(x, aug_selection, window_length):
+    padding = int((len(x)-window_length)/2)
+    if aug_selection == 0:
+        # time shift
+        shift = np.random.randint(1, 25)
+        sign = np.random.choice([-1, 1])
+        x = x[padding + shift * sign: padding + shift * sign + window_length]
+    elif aug_selection == 1:
+        # amplitude scaling
+        scale = np.random.uniform(0.5, 2)
+        x = x[padding:padding+window_length] * scale
+    elif aug_selection == 2:
+        # DC shift
+        shift = np.random.uniform(-10, 10)
+        x = x[padding:padding+window_length] + shift
+    elif aug_selection == 3:
+        # zero_masking
+        mask_length = np.random.randint(1, 75)
+        mask_start = np.random.randint(0, window_length - mask_length)
+        x = x[padding:padding+window_length]
+        x[mask_start:mask_start+mask_length] = 0
+    elif aug_selection == 4:
+        # Gaussian noise
+        sigma = np.random.uniform(0, 0.2)
+        x = x[padding:padding+window_length] + np.random.normal(0, sigma)
+    elif aug_selection == 5:
+        # band stop filter
+        x = x[padding:padding+window_length]
+        fs = 100
+        center = np.random.uniform(2.8, 41.3)
+        width = 5
+        low = (center - width/2) 
+        high = (center + width/2)
+        sos = butter(5, [low, high], btype='bandstop', fs=fs, output='sos')
+        x = sosfiltfilt(sos, x)
+        x = torch.tensor(x.copy())
+    return x
+
+
+x = torch.randn(3000)
+x = SeqCLR_augmentations(x, 4, 2000)

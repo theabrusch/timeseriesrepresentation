@@ -386,9 +386,71 @@ class ContrastiveLoss2(nn.Module):
         if reduce:
             loss = loss / (2*batchsize)
         return loss 
-        
 
-class TimeFrequencyLoss(nn.Module):
-    def __init__(self, delta):
-        self.delta = delta
+class GRU_resblock(nn.Module):
+    def __init__(self, input_shape):
+        super(GRU_resblock, self).__init__()
+        self.layer_norm = nn.LayerNorm(input_shape)
+        self.GRU = nn.GRU(input_shape, input_shape, batch_first = True)
     
+    def forward(self, x):
+        out = self.layer_norm(x)
+        out, _ = self.GRU(x)
+        return x + out
+
+class GRU_encoder(nn.Module):
+    def __init__(self):
+        super(GRU_encoder, self).__init__()
+        self.GRU_1 = nn.GRU(1, 256, batch_first = True)
+        self.GRU_2 = nn.GRU(1, 128, batch_first = True)
+        self.GRU_3 = nn.GRU(1, 64, batch_first = True)
+    
+    def forward(self, x):
+        out1, _ = self.GRU_1(x)
+        x_down = F.interpolate(x.transpose(1,2), scale_factor = 0.5).transpose(1,2)
+        out2, _ = self.GRU_2(x_down)
+        x_down = F.interpolate(x_down.transpose(1,2), scale_factor = 0.5).transpose(1,2)
+        out3, _ = self.GRU_3(x_down)
+
+        # upsample out2 and out3
+        out2 = F.interpolate(out2.transpose(1,2), scale_factor = 2).transpose(1,2)
+        out3 = F.interpolate(out3.transpose(1,2), scale_factor = 4).transpose(1,2)
+        return torch.cat([out1, out2, out3], dim = -1)
+
+class SeqCLR(nn.Module):
+    def __init__(self):
+        super(SeqCLR, self).__init__()
+        self.encoder = nn.Sequential(GRU_encoder(),
+                                     nn.Linear(448, 128),
+                                     nn.ReLU(),
+                                     GRU_resblock(128),
+                                     nn.Linear(128, 4))
+    def forward(self, x):
+        return self.encoder(x)
+        
+class SeqProjector(nn.Module):
+    def __init__(self):
+        super(SeqProjector, self).__init__()
+        self.LSTM_1 = nn.LSTM(4, 256, batch_first = True, bidirectional = True)
+        self.LSTM_2 = nn.LSTM(4, 128, batch_first = True, bidirectional = True)
+        self.LSTM_3 = nn.LSTM(4, 64, batch_first = True,  bidirectional = True)
+
+        self.linear_layer = nn.Sequential(
+            nn.Linear(896, 128), 
+            nn.ReLU(),
+            nn.Linear(128, 32)
+        )
+
+    def forward(self, x):
+        _, (h_1, _) = self.LSTM_1(x)
+        x_down = F.interpolate(x.transpose(1,2), scale_factor = 0.5).transpose(1,2)
+        _, (h_2, _) = self.LSTM_2(x_down)
+        x_down = F.interpolate(x_down.transpose(1,2), scale_factor = 0.5).transpose(1,2)
+        _, (h_3, _) = self.LSTM_3(x_down)
+        # flatten the hidden states
+        h_1, h_2, h_3 = h_1.transpose(0,1), h_2.transpose(0,1), h_3.transpose(0,1)
+        h_1, h_2, h_3 = h_1.reshape(h_1.shape[0], -1), h_2.reshape(h_2.shape[0], -1), h_3.reshape(h_3.shape[0], -1)
+        out = torch.cat([h_1, h_2, h_3], dim = -1)
+        
+        out = self.linear_layer(out)
+        return out
