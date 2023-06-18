@@ -81,7 +81,7 @@ def main(args):
         wandb.finish()
 
     if args.finetune:
-        
+        wandb.init(project = 'MultiView', group = 'SeqCLR_ft', config = args)
         if args.load_model:
             output_path = f'{args.output_path}/SeqCLR_{args.encoder}'
             group = f'{args.pretraining_setup}_{args.loss}'
