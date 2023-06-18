@@ -86,11 +86,11 @@ def construct_eeg_datasets(data_path,
                 sample_weights, counts = get_label_balance(pretrain_dset)
 
             pretrain_sampler = WeightedRandomSampler(sample_weights, len(counts) * int(counts.min()), replacement=False)
-            pretrain_loader = DataLoader(pretrain_dset, batch_size=batchsize, sampler=pretrain_sampler)
+            pretrain_loader = DataLoader(pretrain_dset, batch_size=batchsize, sampler=pretrain_sampler, num_workers=2)
         else:
-            pretrain_loader = DataLoader(pretrain_dset, batch_size=batchsize, shuffle = True)
+            pretrain_loader = DataLoader(pretrain_dset, batch_size=batchsize, shuffle = True, num_workers=2)
 
-        pretrain_loader, pretrain_val_loader = DataLoader(pretrain_dset, batch_size=batchsize, shuffle = True), DataLoader(pretrain_val_dset, batch_size=batchsize, shuffle = True)
+        pretrain_loader, pretrain_val_loader = DataLoader(pretrain_dset, batch_size=batchsize, shuffle = True, num_workers=2), DataLoader(pretrain_val_dset, batch_size=batchsize, shuffle = True, num_workers=2)
     else:
         pretrain_loader, pretrain_val_loader = None, None
     
@@ -160,13 +160,13 @@ def construct_eeg_datasets(data_path,
             finetune_val_loader = []
             for i in range(sample_weights_train.shape[1]):
                 finetune_sampler = WeightedRandomSampler(sample_weights_train[:,i], int(length_train[i]), replacement=False)
-                finetune_loader.append(DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler))
+                finetune_loader.append(DataLoader(finetune_train_dset, batch_size=target_batchsize, sampler=finetune_sampler, num_workers=2))
 
                 finetune_val_sampler = WeightedRandomSampler(sample_weights_val[:,i], int(length_val[i]), replacement=False)
-                finetune_val_loader.append(DataLoader(finetune_val_dset, batch_size=target_batchsize, sampler=finetune_val_sampler))
+                finetune_val_loader.append(DataLoader(finetune_val_dset, batch_size=target_batchsize, sampler=finetune_val_sampler, num_workers=2))
         else:
-            finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, shuffle = True)
-            finetune_val_loader = DataLoader(finetune_val_dset, batch_size=target_batchsize, shuffle = True)
+            finetune_loader = DataLoader(finetune_train_dset, batch_size=target_batchsize, shuffle = True, num_workers=2)
+            finetune_val_loader = DataLoader(finetune_val_dset, batch_size=target_batchsize, shuffle = True, num_workers=2)
         
         # get test set
         print('Loading test data')
@@ -182,9 +182,9 @@ def construct_eeg_datasets(data_path,
         if test:
             sample_weights_val, length_val = fixed_label_balance(test_dset, sample_size = 10, seed=seed)
             finetune_sampler = WeightedRandomSampler(sample_weights_train[:,i], int(length_train[i]), replacement=False)
-            test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True, sampler=finetune_sampler)
+            test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True, sampler=finetune_sampler, num_workers=2)
         else:
-            test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True)
+            test_loader = DataLoader(test_dset, batch_size=target_batchsize, shuffle = True, num_workers=2)
         num_classes = len(np.unique(test_dset.dn3_dset.get_targets()))
     else:
         finetune_loader, finetune_val_loader, test_loader, num_classes = None, None, None, 5
