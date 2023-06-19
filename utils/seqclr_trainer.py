@@ -51,9 +51,9 @@ def pretrain(encoder,
 
             out_2 = encoder(x_2)
             out_2 = projector(out_2)
-            val_loss = loss_fn(out_1, out_2)
+            loss = loss_fn(out_1, out_2)
 
-            val_loss += val_loss.item()
+            val_loss += loss.item()
 
 
         if log:
