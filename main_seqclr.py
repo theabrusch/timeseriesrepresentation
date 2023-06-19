@@ -38,6 +38,10 @@ def main(args):
     orig_channels = channels
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if args.load_model:
+        # check if pretrained model path exists and throw an error if it doesn't
+        if not os.path.exists(args.pretrained_model_path):
+            raise ValueError(f'Pretrained model path {args.pretrained_model_path} does not exist.')
 
     if args.pretrain:
         output_path = f'{args.output_path}/SeqCLR'
