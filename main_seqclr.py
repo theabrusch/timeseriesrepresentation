@@ -60,7 +60,8 @@ def main(args):
         loss_fn = ContrastiveLoss(temperature=0.05)
 
         if args.load_model:
-            encoder.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
+            encoder.load_state_dict(torch.load(args.pretrained_model_path + '/encoder.pt', map_location=device))
+            projector.load_state_dict(torch.load(args.pretrained_model_path + '/projector.pt', map_location=device))
 
         wandb.config.update({'Pretrain samples': len(pretrain_loader.dataset), 'Pretrain validation samples': len(pretrain_val_loader.dataset)})
         
@@ -80,8 +81,11 @@ def main(args):
 
         if args.save_model:
             encoder.eval()
-            path = f'{output_path}/pretrained_model.pt'
-            torch.save(encoder.state_dict(), path)
+            projector.eval()
+            encoder_path = f'{output_path}/encoder.pt'
+            torch.save(encoder.state_dict(), encoder_path)
+            projector_path = f'{output_path}/projector.pt'
+            torch.save(projector.state_dict(), projector_path)
         wandb.finish()
 
     if args.finetune:
