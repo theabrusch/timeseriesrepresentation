@@ -61,5 +61,7 @@ def pretrain(encoder,
             wandb.log(log_dict)
 
         if backup_path is not None:
-            path = f'{backup_path}/pretrained_model.pt'
-            torch.save(encoder.state_dict(), path)
+            encoder_path = f'{backup_path}/encoder.pt'
+            torch.save(encoder.state_dict(), encoder_path)
+            projector_path = f'{backup_path}/projector.pt'
+            torch.save(projector.state_dict(), projector_path)

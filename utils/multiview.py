@@ -87,6 +87,8 @@ class Multiview(nn.Module):
                  nlayers = 6,
                  out_dim = 64,
                  readout_layer = False,
+                 projection_head = False,
+                 embedding_dim = 32,
                  **kwargs):
         super().__init__()
         self.channels = channels
@@ -97,6 +99,10 @@ class Multiview(nn.Module):
                                  norm = 'group', do = conv_do, readout_layer=readout_layer)
         self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, 
                                          pool = 'adapt_avg', orig_channels = orig_channels)
+        self.projection_head = projection_head
+        if projection_head:
+            self.projector = TimeClassifier(in_features = out_dim, num_classes = 32, 
+                                            pool = 'adapt_avg', orig_channels = orig_channels)
     
     def forward(self, x, classify = False):
         b, ch, ts = x.shape
@@ -108,7 +114,10 @@ class Multiview(nn.Module):
             x = x.view(b, ch, self.out_dim, time_out)
         if classify:
             return self.classifier(x)
-        return x
+        elif self.projection_head:
+            return self.projector(x)
+        else:
+            return x
 
     def update_classifier(self, num_classes, orig_channels, seed = None):
         torch.manual_seed(seed)
@@ -135,6 +144,8 @@ class GNNMultiview(nn.Module):
                  hidden_channels = 256, 
                  nlayers = 6, 
                  out_dim = 64,
+                 projection_head = False,
+                 embedding_dim = 32,
                  readout_layer = False,
                  **kwargs):
         super().__init__()
@@ -148,6 +159,12 @@ class GNNMultiview(nn.Module):
 
         out_dim = out_dim
         self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, 
+                                         pool = 'adapt_avg', orig_channels = channels, 
+                                         time_length = time_length)
+        self.projection_head = projection_head
+
+        if projection_head:
+            self.projector = TimeClassifier(in_features = out_dim, num_classes = embedding_dim, 
                                          pool = 'adapt_avg', orig_channels = channels, 
                                          time_length = time_length)
         self.state_dim = out_dim
@@ -199,6 +216,8 @@ class GNNMultiview(nn.Module):
 
         if classify:
             return self.classifier(out)
+        elif self.projection_head:
+            return self.projector(out)
         else:
             return out
         
