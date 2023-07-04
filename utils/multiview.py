@@ -38,7 +38,7 @@ class TimeClassifier(nn.Module):
             latents = self.flatten(self.adpat_avg(latents))
         else:
             latents = self.flatten(latents)
-
+        
         return self.classifier(latents)
 
 class Classifier(nn.Module):
@@ -100,8 +100,9 @@ class Multiview(nn.Module):
         self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, 
                                          pool = 'adapt_avg', orig_channels = orig_channels)
         self.projection_head = projection_head
+
         if projection_head:
-            self.projector = TimeClassifier(in_features = out_dim, num_classes = 32, 
+            self.projector = TimeClassifier(in_features = out_dim, num_classes = embedding_dim, 
                                             pool = 'adapt_avg', orig_channels = orig_channels)
     
     def forward(self, x, classify = False):
@@ -109,13 +110,18 @@ class Multiview(nn.Module):
         if ch > self.channels:
             x = x.view(b*ch, 1, ts)
         x = self.wave2vec(x)
+        
+        if self.projection_head:
+            # only reshape after projection head
+            out = self.projector(x)
+            out = out.view(b, ch, -1)
+            return out
+
         time_out = x.shape[-1]
         if ch > self.channels:
             x = x.view(b, ch, self.out_dim, time_out)
         if classify:
-            return self.classifier(x)
-        elif self.projection_head:
-            return self.projector(x)
+            return self.classifier(x)            
         else:
             return x
 
