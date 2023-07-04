@@ -32,7 +32,10 @@ def pretrain(encoder,
             out_2 = encoder(x_2)
             out_2 = projector(out_2)
 
-            loss = loss_fn(out_1, out_2)
+            out = torch.cat((out_1.unsqueeze(1), out_2.unsqueeze(1)), dim = 1)
+            loss = loss_fn(out)
+            if len(loss) > 0:
+                loss = loss[0]
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
@@ -51,7 +54,10 @@ def pretrain(encoder,
 
             out_2 = encoder(x_2)
             out_2 = projector(out_2)
+            out = torch.cat((out_1.unsqueeze(1), out_2.unsqueeze(1)), dim = 1)
             loss = loss_fn(out_1, out_2)
+            if len(loss) > 0:
+                loss = loss[0]
 
             val_loss += loss.item()
 
