@@ -35,10 +35,6 @@ def main(args):
     args.seqclr_setup = True
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
-    temp_pretrain = next(iter(pretrain_loader))
-    temp_finetune = next(iter(finetune_loader[0]))
-    orig_channels = channels
-    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if args.load_model:
         # check if pretrained model path exists and throw an error if it doesn't
