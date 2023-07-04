@@ -81,6 +81,9 @@ def main(args):
         if args.readout_layer:
             output_path += '_readout'
             group += '_readout'
+            if args.projection_head:
+                output_path += '_projection_head'
+                group += '_projection_head'
 
         output_path = check_output_path(output_path)
         args.outputh_path = output_path
