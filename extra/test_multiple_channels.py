@@ -3,7 +3,7 @@ from dn3.configuratron import ExperimentConfig
 from dn3.data.dataset import EpochTorchRecording, Thinker, DatasetInfo, Dataset
 import mne
 from dn3_.dn3.utils import make_epochs_from_raw
-from eegdataset import load_thinkers, EEG_dataset
+from src.eegdataset import load_thinkers, EEG_dataset
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from scipy.fft import fft

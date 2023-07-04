@@ -1,13 +1,13 @@
 import torch
 import argparse
-from eegdataset import construct_eeg_datasets
-from utils.models import SeqCLR_R, SeqCLR_C, SeqProjector, SeqCLR_classifier
-from utils.seqclr_trainer import pretrain
-from utils.multiview import finetune, evaluate_classifier
+from src.eegdataset import construct_eeg_datasets
+from src.models import SeqCLR_R, SeqCLR_C, SeqProjector, SeqCLR_classifier
+from src.seqclr_trainer import pretrain
+from src.multiview import finetune, evaluate_classifier
 from torch.optim import AdamW
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
-from utils.losses import ContrastiveLoss 
+from src.losses import ContrastiveLoss 
 import os
 import wandb
 
@@ -35,6 +35,8 @@ def main(args):
     args.seqclr_setup = True
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
+    temp_pretrain = next(iter(pretrain_loader))
+    temp_finetune = next(iter(finetune_loader[0]))
     orig_channels = channels
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -157,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('--load_model', type = eval, default = False)
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
-    parser.add_argument('--finetune', type = eval, default = False)
+    parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
@@ -168,7 +170,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
-    parser.add_argument('--sample_generator', type = eval, nargs = '+', default = [10])
+    parser.add_argument('--sample_generator', type = eval, nargs = '+', default = [None])
     parser.add_argument('--readout_layer', type = eval, default = True)
 
     # model arguments
