@@ -96,10 +96,13 @@ def main(args):
             val_samples = len(ft_val_loader.sampler)
 
             if args.load_model:
-                if not args.readout_layer:
-                    pretrained_model_path = f'pretrained_models/MultiView_sleepeeg_big_{args.pretraining_setup}_{args.loss}/pretrained_model.pt'
-                else:
-                    pretrained_model_path = f'pretrained_models/MultiView_sleepeeg_big_{args.pretraining_setup}_{args.loss}_readout/pretrained_model.pt'
+                pretrained_model_path = f'pretrained_models/MultiView_sleepeeg_big_{args.pretraining_setup}_{args.loss}'
+                if args.readout_layer:
+                    pretrained_model_path = pretrained_model_path + '_readout'
+                if args.projection_head:
+                    pretrained_model_path = pretrained_model_path + '_projection_head'
+                pretrained_model_path = pretrained_model_path + '/pretrained_model.pt'
+
                 model.load_state_dict(torch.load(pretrained_model_path, map_location=device))
             
             ft_output_path = output_path + f'/{train_samples}_samples'
