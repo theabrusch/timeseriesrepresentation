@@ -424,7 +424,3 @@ def SeqCLR_augmentations(x, aug_selection, window_length):
         x = sosfiltfilt(sos, x)
         x = torch.tensor(x.copy())
     return x
-
-
-x = torch.randn(3000)
-x = SeqCLR_augmentations(x, 4, 2000)

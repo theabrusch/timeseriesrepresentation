@@ -2,7 +2,7 @@ import torch
 import argparse
 from utils.ts2vec import TS2VecEncoder, TS2VecClassifer
 from utils.dataset import get_datasets
-from eegdataset import construct_eeg_datasets
+from src.eegdataset import construct_eeg_datasets
 from torch.optim import AdamW
 from utils.plot_functions import plot_contrastive_losses
 import numpy as np

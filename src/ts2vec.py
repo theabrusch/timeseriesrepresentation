@@ -2,10 +2,10 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
-from utils.losses import TS2VecLoss
+from src.losses import TS2VecLoss
 from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support
 from copy import deepcopy
-from utils.models import wave2vecblock
+from src.models import wave2vecblock
 import wandb
 
 class DilatedCNNBlock(nn.Module):

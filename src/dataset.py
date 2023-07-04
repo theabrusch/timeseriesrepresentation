@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset, DataLoader
 import torch
-from utils.augmentations import frequency_augmentation, time_augmentation
+from src.augmentations import frequency_augmentation, time_augmentation
 from torch.nn import functional as F
 import numpy as np
 

@@ -1,13 +1,13 @@
 import torch
 import argparse
-from eegdataset import construct_eeg_datasets
-from utils.models import SeqCLR_R, SeqCLR_C, SeqProjector, SeqCLR_classifier
-from utils.seqclr_trainer import pretrain
-from utils.multiview import finetune, evaluate_classifier
+from src.eegdataset import construct_eeg_datasets
+from src.seqclr_models import SeqCLR_R, SeqCLR_C, SeqProjector, SeqCLR_classifier, SeqCLR_W, DummyProjector
+from src.seqclr_trainer import pretrain
+from src.multiview import finetune, evaluate_classifier, TimeClassifier
 from torch.optim import AdamW
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
-from utils.losses import ContrastiveLoss 
+from src.losses import get_loss 
 import os
 import wandb
 
@@ -35,6 +35,8 @@ def main(args):
     args.seqclr_setup = True
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
+    temp_pretrain = next(iter(pretrain_loader))
+    temp_finetune = next(iter(finetune_loader[0]))
     orig_channels = channels
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -54,15 +56,25 @@ def main(args):
         wandb.init(project = 'MultiView', group = 'SeqCLR', config = args)
         if args.encoder == 'SeqCLR_R':
             encoder = SeqCLR_R()
+            projector = SeqProjector()
         elif args.encoder == 'SeqCLR_C':
             encoder = SeqCLR_C()
-        projector = SeqProjector()
-        loss_fn = ContrastiveLoss(temperature=0.05)
+            projector = SeqProjector()
+        elif args.encoder == 'SeqCLR_W':
+            encoder = SeqCLR_W()
+            if not args.loss == 'time_loss':
+                projector = TimeClassifier(in_features = 64, num_classes = 32, 
+                                        pool = 'adapt_avg', orig_channels = channels)
+            else:
+                projector = DummyProjector()
+
+        
+        loss_fn = get_loss(args.loss, device=device)
 
         if args.load_model:
             encoder.load_state_dict(torch.load(args.pretrained_model_path + '/encoder.pt', map_location=device))
             projector.load_state_dict(torch.load(args.pretrained_model_path + '/projector.pt', map_location=device))
-
+        
         wandb.config.update({'Pretrain samples': len(pretrain_loader.dataset), 'Pretrain validation samples': len(pretrain_val_loader.dataset)})
         
         optimizer = AdamW(list(encoder.parameters()) + list(projector.parameters()), lr = args.learning_rate, weight_decay=args.weight_decay)
@@ -102,7 +114,8 @@ def main(args):
         print('Saving outputs in', output_path)
 
         for ft_loader, ft_val_loader in zip(finetune_loader, finetune_val_loader):
-            wandb.init(project = 'MultiView', group = 'SeqCLR', config = args)
+            if device == 'cuda':
+                wandb.init(project = 'MultiView', group = 'SeqCLR', config = args)
             if args.encoder == 'SeqCLR_R':
                 encoder = SeqCLR_R()
             elif args.encoder == 'SeqCLR_C':
@@ -157,7 +170,7 @@ if __name__ == '__main__':
     parser.add_argument('--load_model', type = eval, default = False)
     parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
-    parser.add_argument('--finetune', type = eval, default = False)
+    parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
@@ -168,12 +181,12 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
-    parser.add_argument('--sample_generator', type = eval, nargs = '+', default = [10])
+    parser.add_argument('--sample_generator', type = eval, nargs = '+', default = [None])
     parser.add_argument('--readout_layer', type = eval, default = True)
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
-    parser.add_argument('--encoder', type = str, default = 'SeqCLR_C')
+    parser.add_argument('--encoder', type = str, default = 'SeqCLR_W')
     parser.add_argument('--layers', type = int, default = 6)
     parser.add_argument('--early_stopping_criterion', type = str, default = 'loss')
     parser.add_argument('--conv_do', type = float, default = 0.1)
@@ -193,7 +206,7 @@ if __name__ == '__main__':
     parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg
 
     # optimizer arguments
-    parser.add_argument('--loss', type = str, default = 'contrastive')
+    parser.add_argument('--loss', type = str, default = 'time_loss')
     parser.add_argument('--track_test_performance', type = eval, default = True)
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--ft_learning_rate', type = float, default = 1e-3)

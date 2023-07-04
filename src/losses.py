@@ -153,3 +153,14 @@ class CMCloss(torch.nn.Module):
                 d += 1
         return loss/d, time_loss/d, inst_loss/d
 
+
+
+
+def get_loss(loss_function, device):
+    if loss_function == 'time_loss':
+        loss_fn = CMCloss(temperature = 0.5, criterion='TS2Vec').to(device)
+    elif loss_function == 'contrastive':
+        loss_fn = CMCloss(temperature = 0.5, criterion='contrastive').to(device)
+    elif loss_function == 'COCOA':
+        loss_fn = COCOAloss(temperature = 0.5).to(device)
+    return loss_fn

@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.models import wave2vecblock
+from src.models import wave2vecblock
 import numpy as np
 from sklearn.metrics import balanced_accuracy_score, precision_recall_fscore_support
-from utils.losses import ContrastiveLoss, TS2VecLoss, COCOAloss, CMCloss
+from src.losses import ContrastiveLoss, TS2VecLoss, COCOAloss, CMCloss
 import wandb
 import copy
 
@@ -111,7 +111,7 @@ class Multiview(nn.Module):
             x = x.view(b*ch, 1, ts)
         x = self.wave2vec(x)
         
-        if self.projection_head:
+        if self.projection_head and not classify:
             # only reshape after projection head
             out = self.projector(x)
             out = out.view(b, ch, -1)
