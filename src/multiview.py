@@ -111,7 +111,7 @@ class Multiview(nn.Module):
             x = x.view(b*ch, 1, ts)
         x = self.wave2vec(x)
         
-        if self.projection_head:
+        if self.projection_head and not classify:
             # only reshape after projection head
             out = self.projector(x)
             out = out.view(b, ch, -1)
