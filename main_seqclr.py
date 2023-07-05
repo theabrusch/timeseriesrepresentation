@@ -112,10 +112,15 @@ def main(args):
         for ft_loader, ft_val_loader in zip(finetune_loader, finetune_val_loader):
             if device == 'cuda':
                 wandb.init(project = 'MultiView', group = 'SeqCLR', config = args)
+                
             if args.encoder == 'SeqCLR_R':
                 encoder = SeqCLR_R()
+                projector = SeqProjector()
             elif args.encoder == 'SeqCLR_C':
                 encoder = SeqCLR_C()
+                projector = SeqProjector()
+            elif args.encoder == 'SeqCLR_W':
+                encoder = SeqCLR_W()
 
             train_samples = len(ft_loader.sampler)
             val_samples = len(ft_val_loader.sampler)
