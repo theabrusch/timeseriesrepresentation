@@ -112,15 +112,17 @@ def main(args):
         for ft_loader, ft_val_loader in zip(finetune_loader, finetune_val_loader):
             if device == 'cuda':
                 wandb.init(project = 'MultiView', group = 'SeqCLR', config = args)
-                
+
             if args.encoder == 'SeqCLR_R':
                 encoder = SeqCLR_R()
-                projector = SeqProjector()
+                classifier = 'SeqProjector'
             elif args.encoder == 'SeqCLR_C':
                 encoder = SeqCLR_C()
                 projector = SeqProjector()
+                classifier = 'SeqProjector'
             elif args.encoder == 'SeqCLR_W':
                 encoder = SeqCLR_W()
+                classifier = 'TimeClassifier'
 
             train_samples = len(ft_loader.sampler)
             val_samples = len(ft_val_loader.sampler)
@@ -128,7 +130,7 @@ def main(args):
             if args.load_model:
                 encoder.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
 
-            model = SeqCLR_classifier(encoder = encoder, num_classes = num_classes, channels = channels)
+            model = SeqCLR_classifier(encoder = encoder, num_classes = num_classes, channels = channels, out_dim=64, classifier = classifier)
             
             ft_output_path = output_path + f'/{train_samples}_samples'
             os.makedirs(ft_output_path, exist_ok=True)
