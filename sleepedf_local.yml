@@ -7,7 +7,7 @@ deep1010: False
 datasets:
   sleepedf:
     name: "sleepedf"
-    toplevel: '/Users/theb/Desktop/sleep_edf/mne_files/'
+    toplevel: '/Users/theb/Desktop/data/sleep_edf/mne_files/'
     events: {'Sleep stage W': 0, 'Sleep stage 1': 1, 'Sleep stage 2': 2, 'Sleep stage 3': 3, 'Sleep stage 4': 3, 'Sleep stage R': 4}
     tmin: 0
     tlen: 30
