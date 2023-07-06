@@ -49,6 +49,9 @@ def construct_eeg_datasets(data_path,
     else:
         config.upsample = False
     
+    if seqclr_setup:
+        config.tlen = int(chunk_duration) + 2
+    
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects
     
@@ -77,7 +80,7 @@ def construct_eeg_datasets(data_path,
         if not seqclr_setup:
             pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(pretrain_val_dset, aug_config, standardize_epochs=standardize_epochs)
         else:
-            pretrain_dset, pretrain_val_dset = SeqCLR_dataset(pretrain_dset, standardize_epochs=standardize_epochs), SeqCLR_dataset(pretrain_val_dset, standardize_epochs=standardize_epochs)
+            pretrain_dset, pretrain_val_dset = SeqCLR_dataset(pretrain_dset, window_length=int(config.chunk_duration), standardize_epochs=standardize_epochs), SeqCLR_dataset(pretrain_val_dset, window_length=int(config.chunk_duration), standardize_epochs=standardize_epochs)
 
         if config.balanced_sampling:
             if sample_generator:
@@ -125,7 +128,10 @@ def construct_eeg_datasets(data_path,
             config.upsample = True
         else:
             config.upsample = False
-    
+
+        if seqclr_setup:
+            config.tlen = int(chunk_duration)
+
         print('Loading finetuning data')
         train_subjs, val_subjs = divide_subjects(config, sample_finetune_train_subjects, sample_finetune_val_subjects, subjects = finetunesubjects, test_size=config.val_size)
         finetune_train_thinkers = load_thinkers(config, sample_subjects=False, subjects = train_subjs)
@@ -140,7 +146,7 @@ def construct_eeg_datasets(data_path,
         if not seqclr_setup:
             finetune_train_dset, finetune_val_dset = EEG_dataset(finetune_train_dset, aug_config, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup), EEG_dataset(finetune_val_dset, aug_config, standardize_epochs=standardize_epochs, bendr_setup=bendr_setup)
         else:
-            finetune_train_dset, finetune_val_dset = SeqCLR_dataset(finetune_train_dset, fine_tune_mode=True, standardize_epochs=standardize_epochs), SeqCLR_dataset(finetune_val_dset, fine_tune_mode=True, standardize_epochs=standardize_epochs)
+            finetune_train_dset, finetune_val_dset = SeqCLR_dataset(finetune_train_dset, fine_tune_mode=True, window_length=int(config.chunk_duration), standardize_epochs=standardize_epochs), SeqCLR_dataset(finetune_val_dset, fine_tune_mode=True, window_length=int(config.chunk_duration), standardize_epochs=standardize_epochs)
         
         if config.balanced_sampling:
             if sample_generator:
@@ -176,7 +182,7 @@ def construct_eeg_datasets(data_path,
         if not seqclr_setup:
             test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup)
         else:
-            test_dset = SeqCLR_dataset(test_dset, fine_tune_mode=True, standardize_epochs=standardize_epochs)
+            test_dset = SeqCLR_dataset(test_dset, fine_tune_mode=True, standardize_epochs=standardize_epochs, window_length=int(config.chunk_duration))
         
         test = False
         if test:
@@ -362,11 +368,13 @@ class SeqCLR_dataset(TorchDataset):
     def __init__(self, 
                  dn3_dset, 
                  fine_tune_mode = False, 
+                 window_length = 3000,
                  standardize_epochs = False):
         super().__init__()
         self.dn3_dset = dn3_dset
         self.fine_tune_mode = fine_tune_mode
         self.standardize_epochs = standardize_epochs
+        self.window_length = window_length*100
 
     def __len__(self):
         return len(self.dn3_dset)
@@ -380,8 +388,8 @@ class SeqCLR_dataset(TorchDataset):
             signal = signal[ch1] - signal[ch2]
             # select two random augmentations
             aug1, aug2 = np.random.choice(np.arange(6), 2, replace = False)
-            signal_1 = SeqCLR_augmentations(signal, aug1, window_length=2000)
-            signal_2 = SeqCLR_augmentations(signal, aug2, window_length=2000)
+            signal_1 = SeqCLR_augmentations(signal, aug1, window_length=self.window_length)
+            signal_2 = SeqCLR_augmentations(signal, aug2, window_length=self.window_length)
             return signal_1.unsqueeze(1), signal_2.unsqueeze(1)
         else:
             return signal.transpose(0,1)*10**6, label
@@ -391,7 +399,8 @@ def SeqCLR_augmentations(x, aug_selection, window_length):
     padding = int((len(x)-window_length)/2)
     if aug_selection == 0:
         # time shift
-        shift = np.random.randint(1, 25)
+        max_shift = int(window_length/80)
+        shift = np.random.randint(1, max_shift)
         sign = np.random.choice([-1, 1])
         x = x[padding + shift * sign: padding + shift * sign + window_length]
     elif aug_selection == 1:
@@ -404,7 +413,8 @@ def SeqCLR_augmentations(x, aug_selection, window_length):
         x = x[padding:padding+window_length] + shift
     elif aug_selection == 3:
         # zero_masking
-        mask_length = np.random.randint(1, 75)
+        max_mask = int(window_length*0.0375)
+        mask_length = np.random.randint(1, max_mask)
         mask_start = np.random.randint(0, window_length - mask_length)
         x = x[padding:padding+window_length]
         x[mask_start:mask_start+mask_length] = 0
