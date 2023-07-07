@@ -49,7 +49,7 @@ def main(args):
         output_path = check_output_path(output_path)
         args.outputh_path = output_path
         print('Saving outputs in', output_path)
-        wandb.init(project = 'MultiView', group = 'SeqCLR', config = args)
+        wandb.init(project = 'MultiView', group = f'SeqCLR_{args.loss}', config = args)
         if args.encoder == 'SeqCLR_R':
             encoder = SeqCLR_R()
             projector = SeqProjector()
@@ -100,7 +100,9 @@ def main(args):
 
         if args.load_model:
             output_path = f'{args.output_path}/SeqCLR_{args.encoder}'
-            group = f'{args.pretraining_setup}_{args.loss}'
+            group = f'SeqCLR_{args.loss}'
+            pretrained_model_path = f'pretrained_models/SeqCLR_{args.loss}_{args.pretraining_length}'
+            pretrained_model_path = pretrained_model_path + '/pretrained_model.pt'
         else:
             output_path = f'{args.output_path}/SeqCLR_{args.encoder}_scratch'
             group = f'{args.pretraining_setup}_scratch'
@@ -110,7 +112,7 @@ def main(args):
         print('Saving outputs in', output_path)
 
         for ft_loader, ft_val_loader in zip(finetune_loader, finetune_val_loader):
-            wandb.init(project = 'MultiView', group = 'SeqCLR', config = args)
+            wandb.init(project = 'MultiView', group = f'SeqCLR_ft_{args.loss}', config = args)
 
             if args.encoder == 'SeqCLR_R':
                 encoder = SeqCLR_R()
@@ -127,7 +129,7 @@ def main(args):
             val_samples = len(ft_val_loader.sampler)
 
             if args.load_model:
-                encoder.load_state_dict(torch.load(args.pretrained_model_path, map_location=device))
+                encoder.load_state_dict(torch.load(pretrained_model_path, map_location=device))
 
             model = SeqCLR_classifier(encoder = encoder, num_classes = num_classes, channels = channels, out_dim=64, classifier = classifier)
             
@@ -185,6 +187,7 @@ if __name__ == '__main__':
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
     parser.add_argument('--sample_generator', type = eval, nargs = '+', default = [None])
     parser.add_argument('--readout_layer', type = eval, default = True)
+    parser.add_argument('--pretraining_length', type = int, default = 30)
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
