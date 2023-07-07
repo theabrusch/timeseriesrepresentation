@@ -36,7 +36,7 @@ def main(args):
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if args.load_model:
+    if args.load_model and args.pretrained_model_path is not None:
         # check if pretrained model path exists and throw an error if it doesn't
         if not os.path.exists(args.pretrained_model_path):
             raise ValueError(f'Pretrained model path {args.pretrained_model_path} does not exist.')
