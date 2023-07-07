@@ -112,7 +112,7 @@ def main(args):
         print('Saving outputs in', output_path)
 
         for ft_loader, ft_val_loader in zip(finetune_loader, finetune_val_loader):
-            wandb.init(project = 'MultiView', group = f'SeqCLR_{args.loss}', config = args)
+            wandb.init(project = 'MultiView', group = f'SeqCLR_ft_{args.loss}', config = args)
 
             if args.encoder == 'SeqCLR_R':
                 encoder = SeqCLR_R()
