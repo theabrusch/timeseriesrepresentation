@@ -64,8 +64,7 @@ def main(args):
             else:
                 projector = DummyProjector()
 
-        
-        loss_fn = get_loss(args.loss, device=device)
+        loss_fn = get_loss(args.loss, device=device, temperature = args.temperature,)
 
         if args.load_model:
             encoder.load_state_dict(torch.load(args.pretrained_model_path + '/encoder.pt', map_location=device))
@@ -200,6 +199,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_message_passing_rounds', type = int, default = 3)
     parser.add_argument('--hidden_channels', type = int, default = 256)
     parser.add_argument('--out_dim', type = int, default = 64)
+    parser.add_argument('--temperature', type = float, default = 0.5)
 
 
     # eeg arguments
