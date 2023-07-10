@@ -10,6 +10,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from src.losses import get_loss 
 import os
 import wandb
+import shutil
 
 def check_output_path(output_path):
     if not os.path.exists(output_path):
@@ -160,6 +161,9 @@ def main(args):
                     early_stopping_criterion=args.early_stopping_criterion,
                     backup_path=ft_output_path,
             )
+            if not args.save_model:
+                # delete ft_output_path folder to save memory
+                shutil.rmtree(ft_output_path)
 
             accuracy, prec, rec, f = evaluate_classifier(model, test_loader, device)
             wandb.config.update({'Test accuracy': accuracy, 'Test precision': prec, 'Test recall': rec, 'Test f1': f})
