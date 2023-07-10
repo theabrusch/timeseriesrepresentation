@@ -359,7 +359,6 @@ class EEG_dataset(TorchDataset):
             sig[1,:] = signal[0,:]
             sig[-2,:] = signal[1,:]
             signal = sig
-        #fft = torch.fft.fft(signal, axis = -1).abs()
     
         return signal, label
     

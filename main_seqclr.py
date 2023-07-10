@@ -101,7 +101,7 @@ def main(args):
         if args.load_model:
             output_path = f'{args.output_path}/SeqCLR_{args.encoder}'
             group = f'SeqCLR_{args.loss}'
-            pretrained_model_path = f'pretrained_models/SeqCLR_{args.loss}_{args.pretraining_length}'
+            pretrained_model_path = f'pretrained_models/SeqCLR_{args.loss}_{args.pretraining_length}{args.suffix}'
             pretrained_model_path = pretrained_model_path + '/pretrained_model.pt'
         else:
             output_path = f'{args.output_path}/SeqCLR_{args.encoder}_scratch'
@@ -177,6 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
+    parser.add_argument('--suffix', type = str, default = '')
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--pretraining_setup', type = str, default = 'GNN')
     parser.add_argument('--seed', type = int, default = 42)
