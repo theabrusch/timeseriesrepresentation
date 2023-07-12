@@ -100,12 +100,10 @@ def main(args):
 
         if args.load_model:
             output_path = f'{args.output_path}/SeqCLR_{args.encoder}'
-            group = f'SeqCLR_{args.loss}'
             pretrained_model_path = f'pretrained_models/SeqCLR_{args.loss}_{args.pretraining_length}{args.suffix}'
             pretrained_model_path = pretrained_model_path + '/pretrained_model.pt'
         else:
             output_path = f'{args.output_path}/SeqCLR_{args.encoder}_scratch'
-            group = f'{args.pretraining_setup}_scratch'
 
         output_path = check_output_path(output_path)
         args.outputh_path = output_path
