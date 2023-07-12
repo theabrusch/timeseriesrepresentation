@@ -144,19 +144,19 @@ class SeqCLR_classifier(nn.Module):
         super(SeqCLR_classifier, self).__init__()
         self.encoder = encoder
         self.channels = channels
-        self.classifier = classifier
+        self.classifier_type = classifier
         self.out_dim = out_dim
 
-        if self.classifier == 'SeqProjector':
+        if self.classifier_type == 'SeqProjector':
             self.classifier = SeqProjector(input_dim = 4*channels, output_dim = num_classes)
-        elif self.classifier == 'TimeClassifier':
+        elif self.classifier_type == 'TimeClassifier':
             self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, 
                                              pool = 'adapt_avg', orig_channels = channels)
     def forward(self, x, classify = True):
         b_size = x.shape[0]
         x = x.reshape(b_size*self.channels, -1, 1)
         x = self.encoder(x)
-        if self.classifier == 'SeqProjector':
+        if self.classifier_type == 'SeqProjector':
             x = x.reshape(b_size, self.channels, -1, 4).transpose(2,3).reshape(b_size, 4*self.channels, -1).transpose(1,2)
         else:
             x = x.reshape(b_size, self.channels, self.out_dim, -1)
