@@ -34,6 +34,7 @@ def main(args):
     args.train_mode = 'pretrain' if args.pretrain and not args.finetune else 'finetune' if args.finetune and not args.pretrain else 'both'
     args.standardize_epochs = 'channelwise'
     args.seqclr_setup = True
+    args.chunk_duration = str(args.pretraining_length)
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -173,9 +174,9 @@ if __name__ == '__main__':
     parser.add_argument('--job_id', type = str, default = '0')
     parser.add_argument('--save_model', type = eval, default = False)
     parser.add_argument('--load_model', type = eval, default = False)
-    parser.add_argument('--pretrain', type = eval, default = False)
+    parser.add_argument('--pretrain', type = eval, default = True)
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
-    parser.add_argument('--finetune', type = eval, default = True)
+    parser.add_argument('--finetune', type = eval, default = False)
     parser.add_argument('--optimize_encoder', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--suffix', type = str, default = '')
@@ -189,7 +190,7 @@ if __name__ == '__main__':
     parser.add_argument('--balanced_sampling', type = str, default = 'finetune')
     parser.add_argument('--sample_generator', type = eval, nargs = '+', default = [None])
     parser.add_argument('--readout_layer', type = eval, default = True)
-    parser.add_argument('--pretraining_length', type = int, default = 30)
+    parser.add_argument('--pretraining_length', type = int, default = 20)
 
     # model arguments
     parser.add_argument('--pool', type = str, default = 'adapt_avg')
