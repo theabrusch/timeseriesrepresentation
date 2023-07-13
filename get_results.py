@@ -31,7 +31,7 @@ for loss in losses:
             n_samples = run.config['Finetune validation samples']
             lr = run.config['ft_learning_rate']
             suff = run.config['suffix']
-            if lr in all_results.keys():
+            if lr in all_results[loss].keys():
                 if suff in all_results[loss][lr].keys():
                     if n_samples in all_results[loss][lr][suff].keys():
                         all_results[loss][lr][suff][n_samples]['val_acc'].append(best_val_acc)

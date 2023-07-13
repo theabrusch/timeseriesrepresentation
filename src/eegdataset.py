@@ -51,7 +51,7 @@ def construct_eeg_datasets(data_path,
     
     if seqclr_setup:
         config.tlen = int(chunk_duration) + 2
-    
+       
     if not exclude_subjects is None:
         config.exclude_people = exclude_subjects
     
@@ -80,7 +80,7 @@ def construct_eeg_datasets(data_path,
         if not seqclr_setup:
             pretrain_dset, pretrain_val_dset = EEG_dataset(pretrain_dset, aug_config, standardize_epochs=standardize_epochs), EEG_dataset(pretrain_val_dset, aug_config, standardize_epochs=standardize_epochs)
         else:
-            pretrain_dset, pretrain_val_dset = SeqCLR_dataset(pretrain_dset, window_length=int(config.chunk_duration), standardize_epochs=standardize_epochs), SeqCLR_dataset(pretrain_val_dset, window_length=int(config.chunk_duration), standardize_epochs=standardize_epochs)
+            pretrain_dset, pretrain_val_dset = SeqCLR_dataset(pretrain_dset, window_length=int(chunk_duration), standardize_epochs=standardize_epochs), SeqCLR_dataset(pretrain_val_dset, window_length=int(chunk_duration), standardize_epochs=standardize_epochs)
 
         if config.balanced_sampling:
             if sample_generator:
