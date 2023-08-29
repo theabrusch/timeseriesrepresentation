@@ -13,6 +13,8 @@ datasets:
     tlen: 30
     test_size: 0.3
     val_size: 0.5
+    data_max: 4460.6
+    data_min: -4465.7
     chunk_duration: '30'
     exclude_channels: ['Event marker']
     preload: True
@@ -20,7 +22,7 @@ datasets:
     rename_channels: 
       FPZ: 'EEG Fpz-Cz'
       PZ: 'EEG Pz-Oz'
-    deep1010: None
+    deep1010: False
     #toplevel: /Users/theb/Desktop/physionet.org/physionet.org/files/challenge-2018/1.0.0/training/∂
     train_params:
       epochs: 7

@@ -17,7 +17,14 @@ datasets:
     exclude_channels: ['STI']
     preload: True
     picks: ['F3-M2', 'F4-M1', 'C3-M2', 'C4-M1', 'O1-M2', 'O2-M1']
-    deep1010: None
+    deep1010: False
+    rename_channels: 
+      F3-M2: F3-M2
+      F4-M1: F4-M1
+      C3-M2: C3-M2
+      C4-M1: C4-M1
+      O1-M2: O1-M2
+      O2-M1: O2-M1
     #toplevel: /Users/theb/Desktop/physionet.org/physionet.org/files/challenge-2018/1.0.0/training/∂
     train_params:
       epochs: 7
