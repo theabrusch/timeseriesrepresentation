@@ -9,7 +9,7 @@ import wandb
 import copy
 
 class TimeClassifier(nn.Module):
-    def __init__(self, in_features, num_classes, pool, orig_channels = 9, time_length = 33):
+    def __init__(self, in_features, num_classes, pool, n_layers =1, orig_channels = 9, time_length = 33):
         super().__init__()
         self.pool = pool
         self.flatten = nn.Flatten()
@@ -20,8 +20,16 @@ class TimeClassifier(nn.Module):
             in_features = 4*in_features
         elif self.pool == 'flatten':
             in_features = in_features*time_length
-            
-        self.classifier = nn.Linear(in_features=in_features, out_features=num_classes)
+        
+        if n_layers == 1:
+            self.classifier = nn.Linear(in_features=in_features, out_features=num_classes)
+        elif n_layers == 2:
+            self.classifier = nn.Sequential(
+                nn.Linear(in_features=in_features, out_features=in_features),
+                nn.ReLU(),
+                nn.Linear(in_features=in_features, out_features=num_classes)
+            )
+
     def forward(self, latents):
         if len(latents.shape) > 3:
             latents = latents.permute(0,2,3,1)
@@ -40,6 +48,23 @@ class TimeClassifier(nn.Module):
             latents = self.flatten(latents)
         
         return self.classifier(latents)
+
+class TimeProjector(nn.Module):
+    def __init__(self, in_features, output_dim, n_layers =1):
+        super().__init__()
+        if n_layers == 1:
+            self.projector = nn.Linear(in_features=in_features, out_features=output_dim)
+        elif n_layers == 2:
+            self.projector = nn.Sequential(
+                nn.Linear(in_features=in_features, out_features=in_features),
+                nn.ReLU(),
+                nn.Linear(in_features=in_features, out_features=output_dim)
+            )
+    
+    def forward(self, latents):
+        latents = latents.permute(0,2,1)
+        return self.projector(latents).permute(0,2,1)
+
 
 class Classifier(nn.Module):
     def __init__(self, in_features, num_classes):
@@ -88,7 +113,9 @@ class Multiview(nn.Module):
                  out_dim = 64,
                  readout_layer = False,
                  projection_head = False,
+                 n_layers_proj = 1,
                  embedding_dim = 32,
+                 loss = 'time_loss',
                  **kwargs):
         super().__init__()
         self.channels = channels
@@ -102,22 +129,30 @@ class Multiview(nn.Module):
         self.projection_head = projection_head
 
         if projection_head:
-            self.projector = TimeClassifier(in_features = out_dim, num_classes = embedding_dim, 
-                                            pool = 'adapt_avg', orig_channels = orig_channels)
+            if not loss == 'time_loss':
+                self.projector = TimeClassifier(in_features = out_dim, num_classes = embedding_dim,
+                                                n_layers = n_layers_proj,
+                                                pool = 'adapt_avg', orig_channels = orig_channels)
+            else:
+                self.projector = TimeProjector(in_features = out_dim, output_dim = embedding_dim, n_layers = n_layers_proj)
     
     def forward(self, x, classify = False):
         b, ch, ts = x.shape
         if ch > self.channels:
             x = x.view(b*ch, 1, ts)
         x = self.wave2vec(x)
-        
+        time_out = x.shape[-1]
+
         if self.projection_head and not classify:
             # only reshape after projection head
             out = self.projector(x)
-            out = out.view(b, ch, -1)
+            if len(out.shape) > 2:
+                out = out.reshape(b, ch, -1, time_out)
+            else:
+                out = out.reshape(b, ch, -1)
             return out
 
-        time_out = x.shape[-1]
+        
         if ch > self.channels:
             x = x.view(b, ch, self.out_dim, time_out)
         if classify:
@@ -151,8 +186,10 @@ class GNNMultiview(nn.Module):
                  nlayers = 6, 
                  out_dim = 64,
                  projection_head = False,
+                 n_layers_proj = 1,
                  embedding_dim = 32,
                  readout_layer = False,
+                 loss = 'time_loss',
                  **kwargs):
         super().__init__()
         self.channels = channels
@@ -170,9 +207,13 @@ class GNNMultiview(nn.Module):
         self.projection_head = projection_head
 
         if projection_head:
-            self.projector = TimeClassifier(in_features = out_dim, num_classes = embedding_dim, 
-                                         pool = 'adapt_avg', orig_channels = channels, 
-                                         time_length = time_length)
+            if not loss == 'time_loss':
+                self.projector = TimeClassifier(in_features = out_dim, num_classes = embedding_dim, 
+                                            pool = 'adapt_avg', orig_channels = channels, n_layers=n_layers_proj,
+                                            time_length = time_length)
+            else:
+                self.projector = TimeProjector(in_features = out_dim, output_dim = embedding_dim, n_layers=n_layers_proj)
+
         self.state_dim = out_dim
         print('out_dim', out_dim)
         

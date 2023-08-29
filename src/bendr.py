@@ -141,7 +141,7 @@ class _BENDREncoder(nn.Module):
         self.encoder_h = encoder_h
 
     def load(self, filename, strict=True):
-        state_dict = torch.load(filename)
+        state_dict = torch.load(filename, map_location=torch.device('cpu'))
         self.load_state_dict(state_dict, strict=strict)
 
     def save(self, filename):
@@ -154,7 +154,7 @@ class _BENDREncoder(nn.Module):
 
 class ConvEncoderBENDR(_BENDREncoder):
     def __init__(self, in_features, encoder_h=256, out_dim = 64, enc_width=(3, 2, 2, 2, 2, 2),
-                 dropout=0.1, enc_downsample=(3, 2, 2, 2, 2, 2)):
+                 dropout=0.1, enc_downsample=(3, 2, 2, 2, 2, 2), orig_bendr = False):
         super().__init__(in_features, encoder_h)
         self.encoder_h = encoder_h
         if not isinstance(enc_width, (list, tuple)):
@@ -165,6 +165,8 @@ class ConvEncoderBENDR(_BENDREncoder):
 
         self._downsampling = enc_downsample
         self._width = enc_width
+        if orig_bendr:
+            enc_width = [e if e % 2 else e+1 for e in enc_width]
 
         self.encoder = nn.Sequential()
         for i, (width, downsample) in enumerate(zip(enc_width, enc_downsample)):

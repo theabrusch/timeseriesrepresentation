@@ -39,6 +39,7 @@ def main(args):
     args.train_mode = 'pretrain' if args.pretrain and not args.finetune else 'finetune' if args.finetune else 'both' 
     args.standardize_epochs = 'channelwise'
     args.bendr_setup = True
+    
     pretrain_loader, pretrain_val_loader, finetune_loader, finetune_val_loader, test_loader, (channels, time_length, num_classes) = construct_eeg_datasets(**vars(args))
     
     if args.pretrain:
@@ -119,13 +120,18 @@ def main(args):
         for ft_loader, ft_val_loader in zip(finetune_loader, finetune_val_loader):
             wandb.init(project = 'MultiView', group = 'bendr', config = args)
             #encoder.load(args.pretrained_model_path)
-            encoder = ConvEncoderBENDR(6, encoder_h=args.hidden_size, out_dim=args.out_dim)
+            if args.load_original_bendr:
+                encoder = ConvEncoderBENDR(20, encoder_h=512, out_dim=512, orig_bendr=True)
+                hidden_size = 512
+            else:
+                encoder = ConvEncoderBENDR(6, encoder_h=args.hidden_size, out_dim=args.out_dim)
+                hidden_size = args.out_dim
 
             if args.load_model:
                 encoder.load(args.pretrained_model_path)
 
             torch.manual_seed(args.seed)
-            model = BENDRClassifier(encoder, num_classes, hidden_dim=args.out_dim)
+            model = BENDRClassifier(encoder, num_classes, hidden_dim=hidden_size )
 
             train_samples = len(ft_loader.sampler)
             val_samples = len(ft_val_loader.sampler)
@@ -165,7 +171,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type = str, default = 'sleepeeg_local.yml')
     parser.add_argument('--finetune_path', type = str, default = 'sleepedf_local.yml')
     parser.add_argument('--no_save', type = eval, default = False)
-    parser.add_argument('--load_model', type = eval, default = False)
+    parser.add_argument('--load_model', type = eval, default = True)
     parser.add_argument('--num-workers', default=6, type=int)
     parser.add_argument('--resume', default=None, type=int)
     parser.add_argument('--multi_gpu', default=False, type=eval)
@@ -175,7 +181,7 @@ if __name__ == '__main__':
     parser.add_argument('--evaluate_latent_space', type = eval, default = False)
     parser.add_argument('--finetune', type = eval, default = True)
     parser.add_argument('--optimize_encoder', type = eval, default = True)
-    parser.add_argument('--pretrained_model_path', type = str, default = None)
+    parser.add_argument('--pretrained_model_path', type = str, default = 'models/encoder.pt')
     parser.add_argument('--output_path', type = str, default = 'outputs')
     parser.add_argument('--pretraining_setup', type = str, default = 'GNN')
 
@@ -191,6 +197,7 @@ if __name__ == '__main__':
     parser.add_argument('--mask_span', type = int, default = 10)
     parser.add_argument('--chunk_duration', type = str, default='30')
     parser.add_argument('--encoder', type = str, default = 'BENDR')
+    parser.add_argument('--load_original_bendr', type = eval, default = True)    
 
 
     # eeg arguments
