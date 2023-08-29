@@ -13,10 +13,9 @@ learning_rates = [5e-4, 1e-3, 3e-3]
 losses = ['contrastive']
 all_results = dict()
 
-
 for loss in losses:
     group = f'{group_top}_{loss}'
-    cond = {"$and": [{"group": group}, {'config.ft_learning_rate': {'$in': learning_rates}}, {'config.optimize_encoder': optenc}, {'state': 'finished'}, {'config.suffix': '_t005'}]}
+    cond = {"$and": [{"group": group}, {'config.ft_learning_rate': {'$in': learning_rates}}, {'config.optimize_encoder': optenc}, {'state': 'finished'}, {'config.suffix': '_R'}]}
     runs = api.runs(path = 'theabrusch/MultiView', filters = cond)
     all_results[loss] = dict()
     n_runs = len(runs)
@@ -25,7 +24,9 @@ for loss in losses:
             run.config['suffix'] = ''
         if 'seed' in run.config.keys():
             hist = run.history()
-            best_val_loss_arg = np.argmin(hist['val_class_loss'])
+            map_nan = lambda x: np.nan if x == 'NaN' else x
+            best_val_loss_arg = np.nanargmin(hist['val_class_loss'].apply(map_nan))
+
             best_val_acc = hist['val_acc'][best_val_loss_arg]
             best_test_acc = hist['test_acc'][best_val_loss_arg]
             n_samples = run.config['Finetune validation samples']
