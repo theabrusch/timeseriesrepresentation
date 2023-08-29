@@ -3,12 +3,13 @@ from torch.utils.data import Dataset as TorchDataset
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import WeightedRandomSampler
 import os
+from fnmatch import fnmatch
 import glob
 import json
 import mne 
 from dn3.configuratron import ExperimentConfig
 from dn3.data.dataset import EpochTorchRecording, Thinker, Dataset, DatasetInfo
-from dn3.transforms.instance import To1020
+from dn3.transforms.instance import To1020, MappingDeep1010, TemporalInterpolation
 import numpy as np
 from scipy.signal import filtfilt, butter, sosfiltfilt
 from sklearn.model_selection import train_test_split
@@ -29,6 +30,7 @@ def construct_eeg_datasets(data_path,
                            train_mode = 'both',
                            sample_generator = False,
                            bendr_setup = False,
+                           load_original_bendr = False,
                            seqclr_setup = False,
                            upsample_bendr = False,
                            seed = None,
@@ -42,12 +44,18 @@ def construct_eeg_datasets(data_path,
         config.balanced_sampling = True
     else:
         config.balanced_sampling = False
-    
+
     if bendr_setup and upsample_bendr:
         config.chunk_duration = chunk_duration
         config.upsample = False
     else:
         config.upsample = False
+    
+    if load_original_bendr:
+        config.upsample = True
+        config.deep1010 = True
+        bendr_setup = False
+        standardize_epochs = False
     
     if seqclr_setup:
         config.tlen = int(chunk_duration) + 2
@@ -123,11 +131,18 @@ def construct_eeg_datasets(data_path,
             test_subjects = splits['test']
         info = DatasetInfo(config.name, config.data_max, config.data_min, config._excluded_people,
                             targets=config._targets if config._targets is not None else len(config._unique_events))
+
         if bendr_setup and upsample_bendr:
-            config.chunk_duration = '60'
-            config.upsample = True
+            config.chunk_duration = chunk_duration
         else:
             config.upsample = False
+
+        if load_original_bendr:
+            config.upsample = True
+            config.deep1010 = True
+            bendr_setup = False
+            standardize_epochs = False
+    
 
         if seqclr_setup:
             config.tlen = int(chunk_duration)
@@ -137,6 +152,10 @@ def construct_eeg_datasets(data_path,
         finetune_train_thinkers = load_thinkers(config, sample_subjects=False, subjects = train_subjs)
         finetune_val_thinkers = load_thinkers(config, sample_subjects=False, subjects = val_subjs)
         finetune_train_dset, finetune_val_dset = Dataset(finetune_train_thinkers, dataset_info=info), Dataset(finetune_val_thinkers, dataset_info=info)
+
+        if load_original_bendr:
+            finetune_train_dset.add_transform(To1020())
+            finetune_val_dset.add_transform(To1020())
 
         aug_config = { 
             'jitter_scale_ratio': 1.1,
@@ -179,6 +198,10 @@ def construct_eeg_datasets(data_path,
         config.balanced_sampling = False
         test_thinkers = load_thinkers(config, sample_subjects = sample_test_subjects, subjects = test_subjects)
         test_dset = Dataset(test_thinkers, dataset_info=info)
+
+        if load_original_bendr:
+            test_dset.add_transform(To1020())
+
         if not seqclr_setup:
             test_dset = EEG_dataset(test_dset, aug_config, fine_tune_mode=False, standardize_epochs=standardize_epochs, bendr_setup = bendr_setup)
         else:
@@ -295,28 +318,62 @@ def load_thinkers(config, sample_subjects = False, subjects = None):
             thinkers[subject] = Thinker(sessions)
     return thinkers
 
+class _DumbNamespace:
+    def __init__(self, d: dict):
+        self._d = d.copy()
+        for k in d:
+            if isinstance(d[k], dict):
+                d[k] = _DumbNamespace(d[k])
+            if isinstance(d[k], list):
+                d[k] = [_DumbNamespace(d[k][i]) if isinstance(d[k][i], dict) else d[k][i] for i in range(len(d[k]))]
+        self.__dict__.update(d)
+
+    def keys(self):
+        return list(self.__dict__.keys())
+
+    def __getitem__(self, item):
+        return self.__dict__[item]
+
+    def as_dict(self):
+        return self._d
+
 
 def construct_epoch_dset(file, config):
     raw = mne.io.read_raw_fif(file, preload = config.preload)
-    if config.upsample:
-        raw.resample(256)
-    #if config.name == 'sleepedf':
-    #    annotations = raw.annotations
-    #    start_crop = annotations.orig_time + timedelta(seconds=annotations[1]['onset']) - timedelta(minutes=30)
-    #    end_crop = annotations.orig_time + timedelta(seconds=annotations[-2]['onset']) + timedelta(minutes=30)
-    #    annotations.crop(start_crop, end_crop)
-    #    raw.set_annotations(annotations, emit_warning=False)
+    
+    # Exclude channel index by pattern match
+    if config.rename_channels:
+        picks = config.picks
+        renaming_map = dict()
+        new_picks = []
+        for idx in [idx for idx in range(len(raw.ch_names)) if raw.ch_names[idx] in picks]:
+            for new_ch in config.rename_channels.keys():
+                if config.rename_channels[new_ch] == raw.ch_names[idx]:
+                    renaming_map[raw.ch_names[idx]] = new_ch
+                    new_picks.append(idx)
+        raw = raw.rename_channels(renaming_map)
 
     if config.normalize and config.preload:
         raw.apply_function(lambda x: (x-np.mean(x))/np.std(x))
     sfreq = raw.info['sfreq']
+    new_sfreq = 256
+
     event_map = {v: v for v in config.events.values()}
     events = mne.events_from_annotations(raw, event_id=config.events, chunk_duration=eval(config.chunk_duration))[0]
     
-    epochs = mne.Epochs(raw, events, tmin=config.tmin, tmax=config.tmin + config.tlen - 1 / sfreq, preload=config.preload, decim=config.decimate,
+    epochs = mne.Epochs(raw, events, tmin=config.tmin, tmax=config.tmin + config.tlen - 1 / sfreq, preload=config.preload, decim=1,
                         baseline=config.baseline, reject_by_annotation=config.drop_bad)
-    recording = EpochTorchRecording(epochs, ch_ind_picks=config.picks, event_mapping=event_map,
+    recording = EpochTorchRecording(epochs, ch_ind_picks=new_picks, event_mapping=event_map,
                                     force_label=True)
+    if config.deep1010:
+        _dum = _DumbNamespace(dict(channels=recording.channels, info=dict(data_max=config.data_max,
+                                                                            data_min=config.data_min)))
+        xform = MappingDeep1010(_dum)
+        recording.add_transform(xform)
+
+    if config.upsample:
+        recording.add_transform(TemporalInterpolation(config.tlen*new_sfreq, new_sfreq=new_sfreq))
+    
     return recording
 
 
