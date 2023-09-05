@@ -63,6 +63,7 @@ def main(args):
                 device,
                 backup_path=output_path,
                 loss_fn = loss_fn,
+                track_similarity = args.track_similarity,
                 log = True)
 
         if args.save_model:
