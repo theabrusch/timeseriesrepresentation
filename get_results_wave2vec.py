@@ -10,7 +10,7 @@ api = wandb.Api()
 optenc = False
 models = ['COCOA', 'GNN']
 learning_rates = [5e-4, 1e-3, 3e-3]
-loss_ = 'contrastive'
+loss_ = 'COCOA'
 all_results = dict()
 for model in models:
     group = f'{model}_{loss_}_readout_projection_head'

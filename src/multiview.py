@@ -190,17 +190,19 @@ class GNNMultiview(nn.Module):
                  embedding_dim = 32,
                  readout_layer = False,
                  loss = 'time_loss',
+                 track_similarity = False,
                  **kwargs):
         super().__init__()
         self.channels = channels
         self.time_length = time_length
         self.num_classes = num_classes
+        self.track_similarity = track_similarity
         self.wave2vec = Wave2Vec(channels, input_shape = time_length, out_dim = out_dim, 
                                  hidden_channels = hidden_channels, nlayers = nlayers, norm = norm, 
                                  do = conv_do, readout_layer = readout_layer)
 
 
-        out_dim = out_dim
+        self.out_dim = out_dim
         self.classifier = TimeClassifier(in_features = out_dim, num_classes = num_classes, 
                                          pool = 'adapt_avg', orig_channels = channels, 
                                          time_length = time_length)
@@ -264,6 +266,8 @@ class GNNMultiview(nn.Module):
         if classify:
             return self.classifier(out)
         elif self.projection_head:
+            if self.track_similarity:
+                return self.projector(out), latents.view(b, ch, self.out_dim, -1)
             return self.projector(out)
         else:
             return out
@@ -289,15 +293,36 @@ class GNNMultiview(nn.Module):
         #view_2 = self.take_channel(x, torch.tensor(view_2_idx).to(device))
         view_1 = x[:, view_1_idx, :]
         view_2 = x[:, view_2_idx, :]
+
         out1 = self.forward(view_1)
         out2 = self.forward(view_2)
 
-        out = torch.cat([out1.unsqueeze(1), out2.unsqueeze(1)], dim = 1)
-        loss = loss_fn(out)
-        if isinstance(loss, tuple):
-            return loss
+        if not self.track_similarity:
+            out = torch.cat([out1.unsqueeze(1), out2.unsqueeze(1)], dim = 1)
         else:
-            return loss, *[torch.tensor(0)]*2
+            out = torch.cat([out1[0].unsqueeze(1), out2[0].unsqueeze(1)], dim = 1)
+            latent1 = out1[1]
+            latent2 = out2[1]
+        loss = loss_fn(out)
+
+        if self.track_similarity:
+            sim = compute_similarities(latent1, latent2, out1[0], out2[0])
+        else:
+            sim = torch.tensor(0)
+
+        if isinstance(loss, tuple):
+            return *loss, sim
+        else:
+            return loss, *[torch.tensor(0)]*2, sim
+
+def compute_similarities(latent1, latent2, out1, out2):
+    latent1 = latent1.mean(1).view(latent1.shape[0], -1)
+    latent2 = latent2.mean(1).view(latent2.shape[0], -1)
+    out1 = out1.view(out1.shape[0], -1)
+    out2 = out2.view(out2.shape[0], -1)
+    sim1 = F.cosine_similarity(latent1, out1, dim=-1)
+    sim2 = F.cosine_similarity(latent2, out2, dim=-1)
+    return (sim1 + sim2).mean()
 
 
 def pretrain(model, 
@@ -315,30 +340,36 @@ def pretrain(model,
         epoch_loss = 0
         epoch_inst = 0 
         epoch_temp = 0
+        epoch_sim = 0 
         model.train()
         for i, data in enumerate(dataloader):
             x = data[0].to(device).float()
             optimizer.zero_grad()
-            loss, inst_loss, temp_loss = model.train_step(x, loss_fn, device)
+            loss, inst_loss, temp_loss, sim = model.train_step(x, loss_fn, device)
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
             epoch_inst += inst_loss.item()
             epoch_temp += temp_loss.item()
+            epoch_sim += sim.item()
+
         train_loss = epoch_loss/(i+1)
         train_inst = epoch_inst/(i+1)
         train_temp = epoch_temp/(i+1)
+        train_sim = epoch_sim/(i+1)
 
         val_loss = 0
         val_inst = 0 
         val_temp = 0
+        val_sim = 0
         model.eval()
         for i, data in enumerate(val_dataloader):
             x = data[0].to(device).float()
-            loss, inst_loss, temp_loss = model.train_step(x, loss_fn, device)
+            loss, inst_loss, temp_loss, sim = model.train_step(x, loss_fn, device)
             val_loss += loss.item()
             val_inst += inst_loss.item()
             val_temp += temp_loss.item()
+            val_sim += sim.item()
 
         if log:
             log_dict = {'val_loss': val_loss/(i+1), 'train_loss': train_loss}
@@ -347,6 +378,9 @@ def pretrain(model,
                 log_dict['train_temp_loss'] = train_temp
                 log_dict['val_inst_loss'] = val_inst/(i+1)
                 log_dict['val_temp_loss'] = val_temp/(i+1)
+            if sim > 0:
+                log_dict['train_sim'] = train_sim
+                log_dict['val_sim'] = val_sim/(i+1)
             wandb.log(log_dict)
 
         if backup_path is not None:
