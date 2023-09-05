@@ -155,7 +155,7 @@ if __name__ == '__main__':
     parser.add_argument('--optimize_encoder', type = eval, default = False)
     parser.add_argument('--pretrained_model_path', type = str, default = None)
     parser.add_argument('--output_path', type = str, default = 'outputs')
-    parser.add_argument('--pretraining_setup', type = str, default = 'COCOA')
+    parser.add_argument('--pretraining_setup', type = str, default = 'GNN')
     parser.add_argument('--seed', type = int, default = 42)
 
     # data arguments

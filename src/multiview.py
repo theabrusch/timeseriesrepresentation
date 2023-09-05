@@ -264,11 +264,12 @@ class GNNMultiview(nn.Module):
         out = out.permute(0,2,1)
 
         if classify:
-            return self.classifier(out)
+            out = self.classifier(out)
         elif self.projection_head:
-            if self.track_similarity:
-                return self.projector(out), latents.view(b, ch, self.out_dim, -1)
-            return self.projector(out)
+            out = self.projector(out)
+
+        if self.track_similarity:
+            return out, latents.view(b, ch, self.out_dim, -1)
         else:
             return out
         
