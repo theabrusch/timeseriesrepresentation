@@ -169,9 +169,9 @@ class Multiview(nn.Module):
         out = self.forward(x)
         loss = loss_fn(out)
         if isinstance(loss, tuple):
-            return loss
+            return *loss, torch.tensor(0)
         else:
-            return loss, *[torch.tensor(0)]*2
+            return loss, *[torch.tensor(0)]*3
 
 class GNNMultiview(nn.Module):
     def __init__(self, 
