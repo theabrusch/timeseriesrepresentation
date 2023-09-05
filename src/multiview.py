@@ -269,7 +269,7 @@ class GNNMultiview(nn.Module):
             out = self.projector(out)
 
         if self.track_similarity:
-            return out, latents.view(b, ch, self.out_dim, -1)
+            return out, latents.transpose(1,2).view(b, ch, self.out_dim, -1)
         else:
             return out
         
@@ -319,8 +319,8 @@ class GNNMultiview(nn.Module):
 def compute_similarities(latent1, latent2, out1, out2):
     latent1 = latent1.mean(1).view(latent1.shape[0], -1)
     latent2 = latent2.mean(1).view(latent2.shape[0], -1)
-    out1 = out1.view(out1.shape[0], -1)
-    out2 = out2.view(out2.shape[0], -1)
+    out1 = out1.reshape(out1.shape[0], -1)
+    out2 = out2.reshape(out2.shape[0], -1)
     sim1 = F.cosine_similarity(latent1, out1, dim=-1)
     sim2 = F.cosine_similarity(latent2, out2, dim=-1)
     return (sim1 + sim2).mean()

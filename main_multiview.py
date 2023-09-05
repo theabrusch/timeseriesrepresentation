@@ -175,9 +175,9 @@ if __name__ == '__main__':
     parser.add_argument('--num_message_passing_rounds', type = int, default = 3)
     parser.add_argument('--hidden_channels', type = int, default = 256)
     parser.add_argument('--out_dim', type = int, default = 64)
-    parser.add_argument('--projection_head', type = eval, default = True)
+    parser.add_argument('--projection_head', type = eval, default = False)
     parser.add_argument('--embedding_dim', type = int, default = 32)
-    parser.add_argument('--track_similarity', type = eval, default = False)
+    parser.add_argument('--track_similarity', type = eval, default = True)
 
 
     # eeg arguments
