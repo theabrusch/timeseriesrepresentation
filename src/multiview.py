@@ -321,8 +321,8 @@ def compute_similarities(latent1, latent2, out1, out2):
     latent2 = latent2.mean(1).view(latent2.shape[0], -1)
     out1 = out1.reshape(out1.shape[0], -1)
     out2 = out2.reshape(out2.shape[0], -1)
-    sim1 = F.cosine_similarity(latent1, out1, dim=-1)
-    sim2 = F.cosine_similarity(latent2, out2, dim=-1)
+    sim1 = F.cosine_similarity(latent1, out1, dim=-1).abs()
+    sim2 = F.cosine_similarity(latent2, out2, dim=-1).abs()
     return (sim1 + sim2).mean()
 
 
@@ -334,6 +334,7 @@ def pretrain(model,
             device,
             loss_fn,
             backup_path = None,
+            track_similarity = False,
             log = True):
     
     model.to(device)
@@ -379,7 +380,7 @@ def pretrain(model,
                 log_dict['train_temp_loss'] = train_temp
                 log_dict['val_inst_loss'] = val_inst/(i+1)
                 log_dict['val_temp_loss'] = val_temp/(i+1)
-            if sim > 0:
+            if track_similarity:
                 log_dict['train_sim'] = train_sim
                 log_dict['val_sim'] = val_sim/(i+1)
             wandb.log(log_dict)
