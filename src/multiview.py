@@ -318,7 +318,7 @@ class GNNMultiview(nn.Module):
             latent_loss = torch.tensor(0)
 
         if isinstance(loss, tuple):
-            return *loss, sim
+            return *loss, sim, avg_loss, latent_loss
         else:
             return loss, *[torch.tensor(0)]*2, sim, avg_loss, latent_loss
 
