@@ -176,7 +176,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_message_passing_rounds', type = int, default = 3)
     parser.add_argument('--hidden_channels', type = int, default = 256)
     parser.add_argument('--out_dim', type = int, default = 64)
-    parser.add_argument('--projection_head', type = eval, default = False)
+    parser.add_argument('--projection_head', type = eval, default = True)
     parser.add_argument('--embedding_dim', type = int, default = 32)
     parser.add_argument('--track_similarity', type = eval, default = True)
 
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     parser.add_argument('--multi_channel_setup', type = str, default = 'sample_channel') # None, sample_channel, ch_avg
 
     # optimizer arguments
-    parser.add_argument('--loss', type = str, default = 'time_loss')
+    parser.add_argument('--loss', type = str, default = 'contrastive')
     parser.add_argument('--track_test_performance', type = eval, default = True)
     parser.add_argument('--learning_rate', type = float, default = 1e-3)
     parser.add_argument('--ft_learning_rate', type = float, default = 1e-3)
