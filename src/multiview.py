@@ -169,9 +169,9 @@ class Multiview(nn.Module):
         out = self.forward(x)
         loss = loss_fn(out)
         if isinstance(loss, tuple):
-            return *loss, torch.tensor(0)
+            return *loss, *[torch.tensor(0)]*3
         else:
-            return loss, *[torch.tensor(0)]*3
+            return loss, *[torch.tensor(0)]*5
 
 class GNNMultiview(nn.Module):
     def __init__(self, 
@@ -259,17 +259,19 @@ class GNNMultiview(nn.Module):
         y = torch.zeros(b, *latents.shape[1:]).to(x.device)
         y.index_add_(0, view_id, latents)
         # divide by ch to take mean
-        out = self.readout_net(y)/ch
+        out_mpnn = self.readout_net(y)/ch
 
-        out = out.permute(0,2,1)
+        out_mpnn = out_mpnn.permute(0,2,1)
 
         if classify:
-            out = self.classifier(out)
+            out = self.classifier(out_mpnn)
         elif self.projection_head:
-            out = self.projector(out)
+            out = self.projector(out_mpnn)
+        else:
+            out = out_mpnn
 
         if self.track_similarity:
-            return out, latents.transpose(1,2).view(b, ch, self.out_dim, -1)
+            return out, out_mpnn, latents.transpose(1,2).view(b, ch, self.out_dim, -1)
         else:
             return out
         
@@ -302,28 +304,43 @@ class GNNMultiview(nn.Module):
             out = torch.cat([out1.unsqueeze(1), out2.unsqueeze(1)], dim = 1)
         else:
             out = torch.cat([out1[0].unsqueeze(1), out2[0].unsqueeze(1)], dim = 1)
-            latent1 = out1[1]
-            latent2 = out2[1]
+            out_mpnn1 = out1[1]
+            out_mpnn2 = out2[1]
+            latent1 = out1[2]
+            latent2 = out2[2]
         loss = loss_fn(out)
 
         if self.track_similarity:
-            sim = compute_similarities(latent1, latent2, out1[0], out2[0])
+            sim, avg_loss, latent_loss = compute_similarities(latent1, latent2, out_mpnn1, out_mpnn2)
         else:
             sim = torch.tensor(0)
+            avg_loss = torch.tensor(0)
+            latent_loss = torch.tensor(0)
 
         if isinstance(loss, tuple):
             return *loss, sim
         else:
-            return loss, *[torch.tensor(0)]*2, sim
+            return loss, *[torch.tensor(0)]*2, sim, avg_loss, latent_loss
 
 def compute_similarities(latent1, latent2, out1, out2):
-    latent1 = latent1.mean(1).view(latent1.shape[0], -1)
-    latent2 = latent2.mean(1).view(latent2.shape[0], -1)
+    loss = CMCloss(temperature = 0.5, criterion='contrastive')
+    latent1_avg = latent1.mean(1).view(latent1.shape[0], -1)
+    latent2_avg = latent2.mean(1).view(latent2.shape[0], -1)
     out1 = out1.reshape(out1.shape[0], -1)
     out2 = out2.reshape(out2.shape[0], -1)
-    sim1 = F.cosine_similarity(latent1, out1, dim=-1).abs()
-    sim2 = F.cosine_similarity(latent2, out2, dim=-1).abs()
-    return (sim1 + sim2).mean()
+
+    # compute cosine similarity between average latent and output
+    sim1 = F.cosine_similarity(latent1_avg, out1, dim=-1)
+    sim2 = F.cosine_similarity(latent2_avg, out2, dim=-1)
+
+    # compute contrastive loss between average latent and output
+    loss_1,_,_ = loss(torch.cat([latent1_avg.unsqueeze(1), out1.unsqueeze(1)], dim = 1))
+    loss_2,_,_ = loss(torch.cat([latent2_avg.unsqueeze(1), out2.unsqueeze(1)], dim = 1))
+
+    # compute contrastive loss between all latents
+    loss_latent,_,_ = loss(torch.cat([latent1, latent2], dim = 1))
+
+    return (sim1 + sim2).mean(), (loss_1 + loss_2).mean(), loss_latent
 
 
 def pretrain(model, 
@@ -343,35 +360,46 @@ def pretrain(model,
         epoch_inst = 0 
         epoch_temp = 0
         epoch_sim = 0 
+        epoch_avg_loss = 0
+        epoch_latent_loss = 0
         model.train()
         for i, data in enumerate(dataloader):
             x = data[0].to(device).float()
             optimizer.zero_grad()
-            loss, inst_loss, temp_loss, sim = model.train_step(x, loss_fn, device)
+            loss, inst_loss, temp_loss, sim, avg_loss, latent_loss = model.train_step(x, loss_fn, device)
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
             epoch_inst += inst_loss.item()
             epoch_temp += temp_loss.item()
             epoch_sim += sim.item()
+            epoch_avg_loss += avg_loss.item()
+            epoch_latent_loss += latent_loss.item()
 
         train_loss = epoch_loss/(i+1)
         train_inst = epoch_inst/(i+1)
         train_temp = epoch_temp/(i+1)
         train_sim = epoch_sim/(i+1)
+        train_avg_loss = epoch_avg_loss/(i+1)
+        train_latent_loss = epoch_latent_loss/(i+1)
 
         val_loss = 0
         val_inst = 0 
         val_temp = 0
         val_sim = 0
+        val_avg_loss = 0
+        val_latent_loss = 0
+
         model.eval()
         for i, data in enumerate(val_dataloader):
             x = data[0].to(device).float()
-            loss, inst_loss, temp_loss, sim = model.train_step(x, loss_fn, device)
+            loss, inst_loss, temp_loss, sim, avg_loss, latent_loss = model.train_step(x, loss_fn, device)
             val_loss += loss.item()
             val_inst += inst_loss.item()
             val_temp += temp_loss.item()
             val_sim += sim.item()
+            val_avg_loss += avg_loss.item()
+            val_latent_loss += latent_loss.item()
 
         if log:
             log_dict = {'val_loss': val_loss/(i+1), 'train_loss': train_loss}
@@ -382,7 +410,11 @@ def pretrain(model,
                 log_dict['val_temp_loss'] = val_temp/(i+1)
             if track_similarity:
                 log_dict['train_sim'] = train_sim
+                log_dict['train_avg_loss'] = train_avg_loss
+                log_dict['train_latent_loss'] = train_latent_loss
                 log_dict['val_sim'] = val_sim/(i+1)
+                log_dict['val_avg_loss'] = val_avg_loss/(i+1)
+                log_dict['val_latent_loss'] = val_latent_loss/(i+1)
             wandb.log(log_dict)
 
         if backup_path is not None:
